@@ -1,6 +1,6 @@
 package component
 
-import "git.konjactw.dev/patyhank/minego/codec/data/slot"
+import "git.konjactw.dev/patyhank/minego/codec/slot"
 
 //codec:gen
 type WolfSoundVariant struct {

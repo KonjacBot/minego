@@ -1,7 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/data/slot"
+	"git.konjactw.dev/patyhank/minego/codec/slot"
 	"github.com/Tnze/go-mc/chat"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
@@ -19,6 +19,7 @@ type TrimMaterial struct {
 	Description chat.Message
 }
 
+//codec:gen
 type TrimOverride struct {
 	MaterialType      pk.Identifier
 	OverrideAssetName string

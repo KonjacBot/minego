@@ -1,7 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/data/slot"
+	"git.konjactw.dev/patyhank/minego/codec/slot"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
 

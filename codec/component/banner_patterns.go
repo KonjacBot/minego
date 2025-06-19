@@ -1,8 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/data/slot"
-	"github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/patyhank/minego/codec/slot"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
 
@@ -13,9 +12,11 @@ type BannerPatterns struct {
 
 //codec:gen
 type BannerLayer struct {
-	PatternType    int32 `mc:"VarInt"`
-	AssetID        pk.Option[packet.Identifier, *packet.Identifier]
-	TranslationKey pk.Option[pk.String, *pk.String]
+	Pattern int32 `mc:"VarInt"`
+	//opt:enum:Pattern:0
+	AssetID pk.Identifier
+	//opt:enum:Pattern:0
+	TranslationKey string
 	Color          DyeColor
 }
 

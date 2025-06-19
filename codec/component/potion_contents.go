@@ -1,8 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/data/slot"
-	pk "github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/patyhank/minego/codec/slot"
 )
 
 //codec:gen
@@ -19,23 +18,19 @@ type PotionContents struct {
 type PotionEffect struct {
 	TypeID int32 `mc:"VarInt"`
 
-	Amplifier       int32 `mc:"VarInt"`
-	Duration        int32 `mc:"VarInt"`
-	Ambient         bool
-	ShowParticles   bool
-	ShowIcon        bool
-	HasHiddenEffect bool
-	HiddenEffect    pk.Option[PotionEffectExtraDetails, *PotionEffectExtraDetails]
+	Details PotionEffectDetails
 }
 
 //codec:gen
-type PotionEffectExtraDetails struct {
+type PotionEffectDetails struct {
 	Amplifier       int32 `mc:"VarInt"`
 	Duration        int32 `mc:"VarInt"`
 	Ambient         bool
 	ShowParticles   bool
 	ShowIcon        bool
 	HasHiddenEffect bool
+	//opt:optional:HasHiddenEffect
+	HiddenEffect *PotionEffect
 }
 
 func (*PotionContents) Type() slot.ComponentID {

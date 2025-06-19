@@ -7,9 +7,11 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(go:*)",
-      "*",
       "Bash(./gen-packet.sh:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(/root/go/bin/packetizer:*)",
+      "**",
+      "*"
     ],
     "deny": []
   }

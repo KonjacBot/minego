@@ -1,6 +1,6 @@
 package component
 
-import "git.konjactw.dev/patyhank/minego/codec/data/slot"
+import "git.konjactw.dev/patyhank/minego/codec/slot"
 
 //codec:gen
 type FireworkExplosion struct {
@@ -9,9 +9,9 @@ type FireworkExplosion struct {
 
 //codec:gen
 type FireworkExplosionData struct {
-	Shape      int32   `mc:"VarInt"`
-	Colors     []int32 `mc:"PrefixedArray"`
-	FadeColors []int32 `mc:"PrefixedArray"`
+	Shape      int32 `mc:"VarInt"`
+	Colors     []int32
+	FadeColors []int32
 	HasTrail   bool
 	HasTwinkle bool
 }

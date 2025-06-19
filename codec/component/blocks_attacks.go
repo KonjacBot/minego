@@ -1,7 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/data/slot"
+	"git.konjactw.dev/patyhank/minego/codec/slot"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
 
@@ -14,16 +14,29 @@ type BlocksAttacks struct {
 	ItemDamageBase       float32
 	ItemDamageFactor     float32
 	BypassedBy           pk.Option[pk.Identifier, *pk.Identifier]
-	BlockSound           pk.Option[SoundEvent, *SoundEvent]
-	DisableSound         pk.Option[SoundEvent, *SoundEvent]
+	HasBlockSound        bool
+	//opt:optional:HasBlockSound
+	BlockSoundID int32 `mc:"VarInt"`
+	//opt:optional:HasBlockSound
+	//opt:id:BlockSoundID
+	BlockSound SoundEvent
+
+	HasDisableSound bool
+	//opt:optional:HasDisableSound
+	DisableSoundID int32 `mc:"VarInt"`
+	//opt:optional:HasDisableSound
+	//opt:id:DisableSoundID
+	DisableSound SoundEvent
 }
 
 //codec:gen
 type DamageReduction struct {
 	HorizontalBlockingAngle float32
-	Type                    pk.Option[pk.IDSet, *pk.IDSet]
-	Base                    float32
-	Factor                  float32
+	HasType                 bool
+	//opt:optional:HasType
+	Type   pk.IDSet
+	Base   float32
+	Factor float32
 }
 
 func (*BlocksAttacks) Type() slot.ComponentID {

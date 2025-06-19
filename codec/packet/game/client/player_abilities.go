@@ -8,7 +8,7 @@ var _ ClientboundPacket = (*PlayerAbilities)(nil)
 
 //codec:gen
 type PlayerAbilities struct {
-	Flags        uint8
+	Flags        int8
 	FlyingSpeed  float32
 	WalkingSpeed float32
 }

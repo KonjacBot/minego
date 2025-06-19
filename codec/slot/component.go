@@ -10,13 +10,14 @@ type Component interface {
 }
 
 type ComponentID int32
+type componentCreator func() Component
 
-var components = make(map[ComponentID]Component)
+var components = make(map[ComponentID]componentCreator)
 
 func ComponentFromID(id ComponentID) Component {
-	return components[id]
+	return components[id]()
 }
 
-func RegisterComponent(c Component) {
-	components[c.Type()] = c
+func RegisterComponent(c componentCreator) {
+	components[c().Type()] = c
 }

@@ -7,16 +7,12 @@ import (
 var _ ClientboundPacket = (*PlayerPosition)(nil)
 
 //codec:gen
-type PositionMoveRotation struct {
-	X, Y, Z    float64
-	YRot, XRot float32
-}
-
-//codec:gen
 type PlayerPosition struct {
-	ID        int32 `mc:"VarInt"`
-	Change    PositionMoveRotation
-	Relatives uint8
+	ID                              int32 `mc:"VarInt"`
+	X, Y, Z                         float64
+	VelocityX, VelocityY, VelocityZ float64
+	YRot, XRot                      float32
+	Flags                           int32
 }
 
 func (PlayerPosition) ClientboundPacketID() packetid.ClientboundPacketID {

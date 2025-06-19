@@ -1,15 +1,16 @@
 package component
 
-import "git.konjactw.dev/patyhank/minego/codec/data/slot"
+import "git.konjactw.dev/patyhank/minego/codec/slot"
 
 //codec:gen
 type Enchantments struct {
 	Enchantments []Enchantment
 }
 
+//codec:gen
 type Enchantment struct {
-	TypeID int32 `mc:"VarInt"`
-	Level  int32 `mc:"VarInt"`
+	Type  int32 `mc:"VarInt"`
+	Level int32 `mc:"VarInt"`
 }
 
 func (*Enchantments) Type() slot.ComponentID {
