@@ -4,6 +4,7 @@ import (
 	"github.com/Tnze/go-mc/nbt"
 )
 
+//codec:gen
 type ShowDialog struct {
 	DialogID int32 `mc:"VarInt"`
 	//opt:id:DialogID

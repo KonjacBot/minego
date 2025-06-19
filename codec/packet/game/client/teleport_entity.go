@@ -1,5 +1,6 @@
 package client
 
+//codec:gen
 type SynchronizeVehiclePosition struct {
 	EntityID                        int32 `mc:"VarInt"`
 	X, Y, Z                         float64

@@ -5,7 +5,7 @@ import (
 )
 
 //codec:gen
-type RemoveResourcePacket struct {
+type RemoveResourcePack struct {
 	HasUUID bool
 	//opt:optional:HasUUID
 	UUID uuid.UUID `mc:"UUID"`

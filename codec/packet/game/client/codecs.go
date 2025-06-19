@@ -694,6 +694,13 @@ func (c ChunkBiomes) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *ClearDialog) ReadFrom(r io.Reader) (n int64, err error) {
+	return 0, nil
+}
+
+func (c ClearDialog) WriteTo(w io.Writer) (n int64, err error) {
+	return 0, nil
+}
 func (c *ClearTitles) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Boolean)(&c.Reset).ReadFrom(r)
@@ -1076,6 +1083,54 @@ func (c CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.ByteArray)(&c.Data).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *ReportDetails) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Title).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.String)(&c.Description).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c ReportDetails) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Title).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.String)(&c.Description).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *CustomReportDetails) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.Details).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c CustomReportDetails) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.Details).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1837,6 +1892,125 @@ func (c LevelEvent) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Boolean)(&c.GlobalEvent).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Particle) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.LongDistance).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.AlwaysVisible).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.X).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Y).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Z).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetX).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetY).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetZ).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.MaxSpeed).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Count).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Particle).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Particle) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.LongDistance).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.AlwaysVisible).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.X).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Y).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Z).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetX).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetY).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.OffsetZ).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.MaxSpeed).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Count).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Particle).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -2783,6 +2957,45 @@ func (c OpenBook) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *OpenScreen) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.WindowID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.WindowType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.WindowTitle).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c OpenScreen) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.WindowID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.WindowType).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.WindowTitle).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *OpenSignEditor) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (&c.Location).ReadFrom(r)
@@ -2825,25 +3038,6 @@ func (c *Ping) ReadFrom(r io.Reader) (n int64, err error) {
 func (c Ping) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Int)(&c.ID).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-func (c *PingResponse) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Long)(&c.Payload).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-
-func (c PingResponse) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Long)(&c.Payload).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3424,6 +3618,54 @@ func (c PlayerRotation) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *PingResponse) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Long)(&c.Payload).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c PingResponse) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Long)(&c.Payload).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *ProjectilePower) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.EntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Power).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c ProjectilePower) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.EntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Power).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *RecipeIngredients) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = packet.Array(&c.Data).ReadFrom(r)
@@ -3701,7 +3943,50 @@ func (c RemoveMobEffect) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
-func (c *RemoveResourcePacket) ReadFrom(r io.Reader) (n int64, err error) {
+func (c *ResetScore) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.EntityName).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasObjectiveName).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasObjectiveName {
+		temp, err = (*packet.String)(&c.ObjectiveName).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+func (c ResetScore) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.EntityName).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasObjectiveName).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasObjectiveName {
+		temp, err = (*packet.String)(&c.ObjectiveName).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+func (c *RemoveResourcePack) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Boolean)(&c.HasUUID).ReadFrom(r)
 	n += temp
@@ -3718,7 +4003,7 @@ func (c *RemoveResourcePacket) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, err
 }
 
-func (c RemoveResourcePacket) WriteTo(w io.Writer) (n int64, err error) {
+func (c RemoveResourcePack) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Boolean)(&c.HasUUID).WriteTo(w)
 	n += temp
@@ -3940,7 +4225,7 @@ func (c *ServerData) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasIcon {
-		temp, err = (*Int8VarIntArray)(&c.Icon).ReadFrom(r)
+		temp, err = (*Int8ByteVarIntArray)(&c.Icon).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -3962,13 +4247,20 @@ func (c ServerData) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasIcon {
-		temp, err = (*Int8VarIntArray)(&c.Icon).WriteTo(w)
+		temp, err = (*Int8ByteVarIntArray)(&c.Icon).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
 		}
 	}
 	return n, err
+}
+func (c *ServerLinks) ReadFrom(r io.Reader) (n int64, err error) {
+	return 0, nil
+}
+
+func (c ServerLinks) WriteTo(w io.Writer) (n int64, err error) {
+	return 0, nil
 }
 func (c *SetActionBarText) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
@@ -4012,6 +4304,45 @@ func (c SetBorderCenter) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Double)(&c.Z).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SetBorderLerpSize) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Double)(&c.OldDiameter).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.NewDiameter).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarLong)(&c.Speed).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SetBorderLerpSize) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Double)(&c.OldDiameter).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.NewDiameter).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarLong)(&c.Speed).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4271,6 +4602,55 @@ func (c SetEntityLink) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Int)(&c.HoldingEntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SetEntityVelocity) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityX).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityY).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityZ).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SetEntityVelocity) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityX).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityY).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Short)(&c.VelocityZ).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -5133,6 +5513,39 @@ func (c SetTitleAnimationTimes) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *ShowDialog) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.DialogID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.DialogID == 0 {
+		temp, err = packet.NBT(&c.DialogData).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+func (c ShowDialog) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.DialogID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.DialogID == 0 {
+		temp, err = packet.NBT(&c.DialogData).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
 func (c *SoundEffect) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.VarInt)(&c.SoundID).ReadFrom(r)
@@ -5296,6 +5709,863 @@ func (c EntitySoundEffect) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *StartConfiguration) ReadFrom(r io.Reader) (n int64, err error) {
+	return 0, nil
+}
+
+func (c StartConfiguration) WriteTo(w io.Writer) (n int64, err error) {
+	return 0, nil
+}
+func (c *StoreCookie) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Key).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int8ByteVarIntArray)(&c.Payload).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c StoreCookie) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Key).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int8ByteVarIntArray)(&c.Payload).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SystemChatMessage) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Content).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Overlay).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SystemChatMessage) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Content).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Overlay).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SetTabListHeaderAndFooter) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Header).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Footer).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SetTabListHeaderAndFooter) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Header).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Footer).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *TagQueryResponse) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.TransactionID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.NBT(&c.NBT).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c TagQueryResponse) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.TransactionID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.NBT(&c.NBT).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *PickupItem) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.CollectedEntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.CollectorEntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.PickupItemCount).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c PickupItem) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.CollectedEntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.CollectorEntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.PickupItemCount).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SynchronizeVehiclePosition) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.X).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Y).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Z).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityX).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityY).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityZ).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Yaw).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Pitch).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Flags).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.OnGround).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SynchronizeVehiclePosition) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.X).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Y).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Z).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityX).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityY).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.VelocityZ).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Yaw).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Pitch).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Flags).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.OnGround).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *TestInstanceBlockStatus) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Status).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasSize).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeX).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeY).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeZ).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+func (c TestInstanceBlockStatus) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Status).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasSize).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeX).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeY).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.HasSize {
+		temp, err = (*packet.Double)(&c.SizeZ).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+func (c *SetTickingState) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.TickRate).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.IsFrozen).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SetTickingState) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.TickRate).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.IsFrozen).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *StepTick) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.TickSteps).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c StepTick) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.TickSteps).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Transfer) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Host).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Port).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Transfer) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Host).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Port).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *AdvancementDisplay) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Title).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Description).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Icon).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.FrameType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Flags).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasBackgroundTexture).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasBackgroundTexture {
+		temp, err = (*packet.Identifier)(&c.BackgroundTexture).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Float)(&c.X).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Y).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c AdvancementDisplay) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Title).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Description).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Icon).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.FrameType).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Int)(&c.Flags).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasBackgroundTexture).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasBackgroundTexture {
+		temp, err = (*packet.Identifier)(&c.BackgroundTexture).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Float)(&c.X).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Y).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *AdvancementRequirements) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*StringVarIntArray)(&c.OR).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c AdvancementRequirements) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*StringVarIntArray)(&c.OR).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Advancement) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.ID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasParentID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasParentID {
+		temp, err = (*packet.String)(&c.ParentID).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Boolean)(&c.HasDisplayData).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasDisplayData {
+		temp, err = (&c.DisplayData).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = packet.Array(&c.Requirements).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.SendTelemetryData).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Advancement) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.ID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasParentID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasParentID {
+		temp, err = (*packet.String)(&c.ParentID).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Boolean)(&c.HasDisplayData).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasDisplayData {
+		temp, err = (&c.DisplayData).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = packet.Array(&c.Requirements).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.SendTelemetryData).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *AdvancementProgress) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.ID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Identifier)(&c.CriterionId).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasAchieved).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasAchieved {
+		temp, err = (*packet.Long)(&c.AchievingDate).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+func (c AdvancementProgress) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.ID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Identifier)(&c.CriterionId).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.HasAchieved).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasAchieved {
+		temp, err = (*packet.Long)(&c.AchievingDate).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+func (c *UpdateAdvancements) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.Clear).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Advancements).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*StringIdentifierVarIntArray)(&c.RemovedIds).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Progress).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.ShowAdvancementsToast).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c UpdateAdvancements) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.Clear).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Advancements).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*StringIdentifierVarIntArray)(&c.RemovedIds).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Progress).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.ShowAdvancementsToast).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *AttributeModifier) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Id).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Amount).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Byte)(&c.Operation).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c AttributeModifier) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Id).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Amount).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Byte)(&c.Operation).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Attribute) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Id).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Value).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Modifiers).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Attribute) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Id).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Double)(&c.Value).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Modifiers).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *UpdateAttributes) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Attributes).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c UpdateAttributes) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Attributes).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *UpdateLight) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.VarInt)(&c.ChunkX).ReadFrom(r)
@@ -5333,6 +6603,576 @@ func (c UpdateLight) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	return n, err
+}
+func (c *EntityEffect) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.EffectID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Amplifier).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Duration).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Byte)(&c.Flags).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c EntityEffect) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.EffectID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Amplifier).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Duration).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Byte)(&c.Flags).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *PropertySet) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Id).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int32VarIntVarIntArray)(&c.Items).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c PropertySet) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Id).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int32VarIntVarIntArray)(&c.Items).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *StonecutterRecipe) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Ingredient).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.SlotDisplay).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c StonecutterRecipe) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Ingredient).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.SlotDisplay).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *UpdateRecipes) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.PropertySets).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.StonecutterRecipes).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c UpdateRecipes) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.PropertySets).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.StonecutterRecipes).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Tag) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Name).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int32VarIntVarIntArray)(&c.Entries).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Tag) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Name).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*Int32VarIntVarIntArray)(&c.Entries).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *RegistryTag) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Registry).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Tags).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c RegistryTag) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.Registry).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Tags).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *UpdateTags) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.Data).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c UpdateTags) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = packet.Array(&c.Data).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *WaypointColor) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.UnsignedByte)(&c.R).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UnsignedByte)(&c.G).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UnsignedByte)(&c.B).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c WaypointColor) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.UnsignedByte)(&c.R).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UnsignedByte)(&c.G).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UnsignedByte)(&c.B).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *WaypointVec3i) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.X).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Y).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Z).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c WaypointVec3i) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.X).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Y).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Z).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *WaypointChunkPos) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.X).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Z).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c WaypointChunkPos) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.X).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Z).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *WaypointAzimuth) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.Angle).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c WaypointAzimuth) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.Angle).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Waypoint) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Operation).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.IsUUIDIdentifier).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.IsUUIDIdentifier == true {
+		temp, err = (*packet.UUID)(&c.UUID).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.IsUUIDIdentifier == false {
+		temp, err = (*packet.String)(&c.Name).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Boolean)(&c.HasColor).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasColor {
+		temp, err = (&c.Color).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.VarInt)(&c.WaypointType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.WaypointType == 1 {
+		temp, err = (&c.WaypointPlayerPos).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.WaypointType == 2 {
+		temp, err = (&c.WaypointChunkPos).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.WaypointType == 3 {
+		temp, err = (&c.WaypointAzimuth).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+func (c Waypoint) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Operation).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.IsUUIDIdentifier).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.IsUUIDIdentifier == true {
+		temp, err = (*packet.UUID)(&c.UUID).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.IsUUIDIdentifier == false {
+		temp, err = (*packet.String)(&c.Name).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.Boolean)(&c.HasColor).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasColor {
+		temp, err = (&c.Color).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (*packet.VarInt)(&c.WaypointType).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.WaypointType == 1 {
+		temp, err = (&c.WaypointPlayerPos).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.WaypointType == 2 {
+		temp, err = (&c.WaypointChunkPos).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.WaypointType == 3 {
+		temp, err = (&c.WaypointAzimuth).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}
+
+// Int32VarIntVarIntArray a utility type for encoding/decoding packet.VarInt -> int32[packet.VarInt] slice.
+type Int32VarIntVarIntArray []int32
+
+func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
+		return n, err
+	} else {
+		n += nn
+	}
+	for i := 0; i < size; i++ {
+		nn, err := packet.VarInt(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *Int32VarIntVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	if nn, err := size.ReadFrom(r); err != nil {
+		return nn, err
+	} else {
+		n += nn
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	for i := 0; i < int(size); i++ {
+		var elem packet.VarInt
+		if nn, err := elem.ReadFrom(r); err != nil {
+			return n, err
+		} else {
+			n += nn
+		}
+		*a = append(*a, int32(elem))
+	}
+
+	return n, err
+}
+
+// Int8ByteVarIntArray a utility type for encoding/decoding packet.Byte -> int8[packet.VarInt] slice.
+type Int8ByteVarIntArray []int8
+
+func (a Int8ByteVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
+		return n, err
+	} else {
+		n += nn
+	}
+	for i := 0; i < size; i++ {
+		nn, err := packet.Byte(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *Int8ByteVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	if nn, err := size.ReadFrom(r); err != nil {
+		return nn, err
+	} else {
+		n += nn
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	for i := 0; i < int(size); i++ {
+		var elem packet.Byte
+		if nn, err := elem.ReadFrom(r); err != nil {
+			return n, err
+		} else {
+			n += nn
+		}
+		*a = append(*a, int8(elem))
+	}
+
 	return n, err
 }
 
@@ -5375,50 +7215,6 @@ func (a *Int8VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 			n += nn
 		}
 		*a = append(*a, int8(elem))
-	}
-
-	return n, err
-}
-
-// StringVarIntArray a utility type for encoding/decoding packet.String -> string[packet.VarInt] slice.
-type StringVarIntArray []string
-
-func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
-		return n, err
-	} else {
-		n += nn
-	}
-	for i := 0; i < size; i++ {
-		nn, err := packet.String(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *StringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	for i := 0; i < int(size); i++ {
-		var elem packet.String
-		if nn, err := elem.ReadFrom(r); err != nil {
-			return n, err
-		} else {
-			n += nn
-		}
-		*a = append(*a, string(elem))
 	}
 
 	return n, err
@@ -5512,94 +7308,6 @@ func (a *StringIdentifierVarIntArray) ReadFrom(r io.Reader) (n int64, err error)
 	return n, err
 }
 
-// UuidUUIDUUIDVarIntArray a utility type for encoding/decoding packet.UUID -> uuid.UUID[packet.VarInt] slice.
-type UuidUUIDUUIDVarIntArray []uuid.UUID
-
-func (a UuidUUIDUUIDVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
-		return n, err
-	} else {
-		n += nn
-	}
-	for i := 0; i < size; i++ {
-		nn, err := packet.UUID(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *UuidUUIDUUIDVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	for i := 0; i < int(size); i++ {
-		var elem packet.UUID
-		if nn, err := elem.ReadFrom(r); err != nil {
-			return n, err
-		} else {
-			n += nn
-		}
-		*a = append(*a, uuid.UUID(elem))
-	}
-
-	return n, err
-}
-
-// Int32VarIntVarIntArray a utility type for encoding/decoding packet.VarInt -> int32[packet.VarInt] slice.
-type Int32VarIntVarIntArray []int32
-
-func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
-		return n, err
-	} else {
-		n += nn
-	}
-	for i := 0; i < size; i++ {
-		nn, err := packet.VarInt(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *Int32VarIntVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	for i := 0; i < int(size); i++ {
-		var elem packet.VarInt
-		if nn, err := elem.ReadFrom(r); err != nil {
-			return n, err
-		} else {
-			n += nn
-		}
-		*a = append(*a, int32(elem))
-	}
-
-	return n, err
-}
-
 // Int64VarLongVarIntArray a utility type for encoding/decoding packet.VarLong -> int64[packet.VarInt] slice.
 type Int64VarLongVarIntArray []int64
 
@@ -5683,6 +7391,94 @@ func (a *StringStringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 			n += nn
 		}
 		*a = append(*a, string(elem))
+	}
+
+	return n, err
+}
+
+// StringVarIntArray a utility type for encoding/decoding packet.String -> string[packet.VarInt] slice.
+type StringVarIntArray []string
+
+func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
+		return n, err
+	} else {
+		n += nn
+	}
+	for i := 0; i < size; i++ {
+		nn, err := packet.String(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *StringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	if nn, err := size.ReadFrom(r); err != nil {
+		return nn, err
+	} else {
+		n += nn
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	for i := 0; i < int(size); i++ {
+		var elem packet.String
+		if nn, err := elem.ReadFrom(r); err != nil {
+			return n, err
+		} else {
+			n += nn
+		}
+		*a = append(*a, string(elem))
+	}
+
+	return n, err
+}
+
+// UuidUUIDUUIDVarIntArray a utility type for encoding/decoding packet.UUID -> uuid.UUID[packet.VarInt] slice.
+type UuidUUIDUUIDVarIntArray []uuid.UUID
+
+func (a UuidUUIDUUIDVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
+		return n, err
+	} else {
+		n += nn
+	}
+	for i := 0; i < size; i++ {
+		nn, err := packet.UUID(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *UuidUUIDUUIDVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	if nn, err := size.ReadFrom(r); err != nil {
+		return nn, err
+	} else {
+		n += nn
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	for i := 0; i < int(size); i++ {
+		var elem packet.UUID
+		if nn, err := elem.ReadFrom(r); err != nil {
+			return n, err
+		} else {
+			n += nn
+		}
+		*a = append(*a, uuid.UUID(elem))
 	}
 
 	return n, err

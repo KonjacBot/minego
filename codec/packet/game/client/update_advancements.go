@@ -36,6 +36,7 @@ type Advancement struct {
 	SendTelemetryData bool
 }
 
+//codec:gen
 type AdvancementProgress struct {
 	ID          string `mc:"Identifier"`
 	CriterionId string `mc:"Identifier"`

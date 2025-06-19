@@ -12,14 +12,17 @@ type WaypointVec3i struct {
 	X, Y, Z int32 `mc:"VarInt"`
 }
 
+//codec:gen
 type WaypointChunkPos struct {
 	X, Z int32 `mc:"VarInt"`
 }
 
+//codec:gen
 type WaypointAzimuth struct {
 	Angle float32
 }
 
+//codec:gen
 type Waypoint struct {
 	Operation        int32 `mc:"VarInt"`
 	IsUUIDIdentifier bool
