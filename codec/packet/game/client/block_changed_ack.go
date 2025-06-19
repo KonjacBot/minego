@@ -1,0 +1,16 @@
+package client
+
+import (
+	"github.com/Tnze/go-mc/data/packetid"
+)
+
+var _ ClientboundPacket = (*BlockChangedAck)(nil)
+
+// codec:gen
+type BlockChangedAck struct {
+	Sequence int32 `mc:"VarInt"`
+}
+
+func (BlockChangedAck) ClientboundPacketID() packetid.ClientboundPacketID {
+	return packetid.ClientboundBlockChangedAck
+}

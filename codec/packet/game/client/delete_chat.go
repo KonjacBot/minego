@@ -1,0 +1,20 @@
+package client
+
+import (
+	"github.com/Tnze/go-mc/data/packetid"
+	"github.com/Tnze/go-mc/net/packet"
+)
+
+var _ ClientboundPacket = (*DeleteChat)(nil)
+var _ packet.Field = (*DeleteChat)(nil)
+
+// DeleteChatPacket
+//
+//codec:gen
+type DeleteChat struct {
+	MessageSignature []byte `mc:"ByteArray"`
+}
+
+func (DeleteChat) ClientboundPacketID() packetid.ClientboundPacketID {
+	return packetid.ClientboundDeleteChat
+}

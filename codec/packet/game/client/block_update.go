@@ -1,0 +1,16 @@
+package client
+
+import (
+	"github.com/Tnze/go-mc/data/packetid"
+	"github.com/Tnze/go-mc/net/packet"
+)
+
+// codec:gen
+type BlockUpdate struct {
+	Position   packet.Position
+	BlockState int32 `mc:"VarInt"`
+}
+
+func (BlockUpdate) ClientboundPacketID() packetid.ClientboundPacketID {
+	return packetid.ClientboundBlockUpdate
+}

@@ -1,0 +1,4 @@
+git.konjactw.dev/patyhank/go-mc v1.20.3-0.20250619063151-133e3fab4ac2 h1:KiA1OsQQGjrKxev45URJPwvyuVwen9Bb4TzjEg/ojz8=
+git.konjactw.dev/patyhank/go-mc v1.20.3-0.20250619063151-133e3fab4ac2/go.mod h1:e3pBU8tqRfYDHrhtZRtyfGdYijA86b1fF3XgnEDSgHk=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=

@@ -1,0 +1,18 @@
+package client
+
+import (
+	"github.com/Tnze/go-mc/data/packetid"
+)
+
+var _ ClientboundPacket = (*PlayerAbilities)(nil)
+
+//codec:gen
+type PlayerAbilities struct {
+	Flags        uint8
+	FlyingSpeed  float32
+	WalkingSpeed float32
+}
+
+func (PlayerAbilities) ClientboundPacketID() packetid.ClientboundPacketID {
+	return packetid.ClientboundPlayerAbilities
+}

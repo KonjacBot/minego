@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./packetizer)",
+      "Bash(packetizer)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(go:*)",
+      "*",
+      "Bash(./gen-packet.sh:*)",
+      "Bash(chmod:*)"
+    ],
+    "deny": []
+  }
+}
