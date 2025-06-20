@@ -17,7 +17,7 @@ type SetStructureBlock struct {
 	Rotation                  int32 `mc:"VarInt"`
 	Metadata                  string
 	Integrity                 float32
-	Seed                      int32 `mc:"VarLong"`
+	Seed                      int64 `mc:"VarLong"`
 	Flags                     int8
 }
 
