@@ -1,0 +1,20 @@
+package server
+
+import (
+	"git.konjactw.dev/patyhank/minego/codec/packet/game/server"
+	"github.com/Tnze/go-mc/data/packetid"
+)
+
+type ConfigClientInformation struct {
+	server.ClientInformation
+}
+
+func (ConfigClientInformation) PacketID() packetid.ServerboundPacketID {
+	return packetid.ServerboundConfigClientInformation
+}
+
+func init() {
+	registerPacket(packetid.ServerboundConfigClientInformation, func() ServerboundPacket {
+		return &ConfigClientInformation{}
+	})
+}

@@ -2,6 +2,7 @@ package client
 
 import "github.com/Tnze/go-mc/chat"
 
+//codec:gen
 type ServerLinkData struct {
 	IsBuiltin bool
 	//opt:enum:IsBuiltin:true
@@ -13,4 +14,5 @@ type ServerLinkData struct {
 
 //codec:gen
 type ServerLinks struct {
+	Links []ServerLinkData
 }
