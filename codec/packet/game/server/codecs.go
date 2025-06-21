@@ -2735,9 +2735,8 @@ func (a Int8ByteVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
 	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
 		return n, err
-	} else {
-		n += nn
 	}
+	n += nn
 	for i := 0; i < size; i++ {
 		nn, err := packet.Byte(a[i]).WriteTo(w)
 		n += nn
@@ -2750,23 +2749,27 @@ func (a Int8ByteVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 
 func (a *Int8ByteVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
 	}
 	if size < 0 {
 		return n, errors.New("array length less than zero")
 	}
 
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(Int8ByteVarIntArray, int(size))
+	}
+
 	for i := 0; i < int(size); i++ {
-		var elem packet.Byte
-		if nn, err := elem.ReadFrom(r); err != nil {
+		nn, err = (*packet.Byte)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
 			return n, err
-		} else {
-			n += nn
 		}
-		*a = append(*a, int8(elem))
 	}
 
 	return n, err
@@ -2779,9 +2782,8 @@ func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
 	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
 		return n, err
-	} else {
-		n += nn
 	}
+	n += nn
 	for i := 0; i < size; i++ {
 		nn, err := packet.String(a[i]).WriteTo(w)
 		n += nn
@@ -2794,23 +2796,27 @@ func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 
 func (a *StringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
 	}
 	if size < 0 {
 		return n, errors.New("array length less than zero")
 	}
 
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(StringVarIntArray, int(size))
+	}
+
 	for i := 0; i < int(size); i++ {
-		var elem packet.String
-		if nn, err := elem.ReadFrom(r); err != nil {
+		nn, err = (*packet.String)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
 			return n, err
-		} else {
-			n += nn
 		}
-		*a = append(*a, string(elem))
 	}
 
 	return n, err

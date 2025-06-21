@@ -121,9 +121,8 @@ func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
 	if nn, err := packet.VarInt(size).WriteTo(w); err != nil {
 		return n, err
-	} else {
-		n += nn
 	}
+	n += nn
 	for i := 0; i < size; i++ {
 		nn, err := packet.VarInt(a[i]).WriteTo(w)
 		n += nn
@@ -136,23 +135,27 @@ func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 
 func (a *Int32VarIntVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	var size packet.VarInt
-	if nn, err := size.ReadFrom(r); err != nil {
-		return nn, err
-	} else {
-		n += nn
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
 	}
 	if size < 0 {
 		return n, errors.New("array length less than zero")
 	}
 
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(Int32VarIntVarIntArray, int(size))
+	}
+
 	for i := 0; i < int(size); i++ {
-		var elem packet.VarInt
-		if nn, err := elem.ReadFrom(r); err != nil {
+		nn, err = (*packet.VarInt)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
 			return n, err
-		} else {
-			n += nn
 		}
-		*a = append(*a, int32(elem))
 	}
 
 	return n, err
