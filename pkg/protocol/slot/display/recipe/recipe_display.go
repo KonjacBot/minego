@@ -3,7 +3,7 @@ package recipe
 import (
 	"io"
 
-	"git.konjactw.dev/patyhank/minego/codec/slot/display/slot"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot/display/slot"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
 

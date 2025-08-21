@@ -1,7 +1,7 @@
 package server
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/slot"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
 	"github.com/Tnze/go-mc/data/packetid"
 )
 

@@ -1,7 +1,7 @@
 package client
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/metadata"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
 )
 
 //codec:gen

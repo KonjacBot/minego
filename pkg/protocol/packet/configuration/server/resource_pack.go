@@ -1,7 +1,7 @@
 package server
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/packet/game/server"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
 	"github.com/Tnze/go-mc/data/packetid"
 )
 

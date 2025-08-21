@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/patyhank/minego/codec/component"
+import "git.konjactw.dev/patyhank/minego/pkg/protocol/component"
 
 //codec:gen
 type SoundEffect struct {

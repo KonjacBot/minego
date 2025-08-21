@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/patyhank/minego/codec/particle"
+import "git.konjactw.dev/patyhank/minego/pkg/protocol/particle"
 
 //codec:gen
 type Particle struct {

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"git.konjactw.dev/patyhank/minego/codec/component"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/component"
 	"github.com/Tnze/go-mc/net/packet"
 	"github.com/google/uuid"
 )

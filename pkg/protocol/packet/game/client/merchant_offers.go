@@ -1,7 +1,7 @@
 package client
 
 import (
-	"git.konjactw.dev/patyhank/minego/codec/slot"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
 	slot2 "git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
 )
 

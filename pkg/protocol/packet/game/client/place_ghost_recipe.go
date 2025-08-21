@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/patyhank/minego/codec/slot/display/recipe"
+import "git.konjactw.dev/patyhank/minego/pkg/protocol/slot/display/recipe"
 
 //codec:gen
 type PlaceGhostRecipe struct {
