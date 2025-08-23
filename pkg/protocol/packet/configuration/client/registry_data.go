@@ -19,7 +19,7 @@ type ConfigRegistryData struct {
 	Data       []RegistryData
 }
 
-func (ConfigRegistryData) PacketID() packetid.ClientboundPacketID {
+func (*ConfigRegistryData) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigRegistryData
 }
 

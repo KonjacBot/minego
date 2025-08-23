@@ -7,7 +7,7 @@ type MovePlayerStatusOnly struct {
 	Flags int8
 }
 
-func (MovePlayerStatusOnly) PacketID() packetid.ServerboundPacketID {
+func (*MovePlayerStatusOnly) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundMovePlayerStatusOnly
 }
 

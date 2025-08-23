@@ -8,7 +8,7 @@ type BundleItemSelected struct {
 	SlotInBundle int32 `mc:"VarInt"`
 }
 
-func (BundleItemSelected) PacketID() packetid.ServerboundPacketID {
+func (*BundleItemSelected) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundBundleItemSelected
 }
 

@@ -7,7 +7,7 @@ type ChunkBatchReceived struct {
 	ChunksPerTick float32
 }
 
-func (ChunkBatchReceived) PacketID() packetid.ServerboundPacketID {
+func (*ChunkBatchReceived) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChunkBatchReceived
 }
 

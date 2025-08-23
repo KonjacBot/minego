@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type ConfigResetChat struct {
 }
 
-func (ConfigResetChat) PacketID() packetid.ClientboundPacketID {
+func (*ConfigResetChat) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigResetChat
 }
 

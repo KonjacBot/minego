@@ -11,7 +11,7 @@ type BlockEntityTagQuery struct {
 	Location      pk.Position
 }
 
-func (BlockEntityTagQuery) PacketID() packetid.ServerboundPacketID {
+func (*BlockEntityTagQuery) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundBlockEntityTagQuery
 }
 

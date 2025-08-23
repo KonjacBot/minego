@@ -7,7 +7,7 @@ type Swing struct {
 	Hand int32 `mc:"VarInt"`
 }
 
-func (Swing) PacketID() packetid.ServerboundPacketID {
+func (*Swing) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSwing
 }
 

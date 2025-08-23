@@ -84,6 +84,7 @@ func (m EntityMetadata) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (m *EntityMetadata) ReadFrom(r io.Reader) (int64, error) {
+	m.Data = make(map[uint8]Metadata)
 	var index uint8
 	n, err := (*pk.UnsignedByte)(&index).ReadFrom(r)
 	if err != nil {

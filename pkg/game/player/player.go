@@ -35,6 +35,14 @@ func New(c bot.Client) *Player {
 		pl.lastReceivedPacketTime = time.Now()
 	})
 
+	bot.AddHandler(c, func(ctx context.Context, p *client.KeepAlive) {
+		c.WritePacket(ctx, &server.KeepAlive{
+			ID: p.ID,
+		})
+	})
+	bot.AddHandler(c, func(ctx context.Context, p *client.Disconnect) {
+		fmt.Println(p.Reason.String())
+	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.SystemChatMessage) {
 		if !p.Overlay {
 			bot.PublishEvent(c, MessageEvent{Message: p.Content})

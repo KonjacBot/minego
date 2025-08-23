@@ -7,7 +7,7 @@ type LoginLoginCompression struct {
 	Threshold int32 `mc:"VarInt"`
 }
 
-func (LoginLoginCompression) PacketID() packetid.ClientboundPacketID {
+func (*LoginLoginCompression) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundLoginLoginCompression
 }
 

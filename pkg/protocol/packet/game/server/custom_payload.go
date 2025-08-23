@@ -8,7 +8,7 @@ type CustomPayload struct {
 	Data    []byte `mc:"ByteArray"`
 }
 
-func (CustomPayload) PacketID() packetid.ServerboundPacketID {
+func (*CustomPayload) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundCustomPayload
 }
 

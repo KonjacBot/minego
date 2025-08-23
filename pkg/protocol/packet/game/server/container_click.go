@@ -22,7 +22,7 @@ type ContainerClick struct {
 	CarriedSlot  slot.HashedSlot
 }
 
-func (ContainerClick) PacketID() packetid.ServerboundPacketID {
+func (*ContainerClick) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundContainerClick
 }
 

@@ -9,7 +9,7 @@ type MoveVehicle struct {
 	OnGround   bool
 }
 
-func (MoveVehicle) PacketID() packetid.ServerboundPacketID {
+func (*MoveVehicle) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundMoveVehicle
 }
 

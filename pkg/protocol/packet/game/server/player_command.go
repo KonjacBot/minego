@@ -9,7 +9,7 @@ type PlayerCommand struct {
 	JumpBoost int32 `mc:"VarInt"`
 }
 
-func (PlayerCommand) PacketID() packetid.ServerboundPacketID {
+func (*PlayerCommand) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlayerCommand
 }
 

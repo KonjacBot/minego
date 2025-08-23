@@ -9,7 +9,7 @@ type MovePlayerPosRot struct {
 	Flags       int8
 }
 
-func (MovePlayerPosRot) PacketID() packetid.ServerboundPacketID {
+func (*MovePlayerPosRot) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundMovePlayerPosRot
 }
 

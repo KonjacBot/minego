@@ -22,7 +22,7 @@ type ChatCommandSigned struct {
 	Checksum           int8
 }
 
-func (ChatCommandSigned) PacketID() packetid.ServerboundPacketID {
+func (*ChatCommandSigned) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChatCommandSigned
 }
 

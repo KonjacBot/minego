@@ -10,7 +10,7 @@ type ConfigDisconnect struct {
 	Reason chat.Message
 }
 
-func (ConfigDisconnect) PacketID() packetid.ClientboundPacketID {
+func (*ConfigDisconnect) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigDisconnect
 }
 

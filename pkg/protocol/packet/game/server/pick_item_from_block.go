@@ -11,7 +11,7 @@ type PickItemFromBlock struct {
 	IncludeData bool
 }
 
-func (PickItemFromBlock) PacketID() packetid.ServerboundPacketID {
+func (*PickItemFromBlock) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPickItemFromBlock
 }
 

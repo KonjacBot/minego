@@ -7,7 +7,7 @@ type SetCarriedItem struct {
 	Slot int16
 }
 
-func (SetCarriedItem) PacketID() packetid.ServerboundPacketID {
+func (*SetCarriedItem) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetCarriedItem
 }
 

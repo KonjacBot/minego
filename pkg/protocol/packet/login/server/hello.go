@@ -11,7 +11,7 @@ type LoginHello struct {
 	UUID uuid.UUID `mc:"UUID"`
 }
 
-func (LoginHello) PacketID() packetid.ServerboundPacketID {
+func (*LoginHello) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundLoginHello
 }
 

@@ -12,7 +12,7 @@ type SetTestBlock struct {
 	Message  string
 }
 
-func (SetTestBlock) PacketID() packetid.ServerboundPacketID {
+func (*SetTestBlock) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetTestBlock
 }
 

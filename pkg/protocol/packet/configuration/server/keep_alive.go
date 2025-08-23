@@ -7,7 +7,7 @@ type ConfigKeepAlive struct {
 	ID int64
 }
 
-func (ConfigKeepAlive) PacketID() packetid.ServerboundPacketID {
+func (*ConfigKeepAlive) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigKeepAlive
 }
 

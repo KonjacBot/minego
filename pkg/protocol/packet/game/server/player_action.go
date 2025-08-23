@@ -13,7 +13,7 @@ type PlayerAction struct {
 	Sequence int32 `mc:"VarInt"`
 }
 
-func (PlayerAction) PacketID() packetid.ServerboundPacketID {
+func (*PlayerAction) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlayerAction
 }
 

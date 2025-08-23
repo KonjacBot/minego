@@ -81,6 +81,14 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return temp, err
 	}
+
+	removeLens := int32(0)
+	temp, err = (*pk.VarInt)(&removeLens).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return temp, err
+	}
+
 	var id int32
 	for i := int32(0); i < addLens; i++ {
 		temp, err = (*pk.VarInt)(&id).ReadFrom(r)
@@ -95,13 +103,6 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		if err != nil {
 			return temp, err
 		}
-	}
-
-	removeLens := int32(0)
-	temp, err = (*pk.VarInt)(&removeLens).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return temp, err
 	}
 
 	for i := int32(0); i < removeLens; i++ {

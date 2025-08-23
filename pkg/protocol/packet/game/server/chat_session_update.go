@@ -12,7 +12,7 @@ type ChatSessionUpdate struct {
 	PublicKey user.PublicKey
 }
 
-func (ChatSessionUpdate) PacketID() packetid.ServerboundPacketID {
+func (*ChatSessionUpdate) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChatSessionUpdate
 }
 

@@ -7,7 +7,7 @@ type ClientCommand struct {
 	Action int32 `mc:"VarInt"`
 }
 
-func (ClientCommand) PacketID() packetid.ServerboundPacketID {
+func (*ClientCommand) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundClientCommand
 }
 

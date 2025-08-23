@@ -308,9 +308,32 @@ func (o *OfflineAuth) Authenticate(ctx context.Context, conn *net.Conn, content 
 }
 
 type KonjacAuth struct {
-	*OnlineAuth
 	UserCode string
-	Profile  Profile
+}
+
+func (k *KonjacAuth) Authenticate(ctx context.Context, conn *net.Conn, content client.LoginHello) error {
+	key, encodeStream, decodeStream := newSymmetricEncryption()
+
+	err := k.LoginAuth(ctx, content, key)
+	if err != nil {
+		return errors.Join(ErrEncrypt, fmt.Errorf("login auth fail: %w", err))
+	}
+
+	// Response with Encryption Key
+	var pkt pk.Packet
+	pkt, err = genEncryptionKeyResponse(key, content.PublicKey, content.VerifyToken)
+	if err != nil {
+		return fmt.Errorf("gen encryption key response fail: %v", err)
+	}
+
+	err = conn.WritePacket(pkt)
+	if err != nil {
+		return err
+	}
+
+	// Set Connection Encryption
+	conn.SetCipher(encodeStream, decodeStream)
+	return nil
 }
 
 func (k *KonjacAuth) LoginAuth(ctx context.Context, content client.LoginHello, key []byte) error {
@@ -322,7 +345,7 @@ func (k *KonjacAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 		ServerID        string `json:"serverId"`
 	}{
 		AccessToken:     k.UserCode,
-		SelectedProfile: "",
+		SelectedProfile: "-",
 		ServerID:        digest,
 	})
 
@@ -372,10 +395,19 @@ func (k *KonjacAuth) FetchProfile(ctx context.Context) *Profile {
 		return nil
 	}
 	defer resp.Body.Close()
-	_, _ = io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusNoContent {
+	data, err = io.ReadAll(resp.Body)
+	if resp.StatusCode >= 300 {
 		return nil
 	}
 
-	return nil
+	var profile struct {
+		SelectedProfile Profile `json:"selectedProfile"`
+	}
+
+	err = json.Unmarshal(data, &profile)
+	if err != nil {
+		return nil
+	}
+
+	return &profile.SelectedProfile
 }

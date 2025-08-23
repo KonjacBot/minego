@@ -9,7 +9,7 @@ type ConfigUpdateTags struct {
 	client.UpdateTags
 }
 
-func (ConfigUpdateTags) PacketID() packetid.ClientboundPacketID {
+func (*ConfigUpdateTags) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigUpdateTags
 }
 

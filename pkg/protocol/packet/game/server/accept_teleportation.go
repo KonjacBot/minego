@@ -7,7 +7,7 @@ type AcceptTeleportation struct {
 	TeleportID int32 `mc:"VarInt"`
 }
 
-func (AcceptTeleportation) PacketID() packetid.ServerboundPacketID {
+func (*AcceptTeleportation) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundAcceptTeleportation
 }
 

@@ -54,7 +54,7 @@ func (p PlayerInfoUpdate) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (p *PlayerInfoUpdate) ReadFrom(r io.Reader) (n int64, err error) {
-	bitset := pk.NewFixedBitSet(8)
+	bitset := pk.NewFixedBitSet(256)
 	n1, err := bitset.ReadFrom(r)
 	if err != nil {
 		return n1, err

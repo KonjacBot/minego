@@ -11,7 +11,7 @@ type ResourcePack struct {
 	Result int32     `mc:"VarInt"`
 }
 
-func (ResourcePack) PacketID() packetid.ServerboundPacketID {
+func (*ResourcePack) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundResourcePack
 }
 

@@ -7,7 +7,7 @@ type ContainerClose struct {
 	WindowID int32 `mc:"VarInt"`
 }
 
-func (ContainerClose) PacketID() packetid.ServerboundPacketID {
+func (*ContainerClose) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundContainerClose
 }
 

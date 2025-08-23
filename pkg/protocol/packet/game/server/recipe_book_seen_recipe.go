@@ -7,7 +7,7 @@ type RecipeBookSeenRecipe struct {
 	RecipeID int32 `mc:"VarInt"`
 }
 
-func (RecipeBookSeenRecipe) PacketID() packetid.ServerboundPacketID {
+func (*RecipeBookSeenRecipe) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundRecipeBookSeenRecipe
 }
 

@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type PlayerLoaded struct {
 }
 
-func (PlayerLoaded) PacketID() packetid.ServerboundPacketID {
+func (*PlayerLoaded) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlayerLoaded
 }
 

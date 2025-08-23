@@ -13,8 +13,9 @@ func PublishEvent(client Client, event Event) error {
 	return client.EventHandler().PublishEvent(event.EventID(), event)
 }
 
-func SubscribeEvent(client Client, event string, handler func(event Event) error) {
-	client.EventHandler().SubscribeEvent(event, func(data any) error {
-		return handler(data.(Event))
+func SubscribeEvent[T Event](client Client, handler func(event T) error) {
+	var t T
+	client.EventHandler().SubscribeEvent(t.EventID(), func(data any) error {
+		return handler(data.(T))
 	})
 }

@@ -9,7 +9,7 @@ type ConfigShowDialog struct {
 	client.ShowDialog
 }
 
-func (ConfigShowDialog) PacketID() packetid.ClientboundPacketID {
+func (*ConfigShowDialog) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigShowDialog
 }
 

@@ -8,7 +8,7 @@ type LoginKey struct {
 	VerifyToken  []byte `mc:"ByteArray"`
 }
 
-func (LoginKey) PacketID() packetid.ServerboundPacketID {
+func (*LoginKey) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundLoginKey
 }
 

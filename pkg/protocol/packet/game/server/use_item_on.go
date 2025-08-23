@@ -16,7 +16,7 @@ type UseItemOn struct {
 	Sequence                  int32 `mc:"VarInt"`
 }
 
-func (UseItemOn) PacketID() packetid.ServerboundPacketID {
+func (*UseItemOn) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundUseItemOn
 }
 

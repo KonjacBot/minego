@@ -94,7 +94,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 
 	// 建立連接
 	dialer := &mcnet.DefaultDialer
-	conn, err := dialer.DialMCContext(ctx, addr)
+	b.conn, err = dialer.DialMCContext(ctx, addr)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		host = options.FakeHost
 	}
 
-	err = b.handshake(conn, host, port)
+	err = b.handshake(host, port)
 	if err != nil {
 		return err
 	}
@@ -119,17 +119,18 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
-	b.conn = conn
 	b.connected = true
 
 	// 啟動封包處理 goroutine
-	go b.handlePackets(ctx)
-
 	return nil
 }
 
-func (b *botClient) handshake(conn *mcnet.Conn, host string, port uint64) error {
-	return conn.WritePacket(pk.Marshal(
+func (b *botClient) HandleGame(ctx context.Context) error {
+	return b.handlePackets(ctx)
+}
+
+func (b *botClient) handshake(host string, port uint64) error {
+	return b.conn.WritePacket(pk.Marshal(
 		0,
 		pk.VarInt(772),
 		pk.String(host),
@@ -138,21 +139,28 @@ func (b *botClient) handshake(conn *mcnet.Conn, host string, port uint64) error 
 	))
 }
 
-func (b *botClient) handlePackets(ctx context.Context) {
+func (b *botClient) handlePackets(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(15)
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		default:
 			var p pk.Packet
 			if err := b.conn.ReadPacket(&p); err != nil {
-				return
+				return err
 			}
-
-			creator, ok := client.ClientboundPackets[packetid.ClientboundPacketID(p.ID)]
+			pktID := packetid.ClientboundPacketID(p.ID)
+			if pktID == packetid.ClientboundStartConfiguration {
+				err := b.configuration()
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			creator, ok := client.ClientboundPackets[pktID]
 			if !ok {
 				continue
 			}
@@ -172,6 +180,7 @@ func (b *botClient) handlePackets(ctx context.Context) {
 func NewClient(options *bot.ClientOptions) bot.Client {
 	c := &botClient{
 		packetHandler: newPacketHandler(),
+		eventHandler:  NewEventHandler(),
 		authProvider:  options.AuthProvider,
 	}
 
@@ -180,7 +189,6 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 	}
 
 	c.world = world.NewWorld(c)
-	c.eventHandler = NewEventHandler()
 	c.inventory = inventory.NewManager(c)
 	c.player = player.New(c)
 

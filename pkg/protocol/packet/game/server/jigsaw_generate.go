@@ -12,7 +12,7 @@ type JigsawGenerate struct {
 	KeepJigsaws bool
 }
 
-func (JigsawGenerate) PacketID() packetid.ServerboundPacketID {
+func (*JigsawGenerate) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundJigsawGenerate
 }
 

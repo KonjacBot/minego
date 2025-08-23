@@ -9,7 +9,7 @@ type ConfigCustomPayload struct {
 	server.CustomPayload
 }
 
-func (ConfigCustomPayload) PacketID() packetid.ServerboundPacketID {
+func (*ConfigCustomPayload) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigCustomPayload
 }
 

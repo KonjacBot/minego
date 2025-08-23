@@ -9,7 +9,7 @@ type ConfigCookieResponse struct {
 	server.CookieResponse
 }
 
-func (ConfigCookieResponse) PacketID() packetid.ServerboundPacketID {
+func (*ConfigCookieResponse) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigCookieResponse
 }
 

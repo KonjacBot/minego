@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type ConfigClearDialog struct {
 }
 
-func (ConfigClearDialog) PacketID() packetid.ClientboundPacketID {
+func (*ConfigClearDialog) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigClearDialog
 }
 

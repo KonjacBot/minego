@@ -11,7 +11,7 @@ type EditBook struct {
 	Title string
 }
 
-func (EditBook) PacketID() packetid.ServerboundPacketID {
+func (*EditBook) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundEditBook
 }
 

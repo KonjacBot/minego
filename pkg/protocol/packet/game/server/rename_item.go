@@ -7,7 +7,7 @@ type RenameItem struct {
 	ItemName string
 }
 
-func (RenameItem) PacketID() packetid.ServerboundPacketID {
+func (*RenameItem) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundRenameItem
 }
 

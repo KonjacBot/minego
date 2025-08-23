@@ -9,7 +9,7 @@ type ConfigClientInformation struct {
 	server.ClientInformation
 }
 
-func (ConfigClientInformation) PacketID() packetid.ServerboundPacketID {
+func (*ConfigClientInformation) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigClientInformation
 }
 

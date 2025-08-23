@@ -9,7 +9,7 @@ type PlaceRecipe struct {
 	MakeAll  bool
 }
 
-func (PlaceRecipe) PacketID() packetid.ServerboundPacketID {
+func (*PlaceRecipe) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlaceRecipe
 }
 

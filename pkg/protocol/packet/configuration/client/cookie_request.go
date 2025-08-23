@@ -7,7 +7,7 @@ type ConfigCookieRequest struct {
 	Key string `mc:"Identifier"`
 }
 
-func (ConfigCookieRequest) PacketID() packetid.ClientboundPacketID {
+func (*ConfigCookieRequest) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigCookieRequest
 }
 

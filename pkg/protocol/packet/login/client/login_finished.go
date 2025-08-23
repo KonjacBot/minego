@@ -13,7 +13,7 @@ type LoginLoginFinished struct {
 	Properties []user.Property
 }
 
-func (LoginLoginFinished) PacketID() packetid.ClientboundPacketID {
+func (*LoginLoginFinished) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundLoginLoginFinished
 }
 

@@ -10,7 +10,7 @@ type TeleportToEntity struct {
 	TargetPlayer uuid.UUID `mc:"UUID"`
 }
 
-func (TeleportToEntity) PacketID() packetid.ServerboundPacketID {
+func (*TeleportToEntity) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundTeleportToEntity
 }
 

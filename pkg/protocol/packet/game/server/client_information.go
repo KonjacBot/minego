@@ -15,7 +15,7 @@ type ClientInformation struct {
 	ParticleStatus      int32 `mc:"VarInt"`
 }
 
-func (ClientInformation) PacketID() packetid.ServerboundPacketID {
+func (*ClientInformation) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundClientInformation
 }
 

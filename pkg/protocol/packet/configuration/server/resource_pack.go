@@ -9,7 +9,7 @@ type ConfigResourcePack struct {
 	server.ResourcePack
 }
 
-func (ConfigResourcePack) PacketID() packetid.ServerboundPacketID {
+func (*ConfigResourcePack) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigResourcePack
 }
 

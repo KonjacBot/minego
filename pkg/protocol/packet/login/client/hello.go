@@ -10,7 +10,7 @@ type LoginHello struct {
 	ShouldAuthenticate bool
 }
 
-func (LoginHello) PacketID() packetid.ClientboundPacketID {
+func (*LoginHello) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundLoginHello
 }
 

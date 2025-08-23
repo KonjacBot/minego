@@ -9,7 +9,7 @@ type ConfigResourcePackPop struct {
 	client.RemoveResourcePack
 }
 
-func (ConfigResourcePackPop) PacketID() packetid.ClientboundPacketID {
+func (*ConfigResourcePackPop) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigResourcePackPop
 }
 

@@ -7,7 +7,7 @@ type PingRequest struct {
 	payload int64
 }
 
-func (PingRequest) PacketID() packetid.ServerboundPacketID {
+func (*PingRequest) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPingRequest
 }
 

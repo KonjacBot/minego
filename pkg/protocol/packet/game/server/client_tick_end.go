@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type ClientTickEnd struct {
 }
 
-func (ClientTickEnd) PacketID() packetid.ServerboundPacketID {
+func (*ClientTickEnd) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundClientTickEnd
 }
 

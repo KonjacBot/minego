@@ -10,7 +10,7 @@ type CookieResponse struct {
 	Payload []int8 `mc:"Byte"`
 }
 
-func (CookieResponse) PacketID() packetid.ServerboundPacketID {
+func (*CookieResponse) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundCookieResponse
 }
 

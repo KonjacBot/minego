@@ -11,7 +11,7 @@ type SetCreativeModeSlot struct {
 	ClickedItem slot.Slot
 }
 
-func (SetCreativeModeSlot) PacketID() packetid.ServerboundPacketID {
+func (*SetCreativeModeSlot) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetCreativeModeSlot
 }
 

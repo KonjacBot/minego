@@ -13,7 +13,7 @@ type SetCommandBlock struct {
 	Flags    int8
 }
 
-func (SetCommandBlock) PacketID() packetid.ServerboundPacketID {
+func (*SetCommandBlock) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetCommandBlock
 }
 

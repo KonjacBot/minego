@@ -22,8 +22,7 @@ import (
 type World struct {
 	c bot.Client
 
-	Columns map[level.ChunkPos]*level.Chunk
-
+	columns  map[level.ChunkPos]*level.Chunk
 	entities map[int32]*Entity
 
 	entityLock sync.Mutex
@@ -32,30 +31,34 @@ type World struct {
 
 func NewWorld(c bot.Client) *World {
 	w := &World{
-		c:       c,
-		Columns: make(map[level.ChunkPos]*level.Chunk),
+		c:        c,
+		columns:  make(map[level.ChunkPos]*level.Chunk),
+		entities: make(map[int32]*Entity),
 	}
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.LevelChunkWithLight) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
-		w.Columns[p.Pos] = p.Data
+		w.columns[p.Pos] = p.Data
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.ForgetLevelChunk) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
-		delete(w.Columns, p.Pos)
+		delete(w.columns, p.Pos)
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
-		w.Columns = make(map[level.ChunkPos]*level.Chunk)
+		w.columns = make(map[level.ChunkPos]*level.Chunk)
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.AddEntity) {
+		w.entityLock.Lock()
+		defer w.entityLock.Unlock()
+
 		w.entities[p.ID] = &Entity{
 			id:         p.ID,
 			entityUUID: p.UUID,
@@ -137,7 +140,7 @@ func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
 	chunkZ := pos[2] >> 4
 	pos2d := level.ChunkPos{chunkX, chunkZ}
 
-	chunk, ok := w.Columns[pos2d]
+	chunk, ok := w.columns[pos2d]
 	if !ok {
 		return nil, errors.New("chunk not loaded")
 	}
@@ -161,7 +164,7 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 	chunkZ := pos[2] >> 4
 	pos2d := level.ChunkPos{chunkX, chunkZ}
 
-	chunk, ok := w.Columns[pos2d]
+	chunk, ok := w.columns[pos2d]
 	if !ok {
 		return errors.New("chunk not loaded")
 	}

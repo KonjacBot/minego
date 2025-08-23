@@ -9,7 +9,7 @@ type ConfigServerLinks struct {
 	client.ServerLinks
 }
 
-func (ConfigServerLinks) PacketID() packetid.ClientboundPacketID {
+func (*ConfigServerLinks) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigServerLinks
 }
 

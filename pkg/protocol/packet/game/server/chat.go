@@ -18,7 +18,7 @@ type Chat struct {
 	Checksum     int8
 }
 
-func (Chat) PacketID() packetid.ServerboundPacketID {
+func (*Chat) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChat
 }
 

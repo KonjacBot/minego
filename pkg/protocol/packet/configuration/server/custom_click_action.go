@@ -11,7 +11,7 @@ type ConfigCustomClickAction struct {
 	Data   nbt.RawMessage `mc:"NBT"`
 }
 
-func (ConfigCustomClickAction) PacketID() packetid.ServerboundPacketID {
+func (*ConfigCustomClickAction) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigCustomClickAction
 }
 

@@ -9,7 +9,7 @@ type UseItem struct {
 	Yaw, Pitch float32
 }
 
-func (UseItem) PacketID() packetid.ServerboundPacketID {
+func (*UseItem) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundUseItem
 }
 

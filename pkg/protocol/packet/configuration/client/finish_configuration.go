@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type ConfigFinishConfiguration struct {
 }
 
-func (ConfigFinishConfiguration) PacketID() packetid.ClientboundPacketID {
+func (*ConfigFinishConfiguration) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigFinishConfiguration
 }
 

@@ -7,7 +7,7 @@ type PlayerInput struct {
 	Flags uint8
 }
 
-func (PlayerInput) PacketID() packetid.ServerboundPacketID {
+func (*PlayerInput) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlayerInput
 }
 

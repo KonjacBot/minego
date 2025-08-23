@@ -9,7 +9,7 @@ type SeenAdvancements struct {
 	TabID string `mc:"Identifier"`
 }
 
-func (SeenAdvancements) PacketID() packetid.ServerboundPacketID {
+func (*SeenAdvancements) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSeenAdvancements
 }
 

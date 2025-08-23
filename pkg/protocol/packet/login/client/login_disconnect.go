@@ -10,7 +10,7 @@ type LoginLoginDisconnect struct {
 	Reason chat.JsonMessage
 }
 
-func (LoginLoginDisconnect) PacketID() packetid.ClientboundPacketID {
+func (*LoginLoginDisconnect) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundLoginLoginDisconnect
 }
 

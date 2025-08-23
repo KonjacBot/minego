@@ -7,7 +7,7 @@ type ChangeGameMode struct {
 	GameMode int32 `mc:"VarInt"`
 }
 
-func (ChangeGameMode) PacketID() packetid.ServerboundPacketID {
+func (*ChangeGameMode) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChangeGameMode
 }
 

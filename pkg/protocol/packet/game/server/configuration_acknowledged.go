@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type ConfigurationAcknowledged struct {
 }
 
-func (ConfigurationAcknowledged) PacketID() packetid.ServerboundPacketID {
+func (*ConfigurationAcknowledged) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigurationAcknowledged
 }
 

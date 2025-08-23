@@ -7,7 +7,7 @@ type ChatCommand struct {
 	Command string
 }
 
-func (ChatCommand) PacketID() packetid.ServerboundPacketID {
+func (*ChatCommand) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChatCommand
 }
 

@@ -22,7 +22,7 @@ type TestInstanceBlockAction struct {
 	ErrorMessage chat.Message
 }
 
-func (TestInstanceBlockAction) PacketID() packetid.ServerboundPacketID {
+func (*TestInstanceBlockAction) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundTestInstanceBlockAction
 }
 

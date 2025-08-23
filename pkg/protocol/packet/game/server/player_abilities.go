@@ -7,7 +7,7 @@ type PlayerAbilities struct {
 	Flags int8
 }
 
-func (PlayerAbilities) PacketID() packetid.ServerboundPacketID {
+func (*PlayerAbilities) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPlayerAbilities
 }
 

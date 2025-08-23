@@ -7,7 +7,7 @@ type LockDifficulty struct {
 	Locked bool
 }
 
-func (LockDifficulty) PacketID() packetid.ServerboundPacketID {
+func (*LockDifficulty) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundLockDifficulty
 }
 

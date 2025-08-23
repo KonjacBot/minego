@@ -9,7 +9,7 @@ type ContainerSlotStateChanged struct {
 	State    bool
 }
 
-func (ContainerSlotStateChanged) PacketID() packetid.ServerboundPacketID {
+func (*ContainerSlotStateChanged) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundContainerSlotStateChanged
 }
 

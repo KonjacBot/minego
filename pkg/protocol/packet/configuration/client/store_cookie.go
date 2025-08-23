@@ -8,7 +8,7 @@ type ConfigStoreCookie struct {
 	Payload []int8
 }
 
-func (ConfigStoreCookie) PacketID() packetid.ClientboundPacketID {
+func (*ConfigStoreCookie) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigStoreCookie
 }
 

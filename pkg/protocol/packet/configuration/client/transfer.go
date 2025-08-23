@@ -8,7 +8,7 @@ type ConfigTransfer struct {
 	Port int32 `mc:"VarInt"`
 }
 
-func (ConfigTransfer) PacketID() packetid.ClientboundPacketID {
+func (*ConfigTransfer) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigTransfer
 }
 

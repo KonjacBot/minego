@@ -10,7 +10,7 @@ type ConfigSelectKnownPacks struct {
 	Packs []client.KnownPack
 }
 
-func (ConfigSelectKnownPacks) PacketID() packetid.ServerboundPacketID {
+func (*ConfigSelectKnownPacks) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigSelectKnownPacks
 }
 

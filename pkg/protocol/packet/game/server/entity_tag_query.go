@@ -8,7 +8,7 @@ type EntityTagQuery struct {
 	EntityID      int32 `mc:"VarInt"`
 }
 
-func (EntityTagQuery) PacketID() packetid.ServerboundPacketID {
+func (*EntityTagQuery) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundEntityTagQuery
 }
 

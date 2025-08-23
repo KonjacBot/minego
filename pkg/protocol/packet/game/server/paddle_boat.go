@@ -7,7 +7,7 @@ type PaddleBoat struct {
 	LeftTurning, RightTurning bool
 }
 
-func (PaddleBoat) PacketID() packetid.ServerboundPacketID {
+func (*PaddleBoat) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPaddleBoat
 }
 

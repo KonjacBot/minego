@@ -17,7 +17,7 @@ type SetJigsawBlock struct {
 	PlacementPriority int32 `mc:"VarInt"`
 }
 
-func (SetJigsawBlock) PacketID() packetid.ServerboundPacketID {
+func (*SetJigsawBlock) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetJigsawBlock
 }
 

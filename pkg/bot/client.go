@@ -9,6 +9,7 @@ import (
 
 type Client interface {
 	Connect(ctx context.Context, addr string, options *ConnectOptions) error
+	HandleGame(ctx context.Context) error
 	Close(ctx context.Context) error
 	IsConnected() bool
 	WritePacket(ctx context.Context, packet server.ServerboundPacket) error

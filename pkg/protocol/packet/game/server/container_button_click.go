@@ -8,7 +8,7 @@ type ContainerButtonClick struct {
 	ButtonID int32 `mc:"VarInt"`
 }
 
-func (ContainerButtonClick) PacketID() packetid.ServerboundPacketID {
+func (*ContainerButtonClick) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundContainerButtonClick
 }
 

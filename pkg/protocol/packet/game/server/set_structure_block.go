@@ -21,7 +21,7 @@ type SetStructureBlock struct {
 	Flags                     int8
 }
 
-func (SetStructureBlock) PacketID() packetid.ServerboundPacketID {
+func (*SetStructureBlock) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetStructureBlock
 }
 

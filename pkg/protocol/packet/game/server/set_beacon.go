@@ -12,7 +12,7 @@ type SetBeacon struct {
 	SecondaryEffect int32 `mc:"VarInt"`
 }
 
-func (SetBeacon) PacketID() packetid.ServerboundPacketID {
+func (*SetBeacon) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetBeacon
 }
 

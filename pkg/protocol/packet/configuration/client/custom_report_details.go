@@ -9,7 +9,7 @@ type ConfigCustomReportDetails struct {
 	client.CustomReportDetails
 }
 
-func (ConfigCustomReportDetails) PacketID() packetid.ClientboundPacketID {
+func (*ConfigCustomReportDetails) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigCustomReportDetails
 }
 

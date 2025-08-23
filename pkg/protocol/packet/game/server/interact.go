@@ -17,7 +17,7 @@ type Interact struct {
 	SneakKeyPressed bool
 }
 
-func (Interact) PacketID() packetid.ServerboundPacketID {
+func (*Interact) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundInteract
 }
 

@@ -7,7 +7,7 @@ type KeepAlive struct {
 	ID int64
 }
 
-func (KeepAlive) PacketID() packetid.ServerboundPacketID {
+func (*KeepAlive) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundKeepAlive
 }
 

@@ -12,7 +12,7 @@ type SignUpdate struct {
 	Line1, Line2, Line3, Line4 string
 }
 
-func (SignUpdate) PacketID() packetid.ServerboundPacketID {
+func (*SignUpdate) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSignUpdate
 }
 

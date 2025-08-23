@@ -7,7 +7,7 @@ type DebugSampleSubscription struct {
 	SampleType int32 `mc:"VarInt"`
 }
 
-func (DebugSampleSubscription) PacketID() packetid.ServerboundPacketID {
+func (*DebugSampleSubscription) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundDebugSampleSubscription
 }
 

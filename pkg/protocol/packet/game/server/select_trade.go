@@ -7,7 +7,7 @@ type SelectTrade struct {
 	SelectedSlot int32 `mc:"VarInt"`
 }
 
-func (SelectTrade) PacketID() packetid.ServerboundPacketID {
+func (*SelectTrade) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSelectTrade
 }
 

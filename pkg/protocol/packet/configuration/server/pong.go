@@ -7,7 +7,7 @@ type ConfigPong struct {
 	ID int32
 }
 
-func (ConfigPong) PacketID() packetid.ServerboundPacketID {
+func (*ConfigPong) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundConfigPong
 }
 

@@ -7,7 +7,7 @@ type ConfigUpdateEnabledFeatures struct {
 	Features []string `mc:"Identifier"`
 }
 
-func (ConfigUpdateEnabledFeatures) PacketID() packetid.ClientboundPacketID {
+func (*ConfigUpdateEnabledFeatures) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigUpdateEnabledFeatures
 }
 

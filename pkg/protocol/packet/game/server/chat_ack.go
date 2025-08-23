@@ -7,7 +7,7 @@ type ChatAck struct {
 	MessageCount int32 `mc:"VarInt"`
 }
 
-func (ChatAck) PacketID() packetid.ServerboundPacketID {
+func (*ChatAck) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChatAck
 }
 

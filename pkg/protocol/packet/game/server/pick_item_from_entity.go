@@ -8,7 +8,7 @@ type PickItemFromEntity struct {
 	IncludeData bool
 }
 
-func (PickItemFromEntity) PacketID() packetid.ServerboundPacketID {
+func (*PickItemFromEntity) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPickItemFromEntity
 }
 

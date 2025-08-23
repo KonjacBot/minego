@@ -1,6 +1,8 @@
 package slot
 
-import pk "github.com/Tnze/go-mc/net/packet"
+import (
+	pk "github.com/Tnze/go-mc/net/packet"
+)
 
 type Component interface {
 	Type() ComponentID

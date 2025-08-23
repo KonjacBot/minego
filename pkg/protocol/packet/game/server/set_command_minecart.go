@@ -9,7 +9,7 @@ type SetCommandMinecart struct {
 	TrackOutput bool
 }
 
-func (SetCommandMinecart) PacketID() packetid.ServerboundPacketID {
+func (*SetCommandMinecart) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundSetCommandMinecart
 }
 

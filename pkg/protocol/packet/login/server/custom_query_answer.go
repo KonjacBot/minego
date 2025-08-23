@@ -10,7 +10,7 @@ type LoginCustomQueryAnswer struct {
 	Data []byte `mc:"ByteArray"`
 }
 
-func (LoginCustomQueryAnswer) PacketID() packetid.ServerboundPacketID {
+func (*LoginCustomQueryAnswer) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundLoginCustomQueryAnswer
 }
 

@@ -8,7 +8,7 @@ type CommandSuggestion struct {
 	Text          string
 }
 
-func (CommandSuggestion) PacketID() packetid.ServerboundPacketID {
+func (*CommandSuggestion) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundCommandSuggestion
 }
 

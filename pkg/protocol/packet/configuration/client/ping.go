@@ -7,7 +7,7 @@ type ConfigPing struct {
 	ID int32
 }
 
-func (ConfigPing) PacketID() packetid.ClientboundPacketID {
+func (*ConfigPing) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundConfigPing
 }
 

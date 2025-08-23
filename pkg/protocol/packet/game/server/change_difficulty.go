@@ -7,7 +7,7 @@ type ChangeDifficulty struct {
 	Difficulty uint8
 }
 
-func (ChangeDifficulty) PacketID() packetid.ServerboundPacketID {
+func (*ChangeDifficulty) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundChangeDifficulty
 }
 

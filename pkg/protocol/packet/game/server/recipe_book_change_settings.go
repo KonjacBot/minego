@@ -9,7 +9,7 @@ type RecipeBookChangeSettings struct {
 	FilterActive bool
 }
 
-func (RecipeBookChangeSettings) PacketID() packetid.ServerboundPacketID {
+func (*RecipeBookChangeSettings) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundRecipeBookChangeSettings
 }
 

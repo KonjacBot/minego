@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type Pong struct {
 }
 
-func (Pong) PacketID() packetid.ServerboundPacketID {
+func (*Pong) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundPong
 }
 

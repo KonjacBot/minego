@@ -6,7 +6,7 @@ import "github.com/Tnze/go-mc/data/packetid"
 type LoginLoginAcknowledged struct {
 }
 
-func (LoginLoginAcknowledged) PacketID() packetid.ServerboundPacketID {
+func (*LoginLoginAcknowledged) PacketID() packetid.ServerboundPacketID {
 	return packetid.ServerboundLoginLoginAcknowledged
 }
 
