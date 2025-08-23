@@ -10,6 +10,7 @@ import (
 	"git.konjactw.dev/patyhank/minego/pkg/auth"
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/game/inventory"
+	"git.konjactw.dev/patyhank/minego/pkg/game/player"
 	"git.konjactw.dev/patyhank/minego/pkg/game/world"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
@@ -23,10 +24,16 @@ type botClient struct {
 	conn          *mcnet.Conn
 	packetHandler bot.PacketHandler
 	eventHandler  bot.EventHandler
-	world         bot.World
-	inventory     *inventory.Manager
 	connected     bool
 	authProvider  auth.Provider
+
+	inventory *inventory.Manager
+	world     *world.World
+	player    *player.Player
+}
+
+func (b *botClient) Player() bot.Player {
+	return b.player
 }
 
 func (b *botClient) Close(ctx context.Context) error {
@@ -175,6 +182,7 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 	c.world = world.NewWorld(c)
 	c.eventHandler = NewEventHandler()
 	c.inventory = inventory.NewManager(c)
+	c.player = player.New(c)
 
 	return c
 }
