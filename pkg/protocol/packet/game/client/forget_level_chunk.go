@@ -2,18 +2,14 @@ package client
 
 import (
 	"github.com/Tnze/go-mc/data/packetid"
+	"github.com/Tnze/go-mc/level"
 )
 
 var _ ClientboundPacket = (*ForgetLevelChunk)(nil)
 
 //codec:gen
-type ChunkPos struct {
-	X, Z int32
-}
-
-//codec:gen
 type ForgetLevelChunk struct {
-	Pos ChunkPos
+	Pos level.ChunkPos
 }
 
 func (ForgetLevelChunk) ClientboundPacketID() packetid.ClientboundPacketID {

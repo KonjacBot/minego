@@ -3,12 +3,13 @@ package slot
 import (
 	"io"
 
+	"github.com/Tnze/go-mc/level/item"
 	pk "github.com/Tnze/go-mc/net/packet"
 )
 
 type Slot struct {
 	Count           int32
-	ItemID          int32
+	ItemID          item.ID
 	AddComponent    []Component
 	RemoveComponent []ComponentID
 }
@@ -64,11 +65,15 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		return temp, err
 	}
 	n += temp
-	temp, err = (*pk.VarInt)(&s.ItemID).ReadFrom(r)
+
+	var itemID int32
+	temp, err = (*pk.VarInt)(&itemID).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return temp, err
 	}
+
+	s.ItemID = item.ID(itemID)
 
 	addLens := int32(0)
 	temp, err = (*pk.VarInt)(&addLens).ReadFrom(r)

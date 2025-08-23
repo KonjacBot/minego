@@ -1,0 +1,180 @@
+package client
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"net"
+	"strconv"
+
+	"git.konjactw.dev/patyhank/minego/pkg/auth"
+	"git.konjactw.dev/patyhank/minego/pkg/bot"
+	"git.konjactw.dev/patyhank/minego/pkg/game/inventory"
+	"git.konjactw.dev/patyhank/minego/pkg/game/world"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
+	"github.com/Tnze/go-mc/data/packetid"
+	mcnet "github.com/Tnze/go-mc/net"
+	pk "github.com/Tnze/go-mc/net/packet"
+	"golang.org/x/sync/errgroup"
+)
+
+type botClient struct {
+	conn          *mcnet.Conn
+	packetHandler bot.PacketHandler
+	eventHandler  bot.EventHandler
+	world         bot.World
+	inventory     *inventory.Manager
+	connected     bool
+	authProvider  auth.Provider
+}
+
+func (b *botClient) Close(ctx context.Context) error {
+	if err := b.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *botClient) IsConnected() bool {
+	return b.connected
+}
+
+func (b *botClient) WritePacket(ctx context.Context, packet server.ServerboundPacket) error {
+	err := b.conn.WritePacket(pk.Marshal(packet.PacketID(), packet))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *botClient) PacketHandler() bot.PacketHandler {
+	return b.packetHandler
+}
+
+func (b *botClient) EventHandler() bot.EventHandler {
+	return b.eventHandler
+}
+
+func (b *botClient) World() bot.World {
+	return b.world
+}
+
+func (b *botClient) Inventory() bot.InventoryHandler {
+	return b.inventory
+}
+
+func (b *botClient) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
+	// 套用 go-mc 的連接邏輯
+	host, portStr, err := net.SplitHostPort(addr)
+	var port uint64
+	if err != nil {
+		var addrErr *net.AddrError
+		const missingPort = "missing port in address"
+		if errors.As(err, &addrErr) && addrErr.Err == missingPort {
+			host = addr
+			port = 25565
+		} else {
+			return err
+		}
+	} else {
+		port, err = strconv.ParseUint(portStr, 0, 16)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 建立連接
+	dialer := &mcnet.DefaultDialer
+	conn, err := dialer.DialMCContext(ctx, addr)
+	if err != nil {
+		return err
+	}
+
+	// 執行握手
+	if options != nil && options.FakeHost != "" {
+		host = options.FakeHost
+	}
+
+	err = b.handshake(conn, host, port)
+	if err != nil {
+		return err
+	}
+
+	err = b.login()
+	if err != nil {
+		return err
+	}
+
+	err = b.configuration()
+	if err != nil {
+		return err
+	}
+
+	b.conn = conn
+	b.connected = true
+
+	// 啟動封包處理 goroutine
+	go b.handlePackets(ctx)
+
+	return nil
+}
+
+func (b *botClient) handshake(conn *mcnet.Conn, host string, port uint64) error {
+	return conn.WritePacket(pk.Marshal(
+		0,
+		pk.VarInt(772),
+		pk.String(host),
+		pk.UnsignedShort(port),
+		pk.VarInt(2), // to game state
+	))
+}
+
+func (b *botClient) handlePackets(ctx context.Context) {
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(15)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			var p pk.Packet
+			if err := b.conn.ReadPacket(&p); err != nil {
+				return
+			}
+
+			creator, ok := client.ClientboundPackets[packetid.ClientboundPacketID(p.ID)]
+			if !ok {
+				continue
+			}
+			pkt := creator()
+			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
+			if err != nil {
+				continue
+			}
+			group.Go(func() error {
+				b.packetHandler.HandlePacket(ctx, pkt)
+				return nil
+			})
+		}
+	}
+}
+
+func NewClient(options *bot.ClientOptions) bot.Client {
+	c := &botClient{
+		packetHandler: newPacketHandler(),
+		authProvider:  options.AuthProvider,
+	}
+
+	if options.AuthProvider == nil {
+		c.authProvider = &auth.OfflineAuth{Username: "Steve"}
+	}
+
+	c.world = world.NewWorld(c)
+	c.eventHandler = NewEventHandler()
+	c.inventory = inventory.NewManager(c)
+
+	return c
+}

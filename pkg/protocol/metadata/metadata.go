@@ -46,13 +46,13 @@ const (
 	MetadataQuaternion
 )
 
-type entityMetadata interface {
+type Metadata interface {
 	EntityMetadataType() MetadataType
 	pk.Field
 }
 
 type EntityMetadata struct {
-	Data map[uint8]entityMetadata
+	Data map[uint8]Metadata
 }
 
 func (m EntityMetadata) WriteTo(w io.Writer) (int64, error) {
@@ -114,44 +114,44 @@ func (m *EntityMetadata) ReadFrom(r io.Reader) (int64, error) {
 	return n, nil
 }
 
-type metadataCreator func() entityMetadata
+type metadataCreator func() Metadata
 
 var metadataType = map[MetadataType]metadataCreator{}
 
 func init() {
-	metadataType[MetadataByte] = func() entityMetadata { return &Byte{} }
-	metadataType[MetadataVarInt] = func() entityMetadata { return &VarInt{} }
-	metadataType[MetadataVarLong] = func() entityMetadata { return &VarLong{} }
-	metadataType[MetadataFloat] = func() entityMetadata { return &Float{} }
-	metadataType[MetadataString] = func() entityMetadata { return &String{} }
-	metadataType[MetadataChat] = func() entityMetadata { return &Chat{} }
-	metadataType[MetadataOptChat] = func() entityMetadata { return &OptChat{} }
-	metadataType[MetadataSlot] = func() entityMetadata { return &Slot{} }
-	metadataType[MetadataBoolean] = func() entityMetadata { return &Boolean{} }
-	metadataType[MetadataRotation] = func() entityMetadata { return &Rotation{} }
-	metadataType[MetadataPosition] = func() entityMetadata { return &Position{} }
-	metadataType[MetadataOptPosition] = func() entityMetadata { return &OptPosition{} }
-	metadataType[MetadataDirection] = func() entityMetadata { return &Direction{} }
-	metadataType[MetadataOptLivingEntity] = func() entityMetadata { return &OptLivingEntity{} }
-	metadataType[MetadataBlockState] = func() entityMetadata { return &BlockState{} }
-	metadataType[MetadataOptBlockState] = func() entityMetadata { return &OptBlockState{} }
-	metadataType[MetadataNBT] = func() entityMetadata { return &NBT{} }
-	metadataType[MetadataParticle] = func() entityMetadata { return &Particle{} }
-	metadataType[MetadataParticles] = func() entityMetadata { return &Particles{} }
-	metadataType[MetadataVillagerData] = func() entityMetadata { return &VillagerData{} }
-	metadataType[MetadataOptVarInt] = func() entityMetadata { return &OptVarInt{} }
-	metadataType[MetadataPose] = func() entityMetadata { return &Pose{} }
-	metadataType[MetadataCatVariant] = func() entityMetadata { return &CatVariant{} }
-	metadataType[MetadataCowVariant] = func() entityMetadata { return &CowVariant{} }
-	metadataType[MetadataWolfVariant] = func() entityMetadata { return &WolfVariant{} }
-	metadataType[MetadataWolfSoundVariant] = func() entityMetadata { return &WolfSoundVariant{} }
-	metadataType[MetadataFrogVariant] = func() entityMetadata { return &FrogVariant{} }
-	metadataType[MetadataPigVariant] = func() entityMetadata { return &PigVariant{} }
-	metadataType[MetadataChickenVariant] = func() entityMetadata { return &ChickenVariant{} }
-	metadataType[MetadataOptGlobalPosition] = func() entityMetadata { return &OptGlobalPosition{} }
-	metadataType[MetadataPaintingVariant] = func() entityMetadata { return &PaintingVariant{} }
-	metadataType[MetadataSnifferVariant] = func() entityMetadata { return &SnifferVariant{} }
-	metadataType[MetadataArmadilloState] = func() entityMetadata { return &ArmadilloState{} }
-	metadataType[MetadataVector3] = func() entityMetadata { return &Vector3{} }
-	metadataType[MetadataQuaternion] = func() entityMetadata { return &Quaternion{} }
+	metadataType[MetadataByte] = func() Metadata { return &Byte{} }
+	metadataType[MetadataVarInt] = func() Metadata { return &VarInt{} }
+	metadataType[MetadataVarLong] = func() Metadata { return &VarLong{} }
+	metadataType[MetadataFloat] = func() Metadata { return &Float{} }
+	metadataType[MetadataString] = func() Metadata { return &String{} }
+	metadataType[MetadataChat] = func() Metadata { return &Chat{} }
+	metadataType[MetadataOptChat] = func() Metadata { return &OptChat{} }
+	metadataType[MetadataSlot] = func() Metadata { return &Slot{} }
+	metadataType[MetadataBoolean] = func() Metadata { return &Boolean{} }
+	metadataType[MetadataRotation] = func() Metadata { return &Rotation{} }
+	metadataType[MetadataPosition] = func() Metadata { return &Position{} }
+	metadataType[MetadataOptPosition] = func() Metadata { return &OptPosition{} }
+	metadataType[MetadataDirection] = func() Metadata { return &Direction{} }
+	metadataType[MetadataOptLivingEntity] = func() Metadata { return &OptLivingEntity{} }
+	metadataType[MetadataBlockState] = func() Metadata { return &BlockState{} }
+	metadataType[MetadataOptBlockState] = func() Metadata { return &OptBlockState{} }
+	metadataType[MetadataNBT] = func() Metadata { return &NBT{} }
+	metadataType[MetadataParticle] = func() Metadata { return &Particle{} }
+	metadataType[MetadataParticles] = func() Metadata { return &Particles{} }
+	metadataType[MetadataVillagerData] = func() Metadata { return &VillagerData{} }
+	metadataType[MetadataOptVarInt] = func() Metadata { return &OptVarInt{} }
+	metadataType[MetadataPose] = func() Metadata { return &Pose{} }
+	metadataType[MetadataCatVariant] = func() Metadata { return &CatVariant{} }
+	metadataType[MetadataCowVariant] = func() Metadata { return &CowVariant{} }
+	metadataType[MetadataWolfVariant] = func() Metadata { return &WolfVariant{} }
+	metadataType[MetadataWolfSoundVariant] = func() Metadata { return &WolfSoundVariant{} }
+	metadataType[MetadataFrogVariant] = func() Metadata { return &FrogVariant{} }
+	metadataType[MetadataPigVariant] = func() Metadata { return &PigVariant{} }
+	metadataType[MetadataChickenVariant] = func() Metadata { return &ChickenVariant{} }
+	metadataType[MetadataOptGlobalPosition] = func() Metadata { return &OptGlobalPosition{} }
+	metadataType[MetadataPaintingVariant] = func() Metadata { return &PaintingVariant{} }
+	metadataType[MetadataSnifferVariant] = func() Metadata { return &SnifferVariant{} }
+	metadataType[MetadataArmadilloState] = func() Metadata { return &ArmadilloState{} }
+	metadataType[MetadataVector3] = func() Metadata { return &Vector3{} }
+	metadataType[MetadataQuaternion] = func() Metadata { return &Quaternion{} }
 }
