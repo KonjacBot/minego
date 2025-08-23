@@ -1,7 +1,6 @@
 package slot
 
 import (
-	"fmt"
 	"io"
 
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
@@ -79,7 +78,6 @@ func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		s.SlotDisplay = &composite
 	}
-	fmt.Println(s.SlotDisplay)
 	return
 }
 
