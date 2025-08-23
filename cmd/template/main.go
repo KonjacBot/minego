@@ -19,7 +19,7 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	err := c.Connect(ctx, "mc.konjactw.dev", nil)
+	err := c.Connect(ctx, "mcfallout.net", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -33,5 +33,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 }

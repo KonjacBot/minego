@@ -13,4 +13,4 @@ require (
 
 require github.com/go-gl/mathgl v1.2.0
 
-replace github.com/Tnze/go-mc v1.20.3-0.20241224032005-539b4a3a7f03 => git.konjactw.dev/patyhank/go-mc v1.20.3-0.20250619063151-133e3fab4ac2
+replace github.com/Tnze/go-mc v1.20.3-0.20241224032005-539b4a3a7f03 => git.konjactw.dev/falloutBot/go-mc v0.0.0-20250823092154-f0bb92bdb98a
