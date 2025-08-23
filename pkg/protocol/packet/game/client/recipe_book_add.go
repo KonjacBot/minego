@@ -18,7 +18,7 @@ type Recipe struct {
 	CategoryID     int32 `mc:"VarInt"`
 	HasIngredients bool
 	//opt:optional:HasIngredients
-	Ingredients RecipeIngredients
+	Ingredients []pk.IDSet
 	Flags       int8
 }
 

@@ -72,12 +72,12 @@ func (c *SmithingTrim) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (&c.Trim).ReadFrom(r)
+	temp, err = (&c.Material).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (&c.Remainder).ReadFrom(r)
+	temp, err = (*packet.VarInt)(&c.Pattern).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -92,12 +92,12 @@ func (c SmithingTrim) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (&c.Trim).WriteTo(w)
+	temp, err = (&c.Material).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (&c.Remainder).WriteTo(w)
+	temp, err = (*packet.VarInt)(&c.Pattern).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

@@ -1,6 +1,7 @@
 package slot
 
 import (
+	"fmt"
 	"io"
 
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
@@ -11,6 +12,7 @@ type DisplayType int32
 
 const (
 	DisplayEmpty DisplayType = iota
+	DisplayAnyFuel
 	DisplayItem
 	DisplayItemStack
 	DisplayTag
@@ -38,37 +40,46 @@ func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
 	switch displayType {
 	case DisplayEmpty:
 		return
+	case DisplayAnyFuel:
+		return
 	case DisplayItem:
 		var item Item
 		if _, err = item.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &item
 	case DisplayItemStack:
 		var itemStack ItemStack
 		if _, err = itemStack.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &itemStack
 	case DisplayTag:
 		var tag Tag
 		if _, err = tag.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &tag
 	case DisplaySmithingTrim:
 		var trim SmithingTrim
 		if _, err = trim.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &trim
 	case DisplayWithRemainder:
 		var remainder WithRemainder
 		if _, err = remainder.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &remainder
 	case DisplayComposite:
 		var composite Composite
 		if _, err = composite.ReadFrom(r); err != nil {
 			return
 		}
+		s.SlotDisplay = &composite
 	}
+	fmt.Println(s.SlotDisplay)
 	return
 }
 
@@ -106,9 +117,9 @@ func (i Tag) SlotDisplayType() DisplayType {
 
 //codec:gen
 type SmithingTrim struct {
-	Base      Display
-	Trim      Display
-	Remainder Display
+	Base     Display
+	Material Display
+	Pattern  int32 `mc:"VarInt"`
 }
 
 func (i SmithingTrim) SlotDisplayType() DisplayType {

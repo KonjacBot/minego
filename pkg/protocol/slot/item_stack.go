@@ -103,6 +103,7 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		if err != nil {
 			return temp, err
 		}
+		s.AddComponent = append(s.AddComponent, c)
 	}
 
 	for i := int32(0); i < removeLens; i++ {
@@ -111,7 +112,7 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		if err != nil {
 			return temp, err
 		}
+		s.RemoveComponent = append(s.RemoveComponent, ComponentID(id))
 	}
-
 	return n, nil
 }
