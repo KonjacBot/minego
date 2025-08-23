@@ -73,7 +73,6 @@ func (b *botClient) Inventory() bot.InventoryHandler {
 }
 
 func (b *botClient) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
-	// 套用 go-mc 的連接邏輯
 	host, portStr, err := net.SplitHostPort(addr)
 	var port uint64
 	if err != nil {
@@ -92,14 +91,12 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		}
 	}
 
-	// 建立連接
 	dialer := &mcnet.DefaultDialer
 	b.conn, err = dialer.DialMCContext(ctx, addr)
 	if err != nil {
 		return err
 	}
 
-	// 執行握手
 	if options != nil && options.FakeHost != "" {
 		host = options.FakeHost
 	}
@@ -121,7 +118,6 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 
 	b.connected = true
 
-	// 啟動封包處理 goroutine
 	return nil
 }
 
