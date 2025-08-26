@@ -3,7 +3,7 @@ package client
 import (
 	"io"
 
-	"github.com/Tnze/go-mc/level"
+	"git.konjactw.dev/falloutBot/go-mc/level"
 )
 
 var _ ClientboundPacket = (*LevelChunkWithLight)(nil)

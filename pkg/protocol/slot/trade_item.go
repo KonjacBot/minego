@@ -3,7 +3,7 @@ package slot
 import (
 	"io"
 
-	pk "github.com/Tnze/go-mc/net/packet"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 )
 
 type TradeSlot struct {

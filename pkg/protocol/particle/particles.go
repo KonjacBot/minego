@@ -3,8 +3,9 @@ package particle
 import (
 	"io"
 
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	pk "github.com/Tnze/go-mc/net/packet"
 )
 
 // BasicParticle for Particle Type Other

@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/Tnze/go-mc/data/packetid"
-	pk "github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 )
 
 type ClientboundPacket interface {

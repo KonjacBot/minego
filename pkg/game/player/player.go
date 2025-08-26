@@ -6,13 +6,15 @@ import (
 	"math"
 	"time"
 
+	"github.com/go-gl/mathgl/mgl64"
+
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/game/world"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
-	pk "github.com/Tnze/go-mc/net/packet"
-	"github.com/go-gl/mathgl/mgl64"
 )
 
 type Player struct {
@@ -27,8 +29,9 @@ type Player struct {
 // New 創建新的 Player 實例
 func New(c bot.Client) *Player {
 	pl := &Player{
-		c:      c,
-		entity: &world.Entity{},
+		c:       c,
+		entity:  &world.Entity{},
+		stateID: 1,
 	}
 
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
@@ -36,7 +39,7 @@ func New(c bot.Client) *Player {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.KeepAlive) {
-		c.WritePacket(ctx, &server.KeepAlive{
+		_ = c.WritePacket(ctx, &server.KeepAlive{
 			ID: p.ID,
 		})
 	})
@@ -49,10 +52,51 @@ func New(c bot.Client) *Player {
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerPosition) {
-		pl.entity.SetPosition(mgl64.Vec3{p.X, p.Y, p.Z})
-		pl.entity.SetRotation(mgl64.Vec2{float64(p.XRot), float64(p.YRot)})
+		fmt.Println(p)
+		position := pl.entity.Position()
+		if p.Flags&0x01 != 0 {
+			position[0] += p.X
+		} else {
+			position[0] = p.X
+		}
+
+		if p.Flags&0x02 != 0 {
+			position[1] += p.Y
+		} else {
+			position[1] = p.Y
+		}
+
+		if p.Flags&0x04 != 0 {
+			position[2] += p.Z
+		} else {
+			position[2] = p.Z
+		}
+
+		pl.entity.SetPosition(position)
+
+		rot := pl.entity.Rotation()
+		if p.Flags&0x08 != 0 {
+			rot[0] += float64(p.XRot)
+		} else {
+			rot[0] = float64(p.XRot)
+		}
+
+		if p.Flags&0x10 != 0 {
+			rot[1] += float64(p.YRot)
+		} else {
+			rot[1] = float64(p.YRot)
+		}
+		pl.entity.SetRotation(rot)
 
 		c.WritePacket(context.Background(), &server.AcceptTeleportation{TeleportID: p.ID})
+		c.WritePacket(context.Background(), &server.MovePlayerPosRot{
+			X:     p.X,
+			FeetY: p.Y,
+			Z:     p.Z,
+			Yaw:   p.XRot,
+			Pitch: p.YRot,
+			Flags: 0x00,
+		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerRotation) {
 		pl.entity.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
@@ -173,6 +217,17 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 	return nil
 }
 
+func (p *Player) UpdateLocation() {
+	_ = p.c.WritePacket(context.Background(), &server.MovePlayerPosRot{
+		X:     p.entity.Position().X(),
+		FeetY: p.entity.Position().Y(),
+		Z:     p.entity.Position().Z(),
+		Yaw:   float32(p.entity.Rotation().X()),
+		Pitch: float32(p.entity.Rotation().Y()),
+		Flags: 0x00,
+	})
+}
+
 // LookAt 看向指定位置
 func (p *Player) LookAt(target mgl64.Vec3) error {
 	if p.c == nil {
@@ -190,6 +245,8 @@ func (p *Player) LookAt(target mgl64.Vec3) error {
 	// 計算 yaw 和 pitch
 	yaw := float32(math.Atan2(-direction.X(), direction.Z()) * 180 / math.Pi)
 	pitch := float32(math.Asin(-direction.Y()) * 180 / math.Pi)
+
+	p.entity.SetRotation(mgl64.Vec2{float64(yaw), float64(pitch)})
 
 	return p.c.WritePacket(context.Background(), &server.MovePlayerRot{
 		Yaw:   yaw,
@@ -290,11 +347,22 @@ func (p *Player) OpenContainer(pos protocol.Position) (bot.Container, error) {
 		return nil, fmt.Errorf("failed to open container: %w", err)
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancelFunc()
 
-	for p.c.Inventory().Container() == nil && ctx.Err() == nil {
+	for ctx.Err() == nil && p.c.Inventory().CurrentContainerID() <= 0 {
 		time.Sleep(time.Millisecond * 50)
+	}
+
+	for ctx.Err() == nil && p.c.Inventory().Container().SlotCount() == 0 {
+		time.Sleep(time.Millisecond * 50)
+	}
+
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("failed to open container: %w", ctx.Err())
+	}
+	if p.c.Inventory().CurrentContainerID() <= 0 {
+		return nil, fmt.Errorf("failed to open container: no container opened")
 	}
 
 	return p.c.Inventory().Container(), nil
@@ -328,4 +396,16 @@ func (p *Player) OpenMenu(command string) (bot.Container, error) {
 
 	// 返回客戶端的容器處理器
 	return p.c.Inventory().Container(), nil
+}
+
+func (p *Player) Command(msg string) error {
+	return p.c.WritePacket(context.Background(), &server.ChatCommand{
+		Command: msg,
+	})
+}
+
+func (p *Player) Chat(msg string) error {
+	return p.c.WritePacket(context.Background(), &server.Chat{
+		Message: msg,
+	})
 }

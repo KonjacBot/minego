@@ -1,8 +1,9 @@
 package client
 
 import (
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/component"
-	"github.com/Tnze/go-mc/net/packet"
 )
 
 //codec:gen

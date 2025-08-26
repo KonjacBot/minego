@@ -1,8 +1,9 @@
 package component
 
 import (
+	"git.konjactw.dev/falloutBot/go-mc/nbt"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/nbt"
 )
 
 //codec:gen

@@ -1,8 +1,9 @@
 package client
 
 import (
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"github.com/Tnze/go-mc/data/packetid"
 )
 
 type ConfigUpdateTags struct {

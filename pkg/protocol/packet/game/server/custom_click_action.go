@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/Tnze/go-mc/data/packetid"
-	"github.com/Tnze/go-mc/nbt"
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/nbt"
 )
 
 //codec:gen

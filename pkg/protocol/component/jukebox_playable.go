@@ -3,9 +3,10 @@ package component
 import (
 	"io"
 
+	"git.konjactw.dev/falloutBot/go-mc/chat"
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/chat"
-	"github.com/Tnze/go-mc/net/packet"
 )
 
 type JukeboxPlayable struct {

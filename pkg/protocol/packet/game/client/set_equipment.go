@@ -3,8 +3,9 @@ package client
 import (
 	"io"
 
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	pk "github.com/Tnze/go-mc/net/packet"
 )
 
 type EquipmentData struct {

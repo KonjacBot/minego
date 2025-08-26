@@ -4,10 +4,12 @@ import (
 	"container/heap"
 	"math"
 
+	"github.com/go-gl/mathgl/mgl64"
+
+	"git.konjactw.dev/falloutBot/go-mc/level/block"
+
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol"
-	"github.com/Tnze/go-mc/level/block"
-	"github.com/go-gl/mathgl/mgl64"
 )
 
 // Node 表示 A* 演算法中的節點

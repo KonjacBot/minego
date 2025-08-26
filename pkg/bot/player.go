@@ -1,8 +1,9 @@
 package bot
 
 import (
-	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 	"github.com/go-gl/mathgl/mgl64"
+
+	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 )
 
 type Player interface {
@@ -13,6 +14,7 @@ type Player interface {
 	FlyTo(pos mgl64.Vec3) error
 	WalkTo(pos mgl64.Vec3) error
 	LookAt(vec3 mgl64.Vec3) error
+	UpdateLocation()
 
 	BreakBlock(pos protocol.Position) error
 	PlaceBlock(pos protocol.Position) error
@@ -22,4 +24,7 @@ type Player interface {
 	UseItem(hand int8) error
 
 	OpenMenu(command string) (Container, error)
+	Command(command string) error
+	Chat(message string) error
+	CheckServer()
 }

@@ -6,17 +6,19 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/go-gl/mathgl/mgl64"
+	"golang.org/x/exp/constraints"
+
+	"git.konjactw.dev/falloutBot/go-mc/data/entity"
+	"git.konjactw.dev/falloutBot/go-mc/level"
+	"git.konjactw.dev/falloutBot/go-mc/level/block"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
 	cp "git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/data/entity"
-	"github.com/Tnze/go-mc/level"
-	"github.com/Tnze/go-mc/level/block"
-	pk "github.com/Tnze/go-mc/net/packet"
-	"github.com/go-gl/mathgl/mgl64"
-	"golang.org/x/exp/constraints"
 )
 
 type World struct {
@@ -42,6 +44,7 @@ func NewWorld(c bot.Client) *World {
 
 		w.columns[p.Pos] = p.Data
 	})
+
 	bot.AddHandler(c, func(ctx context.Context, p *cp.ForgetLevelChunk) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
@@ -147,7 +150,8 @@ func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
 
 	blockX := pos[0] & 15
 	blockZ := pos[2] & 15
-	blockIdx := (pos[1] << 8) | (blockZ << 4) | blockX
+	blockY := pos[1] & 15
+	blockIdx := (blockY << 8) | (blockZ << 4) | blockX
 	sectionY := pos[1] >> 4
 	if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
 		return nil, errors.New("invalid section Y coordinate")
@@ -186,9 +190,6 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 }
 
 func (w *World) GetNearbyBlocks(pos protocol.Position, radius int32) ([]block.Block, error) {
-	w.chunkLock.Lock()
-	defer w.chunkLock.Unlock()
-
 	var blocks []block.Block
 
 	for dx := -radius; dx <= radius; dx++ {
@@ -207,8 +208,6 @@ func (w *World) GetNearbyBlocks(pos protocol.Position, radius int32) ([]block.Bl
 }
 
 func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.Block) (protocol.Position, error) {
-	w.chunkLock.Lock()
-	defer w.chunkLock.Unlock()
 	visited := make(map[protocol.Position]bool)
 	queue := list.New()
 	start := pos

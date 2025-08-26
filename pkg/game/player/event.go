@@ -1,6 +1,6 @@
 package player
 
-import "github.com/Tnze/go-mc/chat"
+import "git.konjactw.dev/falloutBot/go-mc/chat"
 
 type MessageEvent struct {
 	Message chat.Message

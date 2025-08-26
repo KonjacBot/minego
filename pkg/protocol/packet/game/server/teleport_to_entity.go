@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/Tnze/go-mc/data/packetid"
 	"github.com/google/uuid"
+
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
 )
 
 //codec:gen

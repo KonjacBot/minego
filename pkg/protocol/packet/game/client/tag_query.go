@@ -1,6 +1,6 @@
 package client
 
-import "github.com/Tnze/go-mc/nbt"
+import "git.konjactw.dev/falloutBot/go-mc/nbt"
 
 //codec:gen
 type TagQueryResponse struct {

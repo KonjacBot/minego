@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/Tnze/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
 )
 
 var _ ClientboundPacket = (*PlayerAbilities)(nil)

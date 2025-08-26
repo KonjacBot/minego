@@ -3,8 +3,8 @@ package slot
 import (
 	"io"
 
-	"github.com/Tnze/go-mc/level/item"
-	pk "github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/falloutBot/go-mc/level/item"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 )
 
 type Slot struct {

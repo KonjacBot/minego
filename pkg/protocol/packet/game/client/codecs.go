@@ -6,9 +6,11 @@ import (
 	"errors"
 	"io"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/component"
-	"github.com/Tnze/go-mc/net/packet"
 	"github.com/google/uuid"
+
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+
+	"git.konjactw.dev/patyhank/minego/pkg/protocol/component"
 )
 
 func (c *AddEntity) ReadFrom(r io.Reader) (n int64, err error) {

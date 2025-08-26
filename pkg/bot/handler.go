@@ -3,12 +3,15 @@ package bot
 import (
 	"context"
 
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"github.com/Tnze/go-mc/data/packetid"
 )
 
 type PacketHandler interface {
 	AddPacketHandler(id packetid.ClientboundPacketID, handler func(ctx context.Context, p client.ClientboundPacket))
+	AddRawPacketHandler(id packetid.ClientboundPacketID, handler func(ctx context.Context, p packet.Packet))
 	AddGenericPacketHandler(handler func(ctx context.Context, p client.ClientboundPacket))
 	HandlePacket(ctx context.Context, p client.ClientboundPacket)
 }

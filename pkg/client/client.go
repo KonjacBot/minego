@@ -7,6 +7,12 @@ import (
 	"net"
 	"strconv"
 
+	"golang.org/x/sync/errgroup"
+
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	mcnet "git.konjactw.dev/falloutBot/go-mc/net"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/auth"
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/game/inventory"
@@ -14,15 +20,11 @@ import (
 	"git.konjactw.dev/patyhank/minego/pkg/game/world"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
-	"github.com/Tnze/go-mc/data/packetid"
-	mcnet "github.com/Tnze/go-mc/net"
-	pk "github.com/Tnze/go-mc/net/packet"
-	"golang.org/x/sync/errgroup"
 )
 
 type botClient struct {
 	conn          *mcnet.Conn
-	packetHandler bot.PacketHandler
+	packetHandler *packetHandler
 	eventHandler  bot.EventHandler
 	connected     bool
 	authProvider  auth.Provider
@@ -91,7 +93,13 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		}
 	}
 
-	dialer := &mcnet.DefaultDialer
+	var dialer mcnet.MCDialer = &mcnet.DefaultDialer
+	if options != nil && options.Proxy != nil {
+		dialer, err = socks5(options.Proxy)
+		if err != nil {
+			return err
+		}
+	}
 	b.conn, err = dialer.DialMCContext(ctx, addr)
 	if err != nil {
 		return err
@@ -156,6 +164,15 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				}
 				continue
 			}
+
+			hs, ok := b.packetHandler.rawMap[pktID]
+			for _, h := range hs {
+				group.Go(func() error {
+					h(ctx, p)
+					return nil
+				})
+			}
+
 			creator, ok := client.ClientboundPackets[pktID]
 			if !ok {
 				continue
@@ -163,12 +180,10 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			pkt := creator()
 			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
 			if err != nil {
+				// fmt.Printf("Decoding: 0x%x %s %s\n", p.ID, pktID.String(), err.Error())
 				continue
 			}
-			group.Go(func() error {
-				b.packetHandler.HandlePacket(ctx, pkt)
-				return nil
-			})
+			b.packetHandler.HandlePacket(ctx, pkt)
 		}
 	}
 }

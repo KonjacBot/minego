@@ -19,14 +19,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
+	"git.konjactw.dev/falloutBot/go-mc/chat"
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/net"
+	"git.konjactw.dev/falloutBot/go-mc/net/CFB8"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/login/client"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/login/server"
-	"github.com/Tnze/go-mc/chat"
-	"github.com/Tnze/go-mc/data/packetid"
-	"github.com/Tnze/go-mc/net"
-	"github.com/Tnze/go-mc/net/CFB8"
-	pk "github.com/Tnze/go-mc/net/packet"
-	"github.com/google/uuid"
 )
 
 var (

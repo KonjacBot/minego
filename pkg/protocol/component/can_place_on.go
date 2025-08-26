@@ -3,9 +3,10 @@ package component
 import (
 	"io"
 
+	"git.konjactw.dev/falloutBot/go-mc/nbt"
+	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/nbt"
-	pk "github.com/Tnze/go-mc/net/packet"
 )
 
 //codec:gen

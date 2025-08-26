@@ -5,7 +5,7 @@ package particle
 import (
 	"io"
 
-	"github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
 )
 
 func (c *Block) ReadFrom(r io.Reader) (n int64, err error) {

@@ -80,8 +80,10 @@ func (m *Manager) CurrentContainerID() int32 {
 func (m *Manager) Close() {
 	if m.currentContainerID != -1 {
 		_ = m.c.WritePacket(context.Background(), &server.ContainerClose{WindowID: m.currentContainerID})
+		m.currentContainerID = -1
 	} else {
 		_ = m.c.WritePacket(context.Background(), &server.ContainerClose{WindowID: 0})
+		m.currentContainerID = -1
 	}
 }
 

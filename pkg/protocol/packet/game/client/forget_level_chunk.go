@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/Tnze/go-mc/data/packetid"
-	"github.com/Tnze/go-mc/level"
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/level"
 )
 
 var _ ClientboundPacket = (*ForgetLevelChunk)(nil)

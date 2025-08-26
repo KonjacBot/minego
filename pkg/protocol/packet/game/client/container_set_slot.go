@@ -1,9 +1,10 @@
 package client
 
 import (
+	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/data/packetid"
-	"github.com/Tnze/go-mc/net/packet"
 )
 
 var _ ClientboundPacket = (*ContainerSetSlot)(nil)

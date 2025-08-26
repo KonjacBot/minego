@@ -3,10 +3,11 @@ package inventory
 import (
 	"context"
 
+	"git.konjactw.dev/falloutBot/go-mc/level/item"
+
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/level/item"
 )
 
 // Container 代表一個容器

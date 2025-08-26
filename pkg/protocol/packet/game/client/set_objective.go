@@ -1,6 +1,6 @@
 package client
 
-import "github.com/Tnze/go-mc/chat"
+import "git.konjactw.dev/falloutBot/go-mc/chat"
 
 //codec:gen
 type ObjectivesData struct {

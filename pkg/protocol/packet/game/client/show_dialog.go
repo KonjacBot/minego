@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/Tnze/go-mc/nbt"
+	"git.konjactw.dev/falloutBot/go-mc/nbt"
 )
 
 //codec:gen

@@ -1,6 +1,6 @@
 package client
 
-import pk "github.com/Tnze/go-mc/net/packet"
+import pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 
 //codec:gen
 type MinecartStep struct {

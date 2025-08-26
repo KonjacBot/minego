@@ -1,13 +1,15 @@
 package bot
 
 import (
+	"github.com/go-gl/mathgl/mgl64"
+	"github.com/google/uuid"
+
+	"git.konjactw.dev/falloutBot/go-mc/data/entity"
+	"git.konjactw.dev/falloutBot/go-mc/level/block"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/data/entity"
-	"github.com/Tnze/go-mc/level/block"
-	"github.com/go-gl/mathgl/mgl64"
-	"github.com/google/uuid"
 )
 
 type World interface {
@@ -32,4 +34,7 @@ type Entity interface {
 
 	Metadata() map[uint8]metadata.Metadata
 	Equipment() map[int8]slot.Slot
+
+	SetPosition(pos mgl64.Vec3)
+	SetRotation(rot mgl64.Vec2)
 }

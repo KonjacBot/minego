@@ -1,6 +1,6 @@
 package client
 
-import "github.com/Tnze/go-mc/data/packetid"
+import "git.konjactw.dev/falloutBot/go-mc/data/packetid"
 
 //codec:gen
 type LoginCookieRequest struct {

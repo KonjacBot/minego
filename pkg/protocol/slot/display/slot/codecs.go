@@ -5,7 +5,7 @@ package slot
 import (
 	"io"
 
-	"github.com/Tnze/go-mc/net/packet"
+	"git.konjactw.dev/falloutBot/go-mc/net/packet"
 )
 
 func (c *Item) ReadFrom(r io.Reader) (n int64, err error) {

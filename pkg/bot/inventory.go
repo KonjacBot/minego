@@ -1,8 +1,9 @@
 package bot
 
 import (
+	"git.konjactw.dev/falloutBot/go-mc/level/item"
+
 	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
-	"github.com/Tnze/go-mc/level/item"
 )
 
 type Container interface {
