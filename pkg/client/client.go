@@ -158,7 +158,11 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			}
 			pktID := packetid.ClientboundPacketID(p.ID)
 			if pktID == packetid.ClientboundStartConfiguration {
-				err := b.configuration()
+				err := b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
+				if err != nil {
+					return err
+				}
+				err = b.configuration()
 				if err != nil {
 					return err
 				}
