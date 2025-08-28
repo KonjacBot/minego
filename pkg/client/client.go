@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 
@@ -184,7 +185,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			pkt := creator()
 			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
 			if err != nil {
-				// fmt.Printf("Decoding: 0x%x %s %s\n", p.ID, pktID.String(), err.Error())
+				fmt.Printf("Decoding: 0x%x %s %s\n", p.ID, pktID.String(), err.Error())
 				continue
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)

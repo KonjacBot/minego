@@ -145,6 +145,10 @@ func (a *Int32VarIntVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, errors.New("array length less than zero")
 	}
 
+	if size > 32767 {
+		return n, errors.New("array length greater than 32767")
+	}
+
 	if cap(*a) >= int(size) {
 		*a = (*a)[:int(size)]
 	} else {
