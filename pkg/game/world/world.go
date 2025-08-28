@@ -133,6 +133,64 @@ func NewWorld(c bot.Client) *World {
 		}
 	})
 
+	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockUpdate) {
+		w.chunkLock.Lock()
+		defer w.chunkLock.Unlock()
+
+		pos := protocol.Position{int32(p.Position.X), int32(p.Position.Y), int32(p.Position.Z)}
+		chunkX := pos[0] >> 4
+		chunkZ := pos[2] >> 4
+		pos2d := level.ChunkPos{chunkX, chunkZ}
+
+		chunk, ok := w.columns[pos2d]
+		if !ok {
+			return // chunk not loaded, ignore update
+		}
+
+		blockX := pos[0] & 15
+		blockZ := pos[2] & 15
+		sectionY := pos[1] >> 4
+		blockY := pos[1] & 15
+
+		if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
+			return // invalid section Y coordinate
+		}
+
+		section := chunk.Sections[sectionY]
+		blockIdx := (blockY << 8) | (blockZ << 4) | blockX
+		section.SetBlock(int(blockIdx), level.BlocksState(p.BlockState))
+	})
+
+	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateSectionsBlocks) {
+		w.chunkLock.Lock()
+		defer w.chunkLock.Unlock()
+
+		sectionX, sectionY, sectionZ := p.ToSectionPos()
+		chunkX := sectionX
+		chunkZ := sectionZ
+		pos2d := level.ChunkPos{chunkX, chunkZ}
+
+		chunk, ok := w.columns[pos2d]
+		if !ok {
+			return // chunk not loaded, ignore update
+		}
+
+		if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
+			return // invalid section Y coordinate
+		}
+
+		section := chunk.Sections[sectionY]
+		blocks := p.ParseBlocks()
+
+		for localPos, stateID := range blocks {
+			blockX := localPos[0]
+			blockY := localPos[1]
+			blockZ := localPos[2]
+			blockIdx := (blockY << 8) | (blockZ << 4) | blockX
+			section.SetBlock(int(blockIdx), level.BlocksState(stateID))
+		}
+	})
+
 	return w
 }
 
