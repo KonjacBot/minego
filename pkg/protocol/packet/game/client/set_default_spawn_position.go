@@ -4,6 +4,8 @@ import pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 
 //codec:gen
 type SetDefaultSpawnPosition struct {
-	Location pk.Position
-	Angle    float32
+	DimensionName pk.Identifier
+	Location      pk.Position
+	Yaw           float32
+	Pitch         float32
 }

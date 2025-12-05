@@ -137,7 +137,7 @@ func (b *botClient) HandleGame(ctx context.Context) error {
 func (b *botClient) handshake(host string, port uint64) error {
 	return b.conn.WritePacket(pk.Marshal(
 		0,
-		pk.VarInt(772),
+		pk.VarInt(773),
 		pk.String(host),
 		pk.UnsignedShort(port),
 		pk.VarInt(2), // to game state
