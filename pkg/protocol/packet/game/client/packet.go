@@ -521,7 +521,7 @@ func (*GameEvent) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundGameEvent
 }
 func (*OpenHorseScreen) PacketID() packetid.ClientboundPacketID {
-	return packetid.ClientboundHorseScreenOpen
+	return packetid.ClientboundMountScreenOpen
 }
 func (*HurtAnimation) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundHurtAnimation

@@ -12,7 +12,6 @@ import (
 	"git.konjactw.dev/falloutBot/go-mc/data/entity"
 	"git.konjactw.dev/falloutBot/go-mc/level"
 	"git.konjactw.dev/falloutBot/go-mc/level/block"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
 
 	"git.konjactw.dev/patyhank/minego/pkg/bot"
 	"git.konjactw.dev/patyhank/minego/pkg/protocol"
@@ -67,7 +66,7 @@ func NewWorld(c bot.Client) *World {
 			entityUUID: p.UUID,
 			entityType: entity.ID(p.Type),
 			pos:        mgl64.Vec3{p.X, p.Y, p.Z},
-			rot:        mgl64.Vec2{pk.Angle(p.XRot).ToDeg(), pk.Angle(p.YRot).ToDeg()},
+			rot:        mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()},
 			metadata:   nil,
 			equipment:  nil,
 		}

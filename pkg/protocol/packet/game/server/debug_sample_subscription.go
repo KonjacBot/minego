@@ -8,11 +8,11 @@ type DebugSampleSubscription struct {
 }
 
 func (*DebugSampleSubscription) PacketID() packetid.ServerboundPacketID {
-	return packetid.ServerboundDebugSampleSubscription
+	return packetid.ServerboundDebugSubscriptionRequest
 }
 
 func init() {
-	registerPacket(packetid.ServerboundDebugSampleSubscription, func() ServerboundPacket {
+	registerPacket(packetid.ServerboundDebugSubscriptionRequest, func() ServerboundPacket {
 		return &DebugSampleSubscription{}
 	})
 }
