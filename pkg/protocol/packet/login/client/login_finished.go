@@ -1,17 +1,13 @@
 package client
 
 import (
-	"github.com/google/uuid"
-
 	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
-	"git.konjactw.dev/falloutBot/go-mc/yggdrasil/user"
+	"git.konjactw.dev/patyhank/minego/pkg/protocol"
 )
 
 //codec:gen
 type LoginLoginFinished struct {
-	UUID       uuid.UUID `mc:"UUID"`
-	Name       string
-	Properties []user.Property
+	protocol.GameProfile
 }
 
 func (*LoginLoginFinished) PacketID() packetid.ClientboundPacketID {

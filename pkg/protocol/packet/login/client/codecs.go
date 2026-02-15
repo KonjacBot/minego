@@ -154,41 +154,9 @@ func (c LoginLoginDisconnect) WriteTo(w io.Writer) (n int64, err error) {
 	return n, err
 }
 func (c *LoginLoginFinished) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.UUID)(&c.UUID).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.String)(&c.Name).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = packet.Array(&c.Properties).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
+	return 0, nil
 }
 
 func (c LoginLoginFinished) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.UUID)(&c.UUID).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.String)(&c.Name).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = packet.Array(&c.Properties).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
+	return 0, nil
 }

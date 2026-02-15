@@ -43,37 +43,27 @@ func (c *AddEntity) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.XRot).ReadFrom(r)
+	temp, err = (&c.Velocity).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.YRot).ReadFrom(r)
+	temp, err = (&c.Pitch).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.YHeadRot).ReadFrom(r)
+	temp, err = (&c.Yaw).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.HeadYaw).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
 	temp, err = (*packet.VarInt)(&c.Data).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityX).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityY).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityZ).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -113,37 +103,27 @@ func (c AddEntity) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.XRot).WriteTo(w)
+	temp, err = (&c.Velocity).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.YRot).WriteTo(w)
+	temp, err = (&c.Pitch).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Byte)(&c.YHeadRot).WriteTo(w)
+	temp, err = (&c.Yaw).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.HeadYaw).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
 	temp, err = (*packet.VarInt)(&c.Data).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityX).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityY).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityZ).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4634,17 +4614,7 @@ func (c *SetEntityVelocity) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Short)(&c.VelocityX).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityY).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityZ).ReadFrom(r)
+	temp, err = (&c.Velocity).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4659,17 +4629,7 @@ func (c SetEntityVelocity) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Short)(&c.VelocityX).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityY).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Short)(&c.VelocityZ).WriteTo(w)
+	temp, err = (&c.Velocity).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -7107,10 +7067,10 @@ func (c Waypoint) WriteTo(w io.Writer) (n int64, err error) {
 	return n, err
 }
 
-// Int64VarIntArray a utility type for encoding/decoding packet.Long -> int64[packet.VarInt] slice.
-type Int64VarIntArray []int64
+// Int8VarIntArray a utility type for encoding/decoding packet.Byte -> int8[packet.VarInt] slice.
+type Int8VarIntArray []int8
 
-func (a Int64VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+func (a Int8VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
@@ -7118,7 +7078,7 @@ func (a Int64VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	n += nn
 	for i := 0; i < size; i++ {
-		nn, err := packet.Long(a[i]).WriteTo(w)
+		nn, err := packet.Byte(a[i]).WriteTo(w)
 		n += nn
 		if err != nil {
 			return n, err
@@ -7127,7 +7087,7 @@ func (a Int64VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	return n, nil
 }
 
-func (a *Int64VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+func (a *Int8VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	var size packet.VarInt
 	nn, err := size.ReadFrom(r)
 	n += nn
@@ -7145,11 +7105,63 @@ func (a *Int64VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	if cap(*a) >= int(size) {
 		*a = (*a)[:int(size)]
 	} else {
-		*a = make(Int64VarIntArray, int(size))
+		*a = make(Int8VarIntArray, int(size))
 	}
 
 	for i := 0; i < int(size); i++ {
-		nn, err = (*packet.Long)(&(*a)[i]).ReadFrom(r)
+		nn, err = (*packet.Byte)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+
+	return n, err
+}
+
+// StringVarIntArray a utility type for encoding/decoding packet.String -> string[packet.VarInt] slice.
+type StringVarIntArray []string
+
+func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	nn, err := packet.VarInt(size).WriteTo(w)
+	if err != nil {
+		return n, err
+	}
+	n += nn
+	for i := 0; i < size; i++ {
+		nn, err := packet.String(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *StringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	if size > 32767 {
+		return n, errors.New("array length greater than 32767")
+	}
+
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(StringVarIntArray, int(size))
+	}
+
+	for i := 0; i < int(size); i++ {
+		nn, err = (*packet.String)(&(*a)[i]).ReadFrom(r)
 		n += nn
 		if err != nil {
 			return n, err
@@ -7202,6 +7214,58 @@ func (a *StringIdentifierVarIntArray) ReadFrom(r io.Reader) (n int64, err error)
 
 	for i := 0; i < int(size); i++ {
 		nn, err = (*packet.Identifier)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+
+	return n, err
+}
+
+// UuidUUIDUUIDVarIntArray a utility type for encoding/decoding packet.UUID -> uuid.UUID[packet.VarInt] slice.
+type UuidUUIDUUIDVarIntArray []uuid.UUID
+
+func (a UuidUUIDUUIDVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	nn, err := packet.VarInt(size).WriteTo(w)
+	if err != nil {
+		return n, err
+	}
+	n += nn
+	for i := 0; i < size; i++ {
+		nn, err := packet.UUID(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *UuidUUIDUUIDVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	if size > 32767 {
+		return n, errors.New("array length greater than 32767")
+	}
+
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(UuidUUIDUUIDVarIntArray, int(size))
+	}
+
+	for i := 0; i < int(size); i++ {
+		nn, err = (*packet.UUID)(&(*a)[i]).ReadFrom(r)
 		n += nn
 		if err != nil {
 			return n, err
@@ -7367,162 +7431,6 @@ func (a *Int8ByteVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, err
 }
 
-// Int8VarIntArray a utility type for encoding/decoding packet.Byte -> int8[packet.VarInt] slice.
-type Int8VarIntArray []int8
-
-func (a Int8VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	nn, err := packet.VarInt(size).WriteTo(w)
-	if err != nil {
-		return n, err
-	}
-	n += nn
-	for i := 0; i < size; i++ {
-		nn, err := packet.Byte(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *Int8VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	nn, err := size.ReadFrom(r)
-	n += nn
-	if err != nil {
-		return n, err
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	if size > 32767 {
-		return n, errors.New("array length greater than 32767")
-	}
-
-	if cap(*a) >= int(size) {
-		*a = (*a)[:int(size)]
-	} else {
-		*a = make(Int8VarIntArray, int(size))
-	}
-
-	for i := 0; i < int(size); i++ {
-		nn, err = (*packet.Byte)(&(*a)[i]).ReadFrom(r)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-
-	return n, err
-}
-
-// StringVarIntArray a utility type for encoding/decoding packet.String -> string[packet.VarInt] slice.
-type StringVarIntArray []string
-
-func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	nn, err := packet.VarInt(size).WriteTo(w)
-	if err != nil {
-		return n, err
-	}
-	n += nn
-	for i := 0; i < size; i++ {
-		nn, err := packet.String(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *StringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	nn, err := size.ReadFrom(r)
-	n += nn
-	if err != nil {
-		return n, err
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	if size > 32767 {
-		return n, errors.New("array length greater than 32767")
-	}
-
-	if cap(*a) >= int(size) {
-		*a = (*a)[:int(size)]
-	} else {
-		*a = make(StringVarIntArray, int(size))
-	}
-
-	for i := 0; i < int(size); i++ {
-		nn, err = (*packet.String)(&(*a)[i]).ReadFrom(r)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-
-	return n, err
-}
-
-// UuidUUIDUUIDVarIntArray a utility type for encoding/decoding packet.UUID -> uuid.UUID[packet.VarInt] slice.
-type UuidUUIDUUIDVarIntArray []uuid.UUID
-
-func (a UuidUUIDUUIDVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
-	size := len(a)
-	nn, err := packet.VarInt(size).WriteTo(w)
-	if err != nil {
-		return n, err
-	}
-	n += nn
-	for i := 0; i < size; i++ {
-		nn, err := packet.UUID(a[i]).WriteTo(w)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (a *UuidUUIDUUIDVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
-	var size packet.VarInt
-	nn, err := size.ReadFrom(r)
-	n += nn
-	if err != nil {
-		return n, err
-	}
-	if size < 0 {
-		return n, errors.New("array length less than zero")
-	}
-
-	if size > 32767 {
-		return n, errors.New("array length greater than 32767")
-	}
-
-	if cap(*a) >= int(size) {
-		*a = (*a)[:int(size)]
-	} else {
-		*a = make(UuidUUIDUUIDVarIntArray, int(size))
-	}
-
-	for i := 0; i < int(size); i++ {
-		nn, err = (*packet.UUID)(&(*a)[i]).ReadFrom(r)
-		n += nn
-		if err != nil {
-			return n, err
-		}
-	}
-
-	return n, err
-}
-
 // StringStringVarIntArray a utility type for encoding/decoding packet.String -> string[packet.VarInt] slice.
 type StringStringVarIntArray []string
 
@@ -7566,6 +7474,58 @@ func (a *StringStringVarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
 
 	for i := 0; i < int(size); i++ {
 		nn, err = (*packet.String)(&(*a)[i]).ReadFrom(r)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+
+	return n, err
+}
+
+// Int64VarIntArray a utility type for encoding/decoding packet.Long -> int64[packet.VarInt] slice.
+type Int64VarIntArray []int64
+
+func (a Int64VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
+	size := len(a)
+	nn, err := packet.VarInt(size).WriteTo(w)
+	if err != nil {
+		return n, err
+	}
+	n += nn
+	for i := 0; i < size; i++ {
+		nn, err := packet.Long(a[i]).WriteTo(w)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+func (a *Int64VarIntArray) ReadFrom(r io.Reader) (n int64, err error) {
+	var size packet.VarInt
+	nn, err := size.ReadFrom(r)
+	n += nn
+	if err != nil {
+		return n, err
+	}
+	if size < 0 {
+		return n, errors.New("array length less than zero")
+	}
+
+	if size > 32767 {
+		return n, errors.New("array length greater than 32767")
+	}
+
+	if cap(*a) >= int(size) {
+		*a = (*a)[:int(size)]
+	} else {
+		*a = make(Int64VarIntArray, int(size))
+	}
+
+	for i := 0; i < int(size); i++ {
+		nn, err = (*packet.Long)(&(*a)[i]).ReadFrom(r)
 		n += nn
 		if err != nil {
 			return n, err
