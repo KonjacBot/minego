@@ -154,9 +154,21 @@ func (c LoginLoginDisconnect) WriteTo(w io.Writer) (n int64, err error) {
 	return n, err
 }
 func (c *LoginLoginFinished) ReadFrom(r io.Reader) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	temp, err = (&c.GameProfile).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
 }
 
 func (c LoginLoginFinished) WriteTo(w io.Writer) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	temp, err = (&c.GameProfile).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
 }

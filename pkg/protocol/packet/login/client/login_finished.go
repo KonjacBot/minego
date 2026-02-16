@@ -7,7 +7,7 @@ import (
 
 //codec:gen
 type LoginLoginFinished struct {
-	protocol.GameProfile
+	GameProfile protocol.GameProfile
 }
 
 func (*LoginLoginFinished) PacketID() packetid.ClientboundPacketID {

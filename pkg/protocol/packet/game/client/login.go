@@ -29,7 +29,7 @@ type CommonPlayerSpawnInfo struct {
 
 //codec:gen
 type Login struct {
-	PlayerID              int32 `mc:"VarInt"`
+	PlayerID              int32
 	Hardcore              bool
 	Levels                []string `mc:"Identifier"`
 	MaxPlayers            int32    `mc:"VarInt"`

@@ -64,7 +64,7 @@ func (c *LoginCustomQueryAnswer) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasData {
-		temp, err = (*packet.ByteArray)(&c.Data).ReadFrom(r)
+		temp, err = (*packet.PluginMessageData)(&c.Data).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -86,7 +86,7 @@ func (c LoginCustomQueryAnswer) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasData {
-		temp, err = (*packet.ByteArray)(&c.Data).WriteTo(w)
+		temp, err = (*packet.PluginMessageData)(&c.Data).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err

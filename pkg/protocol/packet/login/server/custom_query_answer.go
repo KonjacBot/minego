@@ -7,7 +7,7 @@ type LoginCustomQueryAnswer struct {
 	MessageID int32 `mc:"VarInt"`
 	HasData   bool
 	//opt:optional:HasData
-	Data []byte `mc:"ByteArray"`
+	Data []byte `mc:"PluginMessageData"`
 }
 
 func (*LoginCustomQueryAnswer) PacketID() packetid.ServerboundPacketID {
