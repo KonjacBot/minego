@@ -12,8 +12,8 @@ type ClientboundPacket interface {
 
 type packetCreator func() ClientboundPacket
 
-var packetRegistry = make(map[packetid.ClientboundPacketID]packetCreator)
+var ClientboundPackets = make(map[packetid.ClientboundPacketID]packetCreator)
 
 func registerPacket(id packetid.ClientboundPacketID, creator packetCreator) {
-	packetRegistry[id] = creator
+	ClientboundPackets[id] = creator
 }

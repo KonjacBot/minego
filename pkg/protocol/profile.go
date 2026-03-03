@@ -8,9 +8,9 @@ import (
 
 //codec:gen
 type GameProfile struct {
-	UUID       uuid.UUID `mc:"UUID"`
-	Name       string
-	Properties []user.Property
+	UUID       uuid.UUID       `mc:"UUID" json:"id"`
+	Name       string          `json:"name"`
+	Properties []user.Property `json:"properties"`
 }
 
 //codec:gen

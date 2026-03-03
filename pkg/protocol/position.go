@@ -1,6 +1,9 @@
 package protocol
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Position [3]int32
 
@@ -43,7 +46,7 @@ func (p Position) Clone() Position {
 }
 
 func (p Position) String() string {
-	return "(" + string(p[0]) + ", " + string(p[1]) + ", " + string(p[2]) + ")"
+	return fmt.Sprintf("(%d, %d, %d)", p[0], p[1], p[2])
 }
 
 func (p Position) Equals(other Position) bool {

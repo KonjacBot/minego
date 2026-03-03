@@ -13,16 +13,8 @@ type ServerboundPacket interface {
 
 type serverPacketCreator func() ServerboundPacket
 
-var packetRegistry = make(map[packetid.ServerboundPacketID]serverPacketCreator)
+var ServerboundPackets = make(map[packetid.ServerboundPacketID]serverPacketCreator)
 
 func registerPacket(id packetid.ServerboundPacketID, creator serverPacketCreator) {
-	packetRegistry[id] = creator
-}
-
-func CreatePacket(id packetid.ServerboundPacketID) (ServerboundPacket, bool) {
-	creator, ok := packetRegistry[id]
-	if !ok {
-		return nil, false
-	}
-	return creator(), true
+	ServerboundPackets[id] = creator
 }

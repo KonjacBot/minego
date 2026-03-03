@@ -1194,12 +1194,12 @@ func (c *MovePlayerPosRot) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Yaw).ReadFrom(r)
+	temp, err = (*packet.Float)(&c.XRot).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Pitch).ReadFrom(r)
+	temp, err = (*packet.Float)(&c.YRot).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1229,12 +1229,12 @@ func (c MovePlayerPosRot) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Yaw).WriteTo(w)
+	temp, err = (*packet.Float)(&c.XRot).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Pitch).WriteTo(w)
+	temp, err = (*packet.Float)(&c.YRot).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1248,12 +1248,12 @@ func (c MovePlayerPosRot) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *MovePlayerRot) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Float)(&c.Yaw).ReadFrom(r)
+	temp, err = (*packet.Float)(&c.XRot).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Pitch).ReadFrom(r)
+	temp, err = (*packet.Float)(&c.YRot).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1268,12 +1268,12 @@ func (c *MovePlayerRot) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c MovePlayerRot) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Float)(&c.Yaw).WriteTo(w)
+	temp, err = (*packet.Float)(&c.XRot).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Float)(&c.Pitch).WriteTo(w)
+	temp, err = (*packet.Float)(&c.YRot).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1462,7 +1462,7 @@ func (c PickItemFromEntity) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *PingRequest) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Long)(&c.payload).ReadFrom(r)
+	temp, err = (*packet.Long)(&c.Payload).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1472,7 +1472,7 @@ func (c *PingRequest) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c PingRequest) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Long)(&c.payload).WriteTo(w)
+	temp, err = (*packet.Long)(&c.Payload).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

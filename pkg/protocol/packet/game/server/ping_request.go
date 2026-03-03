@@ -4,7 +4,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 
 //codec:gen
 type PingRequest struct {
-	payload int64
+	Payload int64
 }
 
 func (*PingRequest) PacketID() packetid.ServerboundPacketID {

@@ -5,7 +5,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 //codec:gen
 type MovePlayerPosRot struct {
 	X, FeetY, Z float64
-	Yaw, Pitch  float32
+	XRot, YRot  float32
 	Flags       int8
 }
 

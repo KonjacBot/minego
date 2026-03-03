@@ -11,7 +11,7 @@ type PlayerPosition struct {
 	ID                              int32 `mc:"VarInt"`
 	X, Y, Z                         float64
 	VelocityX, VelocityY, VelocityZ float64
-	YRot, XRot                      float32
+	XRot, YRot                      float32
 	Flags                           int32
 }
 
