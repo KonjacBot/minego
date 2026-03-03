@@ -1,10 +1,10 @@
 package component
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/chat"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/chat"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen

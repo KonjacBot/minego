@@ -3,7 +3,7 @@ package bot
 import (
 	"github.com/go-gl/mathgl/mgl64"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/pkg/protocol"
 )
 
 type Player interface {

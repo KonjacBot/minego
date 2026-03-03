@@ -1,8 +1,8 @@
 package protocol
 
 import (
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
-	"git.konjactw.dev/falloutBot/go-mc/yggdrasil/user"
+	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/yggdrasil/user"
 	"github.com/google/uuid"
 )
 

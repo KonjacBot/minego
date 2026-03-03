@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
+import "github.com/KonjacBot/minego/pkg/protocol/metadata"
 
 //codec:gen
 type SetHealth struct {

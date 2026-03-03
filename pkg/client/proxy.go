@@ -6,9 +6,9 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	mcnet "git.konjactw.dev/falloutBot/go-mc/net"
+	mcnet "github.com/KonjacBot/go-mc/net"
 
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/bot"
 )
 
 // createSOCKS5Dialer 建立 SOCKS5 dialer

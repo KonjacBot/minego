@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/patyhank/minego/pkg/protocol"
+import "github.com/KonjacBot/minego/pkg/protocol"
 
 //codec:gen
 type SetEntityVelocity struct {

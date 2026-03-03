@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"git.konjactw.dev/falloutBot/go-mc/chat"
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/go-mc/data/packetid"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/auth"
+	"github.com/KonjacBot/minego/pkg/auth"
 )
 
 func (b *botClient) login() error {

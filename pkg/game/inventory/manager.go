@@ -3,10 +3,10 @@ package inventory
 import (
 	"context"
 
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 // Manager 管理inventory和container

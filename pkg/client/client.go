@@ -10,17 +10,17 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
-	mcnet "git.konjactw.dev/falloutBot/go-mc/net"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/data/packetid"
+	mcnet "github.com/KonjacBot/go-mc/net"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/auth"
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/game/inventory"
-	"git.konjactw.dev/patyhank/minego/pkg/game/player"
-	"git.konjactw.dev/patyhank/minego/pkg/game/world"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/pkg/auth"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/game/inventory"
+	"github.com/KonjacBot/minego/pkg/game/player"
+	"github.com/KonjacBot/minego/pkg/game/world"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
 type botClient struct {

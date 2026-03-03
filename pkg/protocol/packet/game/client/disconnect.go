@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/falloutBot/go-mc/chat"
+import "github.com/KonjacBot/go-mc/chat"
 
 //codec:gen
 type Disconnect struct {

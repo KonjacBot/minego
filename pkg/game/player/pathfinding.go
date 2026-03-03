@@ -6,10 +6,10 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
-	"git.konjactw.dev/falloutBot/go-mc/level/block"
+	"github.com/KonjacBot/go-mc/level/block"
 
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/protocol"
 )
 
 // Node 表示 A* 演算法中的節點

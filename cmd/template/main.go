@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"git.konjactw.dev/patyhank/minego/pkg/auth"
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/client"
-	"git.konjactw.dev/patyhank/minego/pkg/game/player"
+	"github.com/KonjacBot/minego/pkg/auth"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/client"
+	"github.com/KonjacBot/minego/pkg/game/player"
 )
 
 func main() {

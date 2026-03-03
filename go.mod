@@ -1,4 +1,4 @@
-module git.konjactw.dev/patyhank/minego
+module github.com/KonjacBot/minego
 
 go 1.24.0
 
@@ -11,7 +11,8 @@ require (
 )
 
 require (
-	git.konjactw.dev/falloutBot/go-mc v0.0.0-20260215144723-6a8932d2a9b3
 	github.com/go-gl/mathgl v1.2.0
 	golang.org/x/net v0.43.0
 )
+
+require github.com/KonjacBot/go-mc v0.0.0-20260303110648-e4aab80788cf

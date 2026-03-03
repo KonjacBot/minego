@@ -3,10 +3,10 @@ package bot
 import (
 	"context"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
-	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 )
 
 type PacketHandler interface {

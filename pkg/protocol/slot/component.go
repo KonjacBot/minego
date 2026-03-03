@@ -1,7 +1,7 @@
 package slot
 
 import (
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 )
 
 type Component interface {

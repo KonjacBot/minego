@@ -3,8 +3,8 @@ package bot
 import (
 	"context"
 
-	"git.konjactw.dev/patyhank/minego/pkg/auth"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/pkg/auth"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
 type Client interface {

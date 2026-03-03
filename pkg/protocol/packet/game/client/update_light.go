@@ -1,6 +1,6 @@
 package client
 
-import "git.konjactw.dev/falloutBot/go-mc/level"
+import "github.com/KonjacBot/go-mc/level"
 
 //codec:gen
 type UpdateLight struct {

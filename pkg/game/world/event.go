@@ -1,6 +1,6 @@
 package world
 
-import "git.konjactw.dev/patyhank/minego/pkg/bot"
+import "github.com/KonjacBot/minego/pkg/bot"
 
 type EntityRemoveEvent struct {
 	Entity bot.Entity

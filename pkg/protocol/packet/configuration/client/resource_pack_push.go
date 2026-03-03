@@ -1,9 +1,9 @@
 package client
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/data/packetid"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 )
 
 type ConfigResourcePackPush struct {

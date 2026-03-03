@@ -4,10 +4,10 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/google/uuid"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/entity"
+	"github.com/KonjacBot/go-mc/data/entity"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/metadata"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 type Entity struct {

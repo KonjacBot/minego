@@ -8,13 +8,13 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/game/world"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/game/world"
+	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
 type Player struct {

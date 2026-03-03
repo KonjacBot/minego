@@ -1,8 +1,8 @@
 package client
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/chat"
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/go-mc/data/packetid"
 )
 
 //codec:gen

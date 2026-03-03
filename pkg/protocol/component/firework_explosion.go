@@ -1,7 +1,7 @@
 package component
 
 import (
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen

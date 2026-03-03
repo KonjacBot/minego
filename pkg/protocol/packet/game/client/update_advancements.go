@@ -1,9 +1,9 @@
 package client
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/chat"
+	"github.com/KonjacBot/go-mc/chat"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen

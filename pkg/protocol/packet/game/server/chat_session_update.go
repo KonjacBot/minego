@@ -3,8 +3,8 @@ package server
 import (
 	"github.com/google/uuid"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
-	"git.konjactw.dev/falloutBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/yggdrasil/user"
 )
 
 //codec:gen

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/net/packet"
 )
 
 func (c *AcceptTeleportation) ReadFrom(r io.Reader) (n int64, err error) {
@@ -835,35 +835,6 @@ func (c CustomClickAction) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = packet.NBT(&c.Payload).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-func (c *CustomPayload) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Identifier)(&c.Channel).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.ByteArray)(&c.Data).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-
-func (c CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Identifier)(&c.Channel).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.ByteArray)(&c.Data).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

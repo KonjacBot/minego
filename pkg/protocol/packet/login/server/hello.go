@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/google/uuid"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/data/packetid"
 )
 
 //codec:gen

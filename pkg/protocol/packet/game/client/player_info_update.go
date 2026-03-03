@@ -7,10 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"git.konjactw.dev/falloutBot/go-mc/chat"
-	"git.konjactw.dev/falloutBot/go-mc/chat/sign"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
-	"git.konjactw.dev/falloutBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/go-mc/chat/sign"
+	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/yggdrasil/user"
 )
 
 type PlayerInfo interface {

@@ -1,6 +1,6 @@
 package inventory
 
-import "git.konjactw.dev/falloutBot/go-mc/chat"
+import "github.com/KonjacBot/go-mc/chat"
 
 type ContainerOpenEvent struct {
 	WindowID int32

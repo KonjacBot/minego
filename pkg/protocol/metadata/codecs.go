@@ -5,7 +5,7 @@ package metadata
 import (
 	"io"
 
-	"git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/net/packet"
 )
 
 func (c *Rotation) ReadFrom(r io.Reader) (n int64, err error) {

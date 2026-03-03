@@ -1,13 +1,13 @@
 package metadata
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/chat"
-	"git.konjactw.dev/falloutBot/go-mc/nbt"
-	pk "git.konjactw.dev/falloutBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/go-mc/nbt"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/component"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/particle"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/component"
+	"github.com/KonjacBot/minego/pkg/protocol/particle"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 type Byte struct {

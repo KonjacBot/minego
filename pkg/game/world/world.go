@@ -9,15 +9,15 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 	"golang.org/x/exp/constraints"
 
-	"git.konjactw.dev/falloutBot/go-mc/data/entity"
-	"git.konjactw.dev/falloutBot/go-mc/level"
-	"git.konjactw.dev/falloutBot/go-mc/level/block"
+	"github.com/KonjacBot/go-mc/data/entity"
+	"github.com/KonjacBot/go-mc/level"
+	"github.com/KonjacBot/go-mc/level/block"
 
-	"git.konjactw.dev/patyhank/minego/pkg/bot"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/metadata"
-	cp "git.konjactw.dev/patyhank/minego/pkg/protocol/packet/game/client"
-	"git.konjactw.dev/patyhank/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/pkg/protocol/metadata"
+	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 type World struct {
