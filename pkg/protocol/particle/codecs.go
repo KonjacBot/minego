@@ -46,6 +46,25 @@ func (c BlockMarker) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *DragonBreth) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.Power).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c DragonBreth) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Float)(&c.Power).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *Dust) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Int)(&c.Color).ReadFrom(r)
@@ -114,6 +133,64 @@ func (c DustColorTransition) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
+func (c *Effect) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Power).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Effect) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Power).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *InstantEffect) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Power).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c InstantEffect) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Float)(&c.Power).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *EntityEffect) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Int)(&c.Color).ReadFrom(r)
@@ -163,6 +240,25 @@ func (c *TintedLeaves) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (c TintedLeaves) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Flash) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Int)(&c.Color).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Flash) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Int)(&c.Color).WriteTo(w)
 	n += temp

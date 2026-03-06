@@ -1,25 +1,30 @@
 package slot
 
 import (
+	"fmt"
+
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
 
 type Component interface {
-	Type() ComponentID
 	ID() string
 
 	pk.Field
 }
 
-type ComponentID int32
 type componentCreator func() Component
 
-var components = make(map[ComponentID]componentCreator)
+var components = make(map[int]componentCreator)
 
-func ComponentFromID(id ComponentID) Component {
+func ComponentFromID(id int) Component {
+	fmt.Println(id)
+	if components[id] == nil {
+		fmt.Println(components[id], id)
+		return nil
+	}
 	return components[id]()
 }
 
 func RegisterComponent(c componentCreator) {
-	components[c().Type()] = c
+	components[len(components)] = c
 }

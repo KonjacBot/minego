@@ -1652,11 +1652,23 @@ func (c PlayerLoaded) WriteTo(w io.Writer) (n int64, err error) {
 	return 0, nil
 }
 func (c *Pong) ReadFrom(r io.Reader) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	temp, err = (*packet.Int)(&c.ID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
 }
 
 func (c Pong) WriteTo(w io.Writer) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	temp, err = (*packet.Int)(&c.ID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
 }
 func (c *RecipeBookChangeSettings) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64

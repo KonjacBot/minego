@@ -5,8 +5,6 @@ import (
 
 	"github.com/KonjacBot/go-mc/nbt"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen
@@ -52,10 +50,6 @@ type ExactDataComponentMatcher struct {
 type PartialDataComponentMatcher struct {
 	Type      int32          `mc:"VarInt"`
 	Predicate nbt.RawMessage `mc:"NBT"`
-}
-
-func (*CanPlaceOn) Type() slot.ComponentID {
-	return 11
 }
 
 func (*CanPlaceOn) ID() string {

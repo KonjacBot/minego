@@ -1,16 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type CatCollar struct {
 	Color DyeColor
-}
-
-func (*CatCollar) Type() slot.ComponentID {
-	return 93
 }
 
 func (*CatCollar) ID() string {

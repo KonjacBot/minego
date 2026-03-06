@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -25,7 +26,6 @@ const (
 	MetadataOptLivingEntity
 	MetadataBlockState
 	MetadataOptBlockState
-	MetadataNBT
 	MetadataParticle
 	MetadataParticles
 	MetadataVillagerData
@@ -38,12 +38,17 @@ const (
 	MetadataFrogVariant
 	MetadataPigVariant
 	MetadataChickenVariant
+	MetadataZombieNautilusVariant
 	MetadataOptGlobalPosition
 	MetadataPaintingVariant
 	MetadataSnifferVariant
 	MetadataArmadilloState
+	MetadataCopperGolemState
+	MetadataWeatheringCopperState
 	MetadataVector3
 	MetadataQuaternion
+	MetadataResolvableProfile
+	MetadataHumanoidArm
 )
 
 type Metadata interface {
@@ -98,6 +103,7 @@ func (m *EntityMetadata) ReadFrom(r io.Reader) (int64, error) {
 			return n, err
 		}
 
+		fmt.Println(typeId)
 		metadata := metadataType[typeId]()
 		n2, err := metadata.ReadFrom(r)
 		n += n2
@@ -136,7 +142,7 @@ func init() {
 	metadataType[MetadataOptLivingEntity] = func() Metadata { return &OptLivingEntity{} }
 	metadataType[MetadataBlockState] = func() Metadata { return &BlockState{} }
 	metadataType[MetadataOptBlockState] = func() Metadata { return &OptBlockState{} }
-	metadataType[MetadataNBT] = func() Metadata { return &NBT{} }
+	//metadataType[MetadataNBT] = func() Metadata { return &NBT{} }
 	metadataType[MetadataParticle] = func() Metadata { return &Particle{} }
 	metadataType[MetadataParticles] = func() Metadata { return &Particles{} }
 	metadataType[MetadataVillagerData] = func() Metadata { return &VillagerData{} }
@@ -153,6 +159,11 @@ func init() {
 	metadataType[MetadataPaintingVariant] = func() Metadata { return &PaintingVariant{} }
 	metadataType[MetadataSnifferVariant] = func() Metadata { return &SnifferVariant{} }
 	metadataType[MetadataArmadilloState] = func() Metadata { return &ArmadilloState{} }
+	metadataType[MetadataZombieNautilusVariant] = func() Metadata { return &ZombieNautilusVariant{} }
+	metadataType[MetadataCopperGolemState] = func() Metadata { return &CopperGolemState{} }
+	metadataType[MetadataWeatheringCopperState] = func() Metadata { return &WeatheringCopperState{} }
 	metadataType[MetadataVector3] = func() Metadata { return &Vector3{} }
 	metadataType[MetadataQuaternion] = func() Metadata { return &Quaternion{} }
+	metadataType[MetadataResolvableProfile] = func() Metadata { return &ResolvableProfile{} }
+	metadataType[MetadataHumanoidArm] = func() Metadata { return &HumanoidArm{} }
 }

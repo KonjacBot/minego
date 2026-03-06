@@ -34,62 +34,82 @@ func (p *Particle) ReadFrom(r io.Reader) (int64, error) {
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 13: // Dust
+	case 8: // BlockMarker
+		data := &DragonBreth{}
+		n2, err := data.ReadFrom(r)
+		p.Data = data
+		return n + n2, err
+	case 14: // Dust
 		data := &Dust{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 14: // DustColorTransition
+	case 15: // DustColorTransition
 		data := &DustColorTransition{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 20: // EntityEffect
+	case 16: // Effect
+		data := &Effect{}
+		n2, err := data.ReadFrom(r)
+		p.Data = data
+		return n + n2, err
+	case 21: // EntityEffect
 		data := &EntityEffect{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 28: // FallingDust
+	case 29: // FallingDust
 		data := &FallingDust{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 35: // TintedLeaves
+	case 36: // TintedLeaves
 		data := &TintedLeaves{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 37: // SculkCharge
+	case 38: // SculkCharge
 		data := &SculkCharge{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 46: // Item
+	case 42: // SculkCharge
+		data := &Flash{}
+		n2, err := data.ReadFrom(r)
+		p.Data = data
+		return n + n2, err
+	case 46: // Instant Effect
+		data := &InstantEffect{}
+		n2, err := data.ReadFrom(r)
+		p.Data = data
+		return n + n2, err
+	case 47: // Item
 		data := &Item{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 47: // Vibration
+	case 48: // Vibration
 		data := &Vibration{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 48: // Trail
+	case 49: // Trail
 		data := &Trail{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 102: // Shriek
+	case 103: // Shriek
 		data := &Shriek{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 108: // DustPillar
+	case 109: // DustPillar
 		data := &DustPillar{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data
 		return n + n2, err
-	case 112: // BlockCrumble
+	case 113: // BlockCrumble
 		data := &BlockCrumble{}
 		n2, err := data.ReadFrom(r)
 		p.Data = data

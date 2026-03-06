@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol"
 )
 
 func (c *Rotation) ReadFrom(r io.Reader) (n int64, err error) {
@@ -254,6 +255,134 @@ func (c Quaternion) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Float)(&c.W).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *ResolvableProfilePartial) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Name).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UUID)(&c.UUID).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Property).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c ResolvableProfilePartial) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.String)(&c.Name).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.UUID)(&c.UUID).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = packet.Array(&c.Property).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *ResolvableProfile) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.IsFullProfile).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.IsFullProfile == true {
+		c.Profile = new(protocol.GameProfile)
+		temp, err = (*protocol.GameProfile)(c.Profile).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.IsFullProfile == false {
+		c.Partial = new(ResolvableProfilePartial)
+		temp, err = (*ResolvableProfilePartial)(c.Partial).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (&c.Body).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Cape).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Elytra).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Model).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c ResolvableProfile) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Boolean)(&c.IsFullProfile).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.IsFullProfile == true {
+		temp, err = (*protocol.GameProfile)(c.Profile).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	if c.IsFullProfile == false {
+		temp, err = (*ResolvableProfilePartial)(c.Partial).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (&c.Body).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Cape).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Elytra).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Model).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

@@ -120,7 +120,7 @@ func NewWorld(c bot.Client) *World {
 		w.entityLock.Lock()
 		defer w.entityLock.Unlock()
 		if e, ok := w.entities[p.EntityID]; ok {
-			e.rot = mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)}
+			e.rot = mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()}
 		}
 	})
 

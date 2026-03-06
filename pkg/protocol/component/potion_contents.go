@@ -1,9 +1,5 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type PotionContents struct {
 	HasPotionID    bool
@@ -31,10 +27,6 @@ type PotionEffectDetails struct {
 	HasHiddenEffect bool
 	//opt:optional:HasHiddenEffect
 	HiddenEffect *PotionEffect
-}
-
-func (*PotionContents) Type() slot.ComponentID {
-	return 42
 }
 
 func (*PotionContents) ID() string {

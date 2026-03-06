@@ -1,9 +1,5 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type BlockState struct {
 	Properties []BlockStateProperty
@@ -13,10 +9,6 @@ type BlockState struct {
 type BlockStateProperty struct {
 	Name  string
 	Value string
-}
-
-func (*BlockState) Type() slot.ComponentID {
-	return 67
 }
 
 func (*BlockState) ID() string {

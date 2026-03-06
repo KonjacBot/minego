@@ -1,16 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type VillagerVariant struct {
 	Variant int32 `mc:"VarInt"`
-}
-
-func (*VillagerVariant) Type() slot.ComponentID {
-	return 72
 }
 
 func (*VillagerVariant) ID() string {

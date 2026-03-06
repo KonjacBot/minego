@@ -2,8 +2,6 @@ package component
 
 import (
 	"github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen
@@ -38,10 +36,6 @@ type ConsumeEffect struct {
 	TeleportRandomlyDiameter float32
 	//opt:enum:Type:4
 	PlaySound SoundEvent
-}
-
-func (*Consumable) Type() slot.ComponentID {
-	return 21
 }
 
 func (*Consumable) ID() string {

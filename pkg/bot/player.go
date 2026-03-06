@@ -9,6 +9,8 @@ import (
 type Player interface {
 	StateID() int32
 	UpdateStateID(id int32)
+	Sequence() int32
+	UpdateSequence(id int32)
 	Entity() Entity
 
 	FlyTo(pos mgl64.Vec3) error
@@ -19,7 +21,7 @@ type Player interface {
 	BreakBlock(pos protocol.Position) error
 	PlaceBlock(pos protocol.Position) error
 	PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mgl64.Vec3) error
-	OpenContainer(pos protocol.Position) (Container, error)
+	OpenContainer(pos protocol.Position, hand int32) (Container, error)
 
 	UseItem(hand int8) error
 

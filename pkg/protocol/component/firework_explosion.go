@@ -1,9 +1,5 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type FireworkExplosion struct {
 	Explosion FireworkExplosionData
@@ -16,10 +12,6 @@ type FireworkExplosionData struct {
 	FadeColors []int32
 	HasTrail   bool
 	HasTwinkle bool
-}
-
-func (*FireworkExplosion) Type() slot.ComponentID {
-	return 59
 }
 
 func (*FireworkExplosion) ID() string {

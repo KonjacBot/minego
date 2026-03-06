@@ -2,8 +2,6 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen
@@ -21,10 +19,6 @@ type ProfileProperty struct {
 	Value        string `mc:"String"`
 	HasSignature bool
 	Signature    pk.Option[pk.String, *pk.String]
-}
-
-func (*Profile) Type() slot.ComponentID {
-	return 61
 }
 
 func (*Profile) ID() string {

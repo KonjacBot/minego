@@ -2,8 +2,6 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen
@@ -24,10 +22,6 @@ type BannerLayer struct {
 //codec:gen
 type DyeColor struct {
 	ColorID int32 `mc:"VarInt"`
-}
-
-func (*BannerPatterns) Type() slot.ComponentID {
-	return 63
 }
 
 func (*BannerPatterns) ID() string {

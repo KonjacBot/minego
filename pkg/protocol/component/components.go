@@ -21,7 +21,16 @@ func init() {
 		return &Unbreakable{}
 	})
 	slot.RegisterComponent(func() slot.Component {
+		return &UseEffects{}
+	})
+	slot.RegisterComponent(func() slot.Component {
 		return &CustomName{}
+	})
+	slot.RegisterComponent(func() slot.Component {
+		return &MinimumAttackCharge{}
+	})
+	slot.RegisterComponent(func() slot.Component {
+		return &DamageType{}
 	})
 	slot.RegisterComponent(func() slot.Component {
 		return &ItemName{}
@@ -87,6 +96,9 @@ func init() {
 		return &Weapon{}
 	})
 	slot.RegisterComponent(func() slot.Component {
+		return &AttackRange{}
+	})
+	slot.RegisterComponent(func() slot.Component {
 		return &Enchantable{}
 	})
 	slot.RegisterComponent(func() slot.Component {
@@ -107,6 +119,16 @@ func init() {
 	slot.RegisterComponent(func() slot.Component {
 		return &BlocksAttacks{}
 	})
+	slot.RegisterComponent(func() slot.Component {
+		return &PiercingWeapon{}
+	})
+	slot.RegisterComponent(func() slot.Component {
+		return &KineticWeapon{}
+	})
+	slot.RegisterComponent(func() slot.Component {
+		return &SwingAnimation{}
+	})
+
 	slot.RegisterComponent(func() slot.Component {
 		return &StoredEnchantments{}
 	})
@@ -262,6 +284,9 @@ func init() {
 	})
 	slot.RegisterComponent(func() slot.Component {
 		return &CowVariant{}
+	})
+	slot.RegisterComponent(func() slot.Component {
+		return &ZombieNautilusVariant{}
 	})
 	slot.RegisterComponent(func() slot.Component {
 		return &ChickenVariant{}

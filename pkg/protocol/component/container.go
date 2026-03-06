@@ -9,10 +9,6 @@ type Container struct {
 	Items []slot2.Slot
 }
 
-func (*Container) Type() slot2.ComponentID {
-	return 66
-}
-
 func (*Container) ID() string {
 	return "minecraft:container"
 }

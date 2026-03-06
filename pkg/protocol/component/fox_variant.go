@@ -1,16 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type FoxVariant struct {
 	Variant int32 `mc:"VarInt"`
-}
-
-func (*FoxVariant) Type() slot.ComponentID {
-	return 76
 }
 
 func (*FoxVariant) ID() string {

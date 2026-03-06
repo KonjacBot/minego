@@ -1,16 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type PotionDurationScale struct {
 	EffectMultiplier float32
-}
-
-func (*PotionDurationScale) Type() slot.ComponentID {
-	return 43
 }
 
 func (*PotionDurationScale) ID() string {

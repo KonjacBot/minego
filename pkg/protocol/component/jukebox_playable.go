@@ -5,8 +5,6 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 type JukeboxPlayable struct {
@@ -57,10 +55,6 @@ type JukeboxSongData struct {
 	Description chat.Message
 	Duration    float32
 	Output      int32 `mc:"VarInt"`
-}
-
-func (*JukeboxPlayable) Type() slot.ComponentID {
-	return 55
 }
 
 func (*JukeboxPlayable) ID() string {

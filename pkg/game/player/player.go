@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/go-gl/mathgl/mgl64"
@@ -20,8 +21,8 @@ import (
 type Player struct {
 	c bot.Client
 
-	entity  *world.Entity
-	stateID int32
+	entity            *world.Entity
+	stateID, sequence int32
 
 	lastReceivedPacketTime time.Time
 }
@@ -34,6 +35,15 @@ func New(c bot.Client) *Player {
 		stateID: 1,
 	}
 
+	startup := sync.OnceFunc(func() {
+		go func() {
+			ticker := time.NewTicker(50 * time.Millisecond)
+			for range ticker.C {
+				_ = c.WritePacket(context.Background(), &server.ClientTickEnd{})
+			}
+		}()
+	})
+
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
 		pl.lastReceivedPacketTime = time.Now()
 	})
@@ -42,6 +52,13 @@ func New(c bot.Client) *Player {
 		_ = c.WritePacket(ctx, &server.KeepAlive{
 			ID: p.ID,
 		})
+	})
+
+	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
+		startup()
+	})
+	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
+		_ = c.WritePacket(ctx, &server.Pong{p.ID})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.Disconnect) {
 		fmt.Println(p.Reason.String())
@@ -93,8 +110,8 @@ func New(c bot.Client) *Player {
 			X:     p.X,
 			FeetY: p.Y,
 			Z:     p.Z,
-			Yaw:   p.XRot,
-			Pitch: p.YRot,
+			XRot:  p.XRot,
+			YRot:  p.YRot,
 			Flags: 0x00,
 		})
 	})
@@ -119,6 +136,16 @@ func (p *Player) StateID() int32 {
 // UpdateStateID 更新狀態 ID
 func (p *Player) UpdateStateID(id int32) {
 	p.stateID = id
+}
+
+// Sequence 返回當前互動狀態 ID
+func (p *Player) Sequence() int32 {
+	return p.sequence
+}
+
+// UpdateSequence 更新互動狀態 ID
+func (p *Player) UpdateSequence(id int32) {
+	p.sequence = id
 }
 
 // Entity 返回玩家實體
@@ -222,8 +249,8 @@ func (p *Player) UpdateLocation() {
 		X:     p.entity.Position().X(),
 		FeetY: p.entity.Position().Y(),
 		Z:     p.entity.Position().Z(),
-		Yaw:   float32(p.entity.Rotation().X()),
-		Pitch: float32(p.entity.Rotation().Y()),
+		XRot:  float32(p.entity.Rotation().X()),
+		YRot:  float32(p.entity.Rotation().Y()),
 		Flags: 0x00,
 	})
 }
@@ -249,8 +276,8 @@ func (p *Player) LookAt(target mgl64.Vec3) error {
 	p.entity.SetRotation(mgl64.Vec2{float64(yaw), float64(pitch)})
 
 	return p.c.WritePacket(context.Background(), &server.MovePlayerRot{
-		Yaw:   yaw,
-		Pitch: pitch,
+		XRot:  yaw,
+		YRot:  pitch,
 		Flags: 0x00,
 	})
 }
@@ -310,6 +337,7 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 		return fmt.Errorf("client is not initialized")
 	}
 
+	p.sequence++
 	packet := &server.UseItemOn{
 		Hand:        0,
 		Location:    pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
@@ -318,21 +346,22 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 		CursorY:     float32(cursor[1]),
 		CursorZ:     float32(cursor[2]),
 		InsideBlock: false,
-		Sequence:    p.stateID,
+		Sequence:    p.sequence,
 	}
 
 	return p.c.WritePacket(context.Background(), packet)
 }
 
 // OpenContainer 打開指定位置的容器
-func (p *Player) OpenContainer(pos protocol.Position) (bot.Container, error) {
+func (p *Player) OpenContainer(pos protocol.Position, hand int32) (bot.Container, error) {
 	if p.c == nil {
 		return nil, fmt.Errorf("client is not initialized")
 	}
 
+	p.sequence++
 	// 發送使用物品封包來打開容器
 	packet := &server.UseItemOn{
-		Hand:           1,
+		Hand:           hand,
 		Location:       pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
 		Face:           1,
 		CursorX:        0.5,
@@ -340,7 +369,7 @@ func (p *Player) OpenContainer(pos protocol.Position) (bot.Container, error) {
 		CursorZ:        0.5,
 		InsideBlock:    false,
 		WorldBorderHit: false,
-		Sequence:       p.stateID,
+		Sequence:       p.sequence,
 	}
 
 	if err := p.c.WritePacket(context.Background(), packet); err != nil {

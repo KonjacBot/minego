@@ -1,9 +1,5 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type SuspiciousStewEffects struct {
 	Effects []SuspiciousStewEffect
@@ -13,10 +9,6 @@ type SuspiciousStewEffects struct {
 type SuspiciousStewEffect struct {
 	TypeID   int32 `mc:"VarInt"`
 	Duration int32 `mc:"VarInt"`
-}
-
-func (*SuspiciousStewEffects) Type() slot.ComponentID {
-	return 44
 }
 
 func (*SuspiciousStewEffects) ID() string {

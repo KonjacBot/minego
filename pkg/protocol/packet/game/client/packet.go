@@ -17,6 +17,9 @@ var ClientboundPackets = make(map[packetid.ClientboundPacketID]clientBoundPacket
 
 func init() {
 	registerPacket(func() ClientboundPacket {
+		return &BundleDelimiter{}
+	})
+	registerPacket(func() ClientboundPacket {
 		return &AddEntity{}
 	})
 	registerPacket(func() ClientboundPacket {

@@ -10,8 +10,8 @@ import (
 type Slot struct {
 	Count           int32
 	ItemID          item.ID
-	AddComponent    []Component
-	RemoveComponent []ComponentID
+	AddComponent    map[int32]Component
+	RemoveComponent []int32
 }
 
 func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
@@ -31,8 +31,8 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return temp, err
 	}
-	for _, c := range s.AddComponent {
-		temp, err = pk.VarInt(c.Type()).WriteTo(w)
+	for id, c := range s.AddComponent {
+		temp, err = pk.VarInt(id).WriteTo(w)
 		n += temp
 		if err != nil {
 			return temp, err
@@ -90,20 +90,24 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	var id int32
+	s.AddComponent = make(map[int32]Component, addLens)
 	for i := int32(0); i < addLens; i++ {
 		temp, err = (*pk.VarInt)(&id).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return temp, err
 		}
-		c := ComponentFromID(ComponentID(id))
+		c := ComponentFromID(int(id))
+		if c == nil {
+			continue
+		}
 
 		temp, err = c.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return temp, err
 		}
-		s.AddComponent = append(s.AddComponent, c)
+		s.AddComponent[int32(id)] = c
 	}
 
 	for i := int32(0); i < removeLens; i++ {
@@ -112,7 +116,7 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		if err != nil {
 			return temp, err
 		}
-		s.RemoveComponent = append(s.RemoveComponent, ComponentID(id))
+		s.RemoveComponent = append(s.RemoveComponent, id)
 	}
 	return n, nil
 }

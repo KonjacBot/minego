@@ -1,16 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-)
-
 //codec:gen
 type StoredEnchantments struct {
 	Enchantments []Enchantment
-}
-
-func (*StoredEnchantments) Type() slot.ComponentID {
-	return 34
 }
 
 func (*StoredEnchantments) ID() string {

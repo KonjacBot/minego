@@ -2,8 +2,6 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 //codec:gen
@@ -38,10 +36,6 @@ type DamageReduction struct {
 	Type   pk.IDSet
 	Base   float32
 	Factor float32
-}
-
-func (*BlocksAttacks) Type() slot.ComponentID {
-	return 33
 }
 
 func (*BlocksAttacks) ID() string {

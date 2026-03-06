@@ -4,6 +4,9 @@ import (
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/nbt"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/google/uuid"
 
 	"github.com/KonjacBot/minego/pkg/protocol/component"
 	"github.com/KonjacBot/minego/pkg/protocol/particle"
@@ -144,9 +147,9 @@ type NBT struct {
 	Data nbt.RawMessage `mc:"NBT"`
 }
 
-func (b NBT) EntityMetadataType() MetadataType {
-	return MetadataNBT
-}
+//func (b NBT) EntityMetadataType() MetadataType {
+//	return MetadataNBT
+//}
 
 type Particle struct {
 	particle.Particle
@@ -285,6 +288,38 @@ func (ArmadilloState) EntityMetadataType() MetadataType {
 	return MetadataArmadilloState
 }
 
+type CopperGolemState struct {
+	pk.VarInt
+}
+
+func (CopperGolemState) EntityMetadataType() MetadataType {
+	return MetadataCopperGolemState
+}
+
+type WeatheringCopperState struct {
+	pk.VarInt
+}
+
+func (WeatheringCopperState) EntityMetadataType() MetadataType {
+	return MetadataWeatheringCopperState
+}
+
+type ZombieNautilusVariant struct {
+	pk.VarInt
+}
+
+func (ZombieNautilusVariant) EntityMetadataType() MetadataType {
+	return MetadataZombieNautilusVariant
+}
+
+type HumanoidArm struct {
+	pk.VarInt
+}
+
+func (HumanoidArm) EntityMetadataType() MetadataType {
+	return MetadataHumanoidArm
+}
+
 //codec:gen
 type Vector3 struct {
 	X, Y, Z float32
@@ -301,4 +336,28 @@ type Quaternion struct {
 
 func (Quaternion) EntityMetadataType() MetadataType {
 	return MetadataQuaternion
+}
+
+//codec:gen
+type ResolvableProfilePartial struct {
+	Name     string
+	UUID     uuid.UUID `mc:"UUID"`
+	Property []user.Property
+}
+
+//codec:gen
+type ResolvableProfile struct {
+	IsFullProfile bool
+	//opt:enum:IsFullProfile:true
+	Profile *protocol.GameProfile
+	//opt:enum:IsFullProfile:false
+	Partial *ResolvableProfilePartial
+	Body    pk.Option[pk.Identifier, *pk.Identifier]
+	Cape    pk.Option[pk.Identifier, *pk.Identifier]
+	Elytra  pk.Option[pk.Identifier, *pk.Identifier]
+	Model   bool
+}
+
+func (ResolvableProfile) EntityMetadataType() MetadataType {
+	return MetadataResolvableProfile
 }

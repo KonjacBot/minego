@@ -47,6 +47,15 @@ func (b BlockMarker) ParticleID() int32 {
 	return 2
 }
 
+//codec:gen
+type DragonBreth struct {
+	Power float32
+}
+
+func (b DragonBreth) ParticleID() int32 {
+	return 8
+}
+
 // Dust for Particle Type 13
 //
 //codec:gen
@@ -56,7 +65,7 @@ type Dust struct {
 }
 
 func (d Dust) ParticleID() int32 {
-	return 13
+	return 14
 }
 
 // DustColorTransition for Particle Type 14
@@ -69,7 +78,27 @@ type DustColorTransition struct {
 }
 
 func (d DustColorTransition) ParticleID() int32 {
-	return 14
+	return 15
+}
+
+//codec:gen
+type Effect struct {
+	Color int32
+	Power float32
+}
+
+func (e Effect) ParticleID() int32 {
+	return 16
+}
+
+//codec:gen
+type InstantEffect struct {
+	Color int32
+	Power float32
+}
+
+func (e InstantEffect) ParticleID() int32 {
+	return 46
 }
 
 // EntityEffect for Particle Type 20
@@ -80,7 +109,7 @@ type EntityEffect struct {
 }
 
 func (e EntityEffect) ParticleID() int32 {
-	return 20
+	return 21
 }
 
 // FallingDust for Particle Type 28
@@ -91,7 +120,7 @@ type FallingDust struct {
 }
 
 func (f FallingDust) ParticleID() int32 {
-	return 28
+	return 29
 }
 
 // TintedLeaves for Particle Type 35
@@ -102,7 +131,16 @@ type TintedLeaves struct {
 }
 
 func (t TintedLeaves) ParticleID() int32 {
-	return 35
+	return 36
+}
+
+//codec:gen
+type Flash struct {
+	Color int32
+}
+
+func (t Flash) ParticleID() int32 {
+	return 42
 }
 
 // SculkCharge for Particle Type 37
@@ -113,7 +151,7 @@ type SculkCharge struct {
 }
 
 func (s SculkCharge) ParticleID() int32 {
-	return 37
+	return 38
 }
 
 // Item for Particle Type 46
@@ -124,7 +162,7 @@ type Item struct {
 }
 
 func (i Item) ParticleID() int32 {
-	return 46
+	return 47
 }
 
 // Vibration for Particle Type 47
@@ -197,7 +235,7 @@ func (v *Vibration) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func (v Vibration) ParticleID() int32 {
-	return 47
+	return 48
 }
 
 // Trail for Particle Type 48
@@ -210,7 +248,7 @@ type Trail struct {
 }
 
 func (t Trail) ParticleID() int32 {
-	return 48
+	return 49
 }
 
 // Shriek for Particle Type 102
@@ -221,7 +259,7 @@ type Shriek struct {
 }
 
 func (s Shriek) ParticleID() int32 {
-	return 102
+	return 103
 }
 
 // DustPillar for Particle Type 108
@@ -232,7 +270,7 @@ type DustPillar struct {
 }
 
 func (d DustPillar) ParticleID() int32 {
-	return 108
+	return 109
 }
 
 // BlockCrumble for Particle Type 112
@@ -243,5 +281,5 @@ type BlockCrumble struct {
 }
 
 func (b BlockCrumble) ParticleID() int32 {
-	return 112
+	return 113
 }

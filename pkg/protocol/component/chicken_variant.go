@@ -4,8 +4,6 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
-
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
 type ChickenVariant struct {
@@ -48,10 +46,6 @@ func (c ChickenVariant) WriteTo(w io.Writer) (int64, error) {
 		return n1 + n2, err
 	}
 	return n1, err
-}
-
-func (*ChickenVariant) Type() slot.ComponentID {
-	return 86
 }
 
 func (*ChickenVariant) ID() string {

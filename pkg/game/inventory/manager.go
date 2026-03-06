@@ -33,6 +33,9 @@ func NewManager(c bot.Client) *Manager {
 		}
 		m.c.Player().UpdateStateID(p.StateID)
 	})
+	bot.AddHandler(c, func(ctx context.Context, p *client.BlockChangedAck) {
+		m.c.Player().UpdateSequence(p.Sequence)
+	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.ContainerSetSlot) {
 		if p.ContainerID == 0 {
 			m.inventory.SetSlot(int(p.Slot), p.ItemStack)
