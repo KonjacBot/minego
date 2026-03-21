@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"fmt"
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -103,7 +102,6 @@ func (m *EntityMetadata) ReadFrom(r io.Reader) (int64, error) {
 			return n, err
 		}
 
-		fmt.Println(typeId)
 		metadata := metadataType[typeId]()
 		n2, err := metadata.ReadFrom(r)
 		n += n2

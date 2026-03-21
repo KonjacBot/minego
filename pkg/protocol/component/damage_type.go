@@ -1,7 +1,6 @@
 package component
 
 import (
-	"git.konjactw.dev/falloutBot/go-mc/net/packet"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
 
@@ -17,7 +16,11 @@ type DamageTypeData struct {
 
 //codec:gen
 type DamageType struct {
-	Data packet.OptID[DamageTypeData, *DamageTypeData]
+	IsHolder bool
+	//opt:enum:IsHolder:true
+	HolderID int32 `mc:"VarInt"`
+	//opt:enum:IsHolder:false
+	HolderType string `mc:"Identifier"`
 }
 
 func (*DamageType) ID() string {

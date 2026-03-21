@@ -128,7 +128,6 @@ func init() {
 	slot.RegisterComponent(func() slot.Component {
 		return &SwingAnimation{}
 	})
-
 	slot.RegisterComponent(func() slot.Component {
 		return &StoredEnchantments{}
 	})

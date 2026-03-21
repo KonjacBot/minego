@@ -1,7 +1,9 @@
 package slot
 
 import (
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/KonjacBot/go-mc/level/item"
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -12,6 +14,28 @@ type Slot struct {
 	ItemID          item.ID
 	AddComponent    map[int32]Component
 	RemoveComponent []int32
+}
+
+func (s Slot) String() string {
+	baseItem := fmt.Sprintf("{%d: %d} ", s.ItemID, s.Count)
+	if s.AddComponent != nil {
+		var comStrings []string
+		for i, component := range s.AddComponent {
+			comStrings = append(comStrings, fmt.Sprintf("%d: %#v", i, component))
+		}
+
+		baseItem += " [" + strings.Join(comStrings, ", ") + "] "
+	}
+	if s.RemoveComponent != nil {
+		var comStrings []string
+		for _, component := range s.RemoveComponent {
+			comStrings = append(comStrings, fmt.Sprintf("%d", component))
+		}
+
+		baseItem += " (" + strings.Join(comStrings, ", ") + ") "
+	}
+
+	return baseItem
 }
 
 func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
@@ -31,6 +55,10 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return temp, err
 	}
+
+	temp, err = pk.VarInt(len(s.RemoveComponent)).WriteTo(w)
+	n += temp
+
 	for id, c := range s.AddComponent {
 		temp, err = pk.VarInt(id).WriteTo(w)
 		n += temp
@@ -44,8 +72,6 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 		}
 	}
 
-	temp, err = pk.VarInt(len(s.RemoveComponent)).WriteTo(w)
-	n += temp
 	if err != nil {
 		return temp, err
 	}
@@ -90,7 +116,9 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	var id int32
-	s.AddComponent = make(map[int32]Component, addLens)
+	if addLens > 0 {
+		s.AddComponent = make(map[int32]Component)
+	}
 	for i := int32(0); i < addLens; i++ {
 		temp, err = (*pk.VarInt)(&id).ReadFrom(r)
 		n += temp
@@ -99,7 +127,7 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		c := ComponentFromID(int(id))
 		if c == nil {
-			continue
+			return temp, err
 		}
 
 		temp, err = c.ReadFrom(r)
@@ -109,7 +137,6 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		s.AddComponent[int32(id)] = c
 	}
-
 	for i := int32(0); i < removeLens; i++ {
 		temp, err = (*pk.VarInt)(&id).ReadFrom(r)
 		n += temp

@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"fmt"
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -46,7 +47,12 @@ func (d *Display) ReadFrom(r io.Reader) (n int64, err error) {
 		d.Display = new(Smithing)
 	}
 	if d.Display != nil {
-		return d.Display.ReadFrom(r)
+		from, err := d.Display.ReadFrom(r)
+		n += from
+		if err != nil {
+			fmt.Println("Error reading display:", err)
+		}
+		return n, err
 	}
 	return
 }

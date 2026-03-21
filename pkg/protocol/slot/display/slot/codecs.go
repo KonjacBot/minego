@@ -48,7 +48,7 @@ func (c ItemStack) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *Tag) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (&c.Tag).ReadFrom(r)
+	temp, err = (*packet.Identifier)(&c.Tag).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -58,7 +58,46 @@ func (c *Tag) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c Tag) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (&c.Tag).WriteTo(w)
+	temp, err = (*packet.Identifier)(&c.Tag).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *SmithingTrimData) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.AssetId).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Description).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Decal).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c SmithingTrimData) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.Identifier)(&c.AssetId).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Description).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.Decal).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -77,7 +116,7 @@ func (c *SmithingTrim) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.VarInt)(&c.Pattern).ReadFrom(r)
+	temp, err = (&c.Pattern).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -97,7 +136,7 @@ func (c SmithingTrim) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.VarInt)(&c.Pattern).WriteTo(w)
+	temp, err = (&c.Pattern).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

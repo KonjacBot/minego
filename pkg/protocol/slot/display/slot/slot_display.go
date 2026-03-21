@@ -3,6 +3,7 @@ package slot
 import (
 	"io"
 
+	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
@@ -107,7 +108,7 @@ func (i ItemStack) SlotDisplayType() DisplayType {
 
 //codec:gen
 type Tag struct {
-	Tag pk.Identifier
+	Tag string `mc:"Identifier"`
 }
 
 func (i Tag) SlotDisplayType() DisplayType {
@@ -115,10 +116,17 @@ func (i Tag) SlotDisplayType() DisplayType {
 }
 
 //codec:gen
+type SmithingTrimData struct {
+	AssetId     string `mc:"Identifier"`
+	Description chat.Message
+	Decal       bool
+}
+
+//codec:gen
 type SmithingTrim struct {
 	Base     Display
 	Material Display
-	Pattern  int32 `mc:"VarInt"`
+	Pattern  pk.OptID[SmithingTrimData, *SmithingTrimData]
 }
 
 func (i SmithingTrim) SlotDisplayType() DisplayType {
