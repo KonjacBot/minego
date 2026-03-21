@@ -60,16 +60,12 @@ func New(c bot.Client) *Player {
 	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
 		_ = c.WritePacket(ctx, &server.Pong{p.ID})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.Disconnect) {
-		fmt.Println(p.Reason.String())
-	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.SystemChatMessage) {
 		if !p.Overlay {
 			bot.PublishEvent(c, MessageEvent{Message: p.Content})
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerPosition) {
-		fmt.Println(p)
 		position := pl.entity.Position()
 		if p.Flags&0x01 != 0 {
 			position[0] += p.X
