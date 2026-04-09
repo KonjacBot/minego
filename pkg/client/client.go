@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"strconv"
 
+	"github.com/KonjacBot/minego/pkg/protocol/packet"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/KonjacBot/go-mc/data/packetid"
@@ -120,7 +120,17 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
+	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateLogin, To: packet.StateConfig})
+	if err != nil {
+		return err
+	}
+
 	err = b.configuration()
+	if err != nil {
+		return err
+	}
+
+	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
 	if err != nil {
 		return err
 	}
@@ -159,11 +169,22 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			}
 			pktID := packetid.ClientboundPacketID(p.ID)
 			if pktID == packetid.ClientboundStartConfiguration {
-				err := b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
+				err := b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StatePlay, To: packet.StateConfig})
 				if err != nil {
 					return err
 				}
+
+				err = b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
+				if err != nil {
+					return err
+				}
+
 				err = b.configuration()
+				if err != nil {
+					return err
+				}
+
+				err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
 				if err != nil {
 					return err
 				}
@@ -185,7 +206,6 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			pkt := creator()
 			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
 			if err != nil {
-				fmt.Printf("Decoding: 0x%x %s %s\n", p.ID, pktID.String(), err.Error())
 				continue
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)

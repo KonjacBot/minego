@@ -37,12 +37,12 @@ func (ph *packetHandler) AddRawPacketHandler(id packetid.ClientboundPacketID, ha
 }
 
 func (ph *packetHandler) HandlePacket(ctx context.Context, p client.ClientboundPacket) {
-	f := ph.handlerMap[p.PacketID()]
-	for _, handler := range f {
+	for _, handler := range ph.genericMap {
 		handler(ctx, p)
 	}
 
-	for _, handler := range ph.genericMap {
+	f := ph.handlerMap[p.PacketID()]
+	for _, handler := range f {
 		handler(ctx, p)
 	}
 }

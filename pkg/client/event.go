@@ -34,37 +34,3 @@ func NewEventHandler() *EventHandler {
 		handlers: make(map[string][]func(any) error),
 	}
 }
-
-//func SubscribeEvent[T bot.Event[T]](eb *EventHandler, t T, f func(event T) error) {
-//	eb.mu.Lock()
-//	defer eb.mu.Unlock()
-//
-//	eb.handlers[t.ID()] = append(eb.handlers[t.ID()], func(d any) error {
-//		t2 := d.(T)
-//		return f(t2)
-//	})
-//}
-//
-//func PublishEvent[T bot.Event[T]](eb *EventHandler, t T) error {
-//	eb.mu.RLock()
-//	defer eb.mu.RUnlock()
-//	if hs, ok := eb.handlers[t.ID()]; ok {
-//		for _, h := range hs {
-//			if err := h(t); err != nil {
-//				return err
-//			}
-//		}
-//	}
-//
-//	return nil
-//}
-//
-//func GoPublishEvent[T bot.Event[T]](eb *EventHandler, t T) {
-//	eb.mu.RLock()
-//	defer eb.mu.RUnlock()
-//	if hs, ok := eb.handlers[t.ID()]; ok {
-//		for _, h := range hs {
-//			go h(t)
-//		}
-//	}
-//}
