@@ -50,9 +50,16 @@ func (h *NodeHeap) Pop() interface{} {
 }
 
 // AStar 使用 A* 演算法尋找路徑
+// AStar 使用 A* 演算法尋找路徑（允許懸空/飛行版本）
 func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
-	startPos := protocol.Position{int32(start.X()), int32(start.Y()), int32(start.Z())}
-	goalPos := protocol.Position{int32(goal.X()), int32(goal.Y()), int32(goal.Z())}
+	// 將浮點數座標轉換為區塊整數座標
+	startPos := protocol.Position{int32(math.Floor(start.X())), int32(math.Floor(start.Y())), int32(math.Floor(start.Z()))}
+	goalPos := protocol.Position{int32(math.Floor(goal.X())), int32(math.Floor(goal.Y())), int32(math.Floor(goal.Z()))}
+
+	// 如果終點本身就不可通行（例如點到了固體方塊內部），直接防呆返回，避免白跑搜尋
+	if !isWalkable(world, goalPos) {
+		return nil, nil // 終點不可通行，找不到路徑
+	}
 
 	openSet := &NodeHeap{}
 	heap.Init(openSet)
@@ -60,10 +67,12 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 	closedSet := make(map[protocol.Position]bool)
 	allNodes := make(map[protocol.Position]*Node)
 
+	// 初始化起點節點
 	startNode := &Node{
 		Position: startPos,
 		G:        0,
 		H:        heuristic(startPos, goalPos),
+		Index:    0, // 起點作為第一個放入 heap 的節點，Index 為 0
 	}
 	startNode.F = startNode.G + startNode.H
 
@@ -73,19 +82,20 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 	for openSet.Len() > 0 {
 		current := heap.Pop(openSet).(*Node)
 
+		// 找到終點，開始回溯路徑
 		if current.Position == goalPos {
 			return reconstructPath(current), nil
 		}
 
 		closedSet[current.Position] = true
 
-		// 檢查相鄰節點
+		// 檢查 6 個方向的相鄰節點
 		for _, neighbor := range getNeighbors(current.Position) {
 			if closedSet[neighbor] {
 				continue
 			}
 
-			// 檢查是否可通行
+			// 檢查該位置機器人是否容納得下（頭腳是否為空氣）
 			if !isWalkable(world, neighbor) {
 				continue
 			}
@@ -94,19 +104,23 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 
 			neighborNode, exists := allNodes[neighbor]
 			if !exists {
+				// 關鍵修正：新建立的節點，Index 必須明確指定為 -1
 				neighborNode = &Node{
 					Position: neighbor,
 					G:        math.Inf(1),
 					H:        heuristic(neighbor, goalPos),
+					Index:    -1,
 				}
 				allNodes[neighbor] = neighborNode
 			}
 
+			// 如果這條路徑比之前找到的更好，更新節點資訊
 			if tentativeG < neighborNode.G {
 				neighborNode.Parent = current
 				neighborNode.G = tentativeG
 				neighborNode.F = neighborNode.G + neighborNode.H
 
+				// 根據 Index 狀態決定是新推入還是調整 heap 位置
 				if neighborNode.Index == -1 {
 					heap.Push(openSet, neighborNode)
 				} else {
@@ -150,25 +164,17 @@ func isWalkable(world bot.World, pos protocol.Position) bool {
 	// 檢查腳部位置
 	footBlock, err := world.GetBlock(pos)
 	if err != nil {
-		return false
+		footBlock = block.Air{}
 	}
 
 	// 檢查頭部位置
 	headPos := protocol.Position{pos[0], pos[1] + 1, pos[2]}
 	headBlock, err := world.GetBlock(headPos)
 	if err != nil {
-		return false
+		headBlock = block.Air{}
 	}
 
-	// 檢查地面位置
-	groundPos := protocol.Position{pos[0], pos[1] - 1, pos[2]}
-	groundBlock, err := world.GetBlock(groundPos)
-	if err != nil {
-		return false
-	}
-
-	// 腳部和頭部必須是空氣，地面必須是固體方塊
-	return footBlock == block.Air{} && headBlock == block.Air{} && groundBlock != block.Air{}
+	return footBlock == block.Air{} && headBlock == block.Air{}
 }
 
 // reconstructPath 重建路徑

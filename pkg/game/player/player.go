@@ -36,12 +36,12 @@ func New(c bot.Client) *Player {
 	}
 
 	startup := sync.OnceFunc(func() {
-		go func() {
-			ticker := time.NewTicker(50 * time.Millisecond)
-			for range ticker.C {
-				_ = c.WritePacket(context.Background(), &server.ClientTickEnd{})
-			}
-		}()
+		//go func() {
+		//	ticker := time.NewTicker(50 * time.Millisecond)
+		//	for range ticker.C {
+		//		_ = c.WritePacket(context.Background(), &server.ClientTickEnd{})
+		//	}
+		//}()
 	})
 
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
@@ -194,9 +194,10 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		}); err != nil {
 			return fmt.Errorf("failed to move player: %w", err)
 		}
-
+		p.entity.SetPosition(target)
 		time.Sleep(50 * time.Millisecond)
 	}
+
 	return nil
 }
 
@@ -225,9 +226,9 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 	// 沿著路徑移動
 	for _, waypoint := range path {
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
-			X:     waypoint.X(),
+			X:     waypoint.X() + 0.5,
 			FeetY: waypoint.Y(),
-			Z:     waypoint.Z(),
+			Z:     waypoint.Z() + 0.5,
 			Flags: 0x0,
 		}); err != nil {
 			return fmt.Errorf("failed to move to waypoint: %w", err)
