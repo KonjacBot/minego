@@ -2,6 +2,7 @@ package player
 
 import (
 	"container/heap"
+	"errors"
 	"math"
 
 	"github.com/go-gl/mathgl/mgl64"
@@ -11,6 +12,8 @@ import (
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol"
 )
+
+var ErrMaxNodesExceeded = errors.New("a* pathfinding exceeded max node count")
 
 // Node 表示 A* 演算法中的節點
 type Node struct {
@@ -49,16 +52,15 @@ func (h *NodeHeap) Pop() interface{} {
 	return node
 }
 
-// AStar 使用 A* 演算法尋找路徑
-// AStar 使用 A* 演算法尋找路徑（允許懸空/飛行版本）
-func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
+// AStar 使用 A* 演算法尋找路徑（新增 maxNodeCount 限制）
+func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.Vec3, error) {
 	// 將浮點數座標轉換為區塊整數座標
 	startPos := protocol.Position{int32(math.Floor(start.X())), int32(math.Floor(start.Y())), int32(math.Floor(start.Z()))}
 	goalPos := protocol.Position{int32(math.Floor(goal.X())), int32(math.Floor(goal.Y())), int32(math.Floor(goal.Z()))}
 
-	// 如果終點本身就不可通行（例如點到了固體方塊內部），直接防呆返回，避免白跑搜尋
+	// 如果終點本身就不可通行，直接防呆返回
 	if !isWalkable(world, goalPos) {
-		return nil, nil // 終點不可通行，找不到路徑
+		return nil, nil
 	}
 
 	openSet := &NodeHeap{}
@@ -72,15 +74,31 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 		Position: startPos,
 		G:        0,
 		H:        heuristic(startPos, goalPos),
-		Index:    0, // 起點作為第一個放入 heap 的節點，Index 為 0
+		Index:    0,
 	}
 	startNode.F = startNode.G + startNode.H
 
 	heap.Push(openSet, startNode)
 	allNodes[startPos] = startNode
 
+	// 追蹤走過的節點數量，以及目前最靠近終點的節點（防禦性設計）
+	nodesExplored := 0
+	bestNode := startNode
+
 	for openSet.Len() > 0 {
+		// 檢查是否超過最大節點搜尋限制
+		if maxNodeCount > 0 && nodesExplored >= maxNodeCount {
+			// 選擇 1：返回目前為止最接近終點的路徑（推薦，機器人不會卡死）
+			return reconstructPath(bestNode), ErrMaxNodesExceeded
+		}
+
 		current := heap.Pop(openSet).(*Node)
+		nodesExplored++
+
+		// 更新目前最接近終點的節點（根據啟發式距離 H，越小代表越接近終點）
+		if current.H < bestNode.H {
+			bestNode = current
+		}
 
 		// 找到終點，開始回溯路徑
 		if current.Position == goalPos {
@@ -95,7 +113,7 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 				continue
 			}
 
-			// 檢查該位置機器人是否容納得下（頭腳是否為空氣）
+			// 檢查該位置機器人是否容納得下
 			if !isWalkable(world, neighbor) {
 				continue
 			}
@@ -104,7 +122,6 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 
 			neighborNode, exists := allNodes[neighbor]
 			if !exists {
-				// 關鍵修正：新建立的節點，Index 必須明確指定為 -1
 				neighborNode = &Node{
 					Position: neighbor,
 					G:        math.Inf(1),
@@ -120,7 +137,6 @@ func AStar(world bot.World, start, goal mgl64.Vec3) ([]mgl64.Vec3, error) {
 				neighborNode.G = tentativeG
 				neighborNode.F = neighborNode.G + neighborNode.H
 
-				// 根據 Index 狀態決定是新推入還是調整 heap 位置
 				if neighborNode.Index == -1 {
 					heap.Push(openSet, neighborNode)
 				} else {

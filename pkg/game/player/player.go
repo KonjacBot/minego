@@ -195,7 +195,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 			return fmt.Errorf("failed to move player: %w", err)
 		}
 		p.entity.SetPosition(target)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(25 * time.Millisecond)
 	}
 
 	return nil
@@ -213,8 +213,7 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 
 	currentPos := p.entity.Position()
 
-	// 使用 A* 演算法尋找路徑
-	path, err := AStar(p.c.World(), currentPos, pos)
+	path, err := AStar(p.c.World(), currentPos, pos, 4096)
 	if err != nil {
 		return fmt.Errorf("failed to find path: %w", err)
 	}
@@ -234,8 +233,7 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 			return fmt.Errorf("failed to move to waypoint: %w", err)
 		}
 
-		// 短暫延遲以模擬真實移動
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	return nil
