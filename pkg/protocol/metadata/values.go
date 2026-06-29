@@ -201,12 +201,28 @@ func (b CatVariant) EntityMetadataType() MetadataType {
 	return MetadataCatVariant
 }
 
+type CatSoundVariant struct {
+	pk.VarInt
+}
+
+func (CatSoundVariant) EntityMetadataType() MetadataType {
+	return MetadataCatSoundVariant
+}
+
 type CowVariant struct {
 	pk.VarInt
 }
 
 func (CowVariant) EntityMetadataType() MetadataType {
 	return MetadataCowVariant
+}
+
+type CowSoundVariant struct {
+	pk.VarInt
+}
+
+func (CowSoundVariant) EntityMetadataType() MetadataType {
+	return MetadataCowSoundVariant
 }
 
 type WolfVariant struct {
@@ -241,12 +257,28 @@ func (PigVariant) EntityMetadataType() MetadataType {
 	return MetadataPigVariant
 }
 
+type PigSoundVariant struct {
+	pk.VarInt
+}
+
+func (PigSoundVariant) EntityMetadataType() MetadataType {
+	return MetadataPigSoundVariant
+}
+
 type ChickenVariant struct {
 	pk.VarInt
 }
 
 func (ChickenVariant) EntityMetadataType() MetadataType {
 	return MetadataChickenVariant
+}
+
+type ChickenSoundVariant struct {
+	pk.VarInt
+}
+
+func (ChickenSoundVariant) EntityMetadataType() MetadataType {
+	return MetadataChickenSoundVariant
 }
 
 //codec:gen

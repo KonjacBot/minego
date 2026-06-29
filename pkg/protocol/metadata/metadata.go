@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -31,12 +32,16 @@ const (
 	MetadataOptVarInt
 	MetadataPose
 	MetadataCatVariant
+	MetadataCatSoundVariant
 	MetadataCowVariant
+	MetadataCowSoundVariant
 	MetadataWolfVariant
 	MetadataWolfSoundVariant
 	MetadataFrogVariant
 	MetadataPigVariant
+	MetadataPigSoundVariant
 	MetadataChickenVariant
+	MetadataChickenSoundVariant
 	MetadataZombieNautilusVariant
 	MetadataOptGlobalPosition
 	MetadataPaintingVariant
@@ -102,7 +107,11 @@ func (m *EntityMetadata) ReadFrom(r io.Reader) (int64, error) {
 			return n, err
 		}
 
-		metadata := metadataType[typeId]()
+		creator := metadataType[typeId]
+		if creator == nil {
+			return n, fmt.Errorf("metadata: unknown entity metadata type id %d", typeId)
+		}
+		metadata := creator()
 		n2, err := metadata.ReadFrom(r)
 		n += n2
 		if err != nil {
@@ -147,12 +156,16 @@ func init() {
 	metadataType[MetadataOptVarInt] = func() Metadata { return &OptVarInt{} }
 	metadataType[MetadataPose] = func() Metadata { return &Pose{} }
 	metadataType[MetadataCatVariant] = func() Metadata { return &CatVariant{} }
+	metadataType[MetadataCatSoundVariant] = func() Metadata { return &CatSoundVariant{} }
 	metadataType[MetadataCowVariant] = func() Metadata { return &CowVariant{} }
+	metadataType[MetadataCowSoundVariant] = func() Metadata { return &CowSoundVariant{} }
 	metadataType[MetadataWolfVariant] = func() Metadata { return &WolfVariant{} }
 	metadataType[MetadataWolfSoundVariant] = func() Metadata { return &WolfSoundVariant{} }
 	metadataType[MetadataFrogVariant] = func() Metadata { return &FrogVariant{} }
 	metadataType[MetadataPigVariant] = func() Metadata { return &PigVariant{} }
+	metadataType[MetadataPigSoundVariant] = func() Metadata { return &PigSoundVariant{} }
 	metadataType[MetadataChickenVariant] = func() Metadata { return &ChickenVariant{} }
+	metadataType[MetadataChickenSoundVariant] = func() Metadata { return &ChickenSoundVariant{} }
 	metadataType[MetadataOptGlobalPosition] = func() Metadata { return &OptGlobalPosition{} }
 	metadataType[MetadataPaintingVariant] = func() Metadata { return &PaintingVariant{} }
 	metadataType[MetadataSnifferVariant] = func() Metadata { return &SnifferVariant{} }
