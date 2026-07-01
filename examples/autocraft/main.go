@@ -144,7 +144,7 @@ func putGlassPane() {
 
 func takeGlass() {
 	c.Inventory().Close()
-	container, err := c.Player().OpenContainer(cfg.TakePos, 1)
+	container, err := c.Player().OpenContainer(cfg.TakePos, 0)
 	if err != nil || container == nil {
 		return
 	}
@@ -194,7 +194,7 @@ func craftGlass() (int32, int32) {
 	if err != nil {
 		return 0, 0
 	}
-	con, err := c.Player().OpenContainer(craftingTablePos, 1)
+	con, err := c.Player().OpenContainer(craftingTablePos, 0)
 	if err != nil {
 		fmt.Println(err)
 		return 0, 0
