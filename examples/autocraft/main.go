@@ -120,7 +120,7 @@ func craft() {
 func putGlassPane() {
 	for _, pos := range cfg.PlacePos {
 		c.Inventory().Close()
-		container, err := c.Player().OpenContainer(pos, 1)
+		container, err := c.Player().OpenContainer(pos, 0)
 		if err != nil || container == nil {
 			fmt.Println(err)
 			continue
