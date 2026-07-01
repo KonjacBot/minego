@@ -13,12 +13,12 @@ func (s *UpdateSectionsBlocks) SetSectionPos(x, y, z int32) {
 func (s UpdateSectionsBlocks) ToSectionPos() (x, y, z int32) {
 	sectionX := int32(s.ChunkSectionPosition >> 42)
 	sectionY := int32(s.ChunkSectionPosition << 44 >> 44)
-	sectionZ := int32(s.ChunkSectionPosition >> 22 >> 42)
+	sectionZ := int32(s.ChunkSectionPosition << 22 >> 42)
 	return sectionX, sectionY, sectionZ
 }
 
 func (s *UpdateSectionsBlocks) AddBlock(x, y, z int, stateID int32) {
-	s.Blocks = append(s.Blocks, int64(stateID)<<12|(int64(x)<<8|int64(y)<<4|int64(z)))
+	s.Blocks = append(s.Blocks, int64(stateID)<<12|(int64(x)<<8|int64(z)<<4|int64(y)))
 }
 
 func (s UpdateSectionsBlocks) ParseBlocks() map[[3]int32]int32 {
