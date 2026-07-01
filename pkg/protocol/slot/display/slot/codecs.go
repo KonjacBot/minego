@@ -8,6 +8,54 @@ import (
 	"github.com/KonjacBot/go-mc/net/packet"
 )
 
+func (c *WithAnyPotion) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Display).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c WithAnyPotion) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Display).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *OnlyWithComponent) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Source).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Component).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c OnlyWithComponent) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Source).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Component).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
 func (c *Item) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.VarInt)(&c.ID).ReadFrom(r)
@@ -59,6 +107,35 @@ func (c *Tag) ReadFrom(r io.Reader) (n int64, err error) {
 func (c Tag) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.Identifier)(&c.Tag).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *Dyed) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Dye).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Target).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c Dyed) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Dye).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.Target).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

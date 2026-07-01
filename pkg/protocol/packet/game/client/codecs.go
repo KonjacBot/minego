@@ -4,6 +4,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
@@ -3748,6 +3749,7 @@ func (c *RecipeBookAdd) ReadFrom(r io.Reader) (n int64, err error) {
 	temp, err = packet.Array(&c.Recipes).ReadFrom(r)
 	n += temp
 	if err != nil {
+		fmt.Println(err)
 		return n, err
 	}
 	temp, err = (*packet.Boolean)(&c.Replace).ReadFrom(r)

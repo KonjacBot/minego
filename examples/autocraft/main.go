@@ -192,6 +192,7 @@ func craftGlass() (int32, int32) {
 
 	craftingTablePos, err := c.World().FindNearbyBlock(pos, 6, block.CraftingTable{})
 	if err != nil {
+		fmt.Println(err)
 		return 0, 0
 	}
 	con, err := c.Player().OpenContainer(craftingTablePos, 0)

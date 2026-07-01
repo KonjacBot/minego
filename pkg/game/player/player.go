@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
+	"github.com/KonjacBot/go-mc/level/block"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/bot"
@@ -351,6 +352,17 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 func (p *Player) OpenContainer(pos protocol.Position, hand int32) (bot.Container, error) {
 	if p.c == nil {
 		return nil, fmt.Errorf("client is not initialized")
+	}
+	w := p.c.World()
+	if w == nil {
+		return nil, fmt.Errorf("world is not initialized")
+	}
+	blk, err := w.GetBlock(pos)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open container: %w", err)
+	}
+	if block.IsAirBlock(blk) {
+		return nil, fmt.Errorf("failed to open container: block at %v is air", pos)
 	}
 
 	p.sequence++

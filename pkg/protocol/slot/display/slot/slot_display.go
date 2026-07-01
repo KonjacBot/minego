@@ -14,9 +14,12 @@ type DisplayType int32
 const (
 	DisplayEmpty DisplayType = iota
 	DisplayAnyFuel
+	DisplayWithAnyPotion
+	DisplayOnlyWithComponent
 	DisplayItem
 	DisplayItemStack
 	DisplayTag
+	DisplayDyed
 	DisplaySmithingTrim
 	DisplayWithRemainder
 	DisplayComposite
@@ -43,6 +46,18 @@ func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
 		return
 	case DisplayAnyFuel:
 		return
+	case DisplayWithAnyPotion:
+		var potion WithAnyPotion
+		if _, err = potion.ReadFrom(r); err != nil {
+			return
+		}
+		s.SlotDisplay = &potion
+	case DisplayOnlyWithComponent:
+		var only OnlyWithComponent
+		if _, err = only.ReadFrom(r); err != nil {
+			return
+		}
+		s.SlotDisplay = &only
 	case DisplayItem:
 		var item Item
 		if _, err = item.ReadFrom(r); err != nil {
@@ -61,6 +76,12 @@ func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
 			return
 		}
 		s.SlotDisplay = &tag
+	case DisplayDyed:
+		var dyed Dyed
+		if _, err = dyed.ReadFrom(r); err != nil {
+			return
+		}
+		s.SlotDisplay = &dyed
 	case DisplaySmithingTrim:
 		var trim SmithingTrim
 		if _, err = trim.ReadFrom(r); err != nil {
@@ -89,6 +110,25 @@ type SlotDisplay interface {
 }
 
 //codec:gen
+type WithAnyPotion struct {
+	Display Display
+}
+
+func (i WithAnyPotion) SlotDisplayType() DisplayType {
+	return DisplayWithAnyPotion
+}
+
+//codec:gen
+type OnlyWithComponent struct {
+	Source    Display
+	Component int32 `mc:"VarInt"`
+}
+
+func (i OnlyWithComponent) SlotDisplayType() DisplayType {
+	return DisplayOnlyWithComponent
+}
+
+//codec:gen
 type Item struct {
 	ID int32 `mc:"VarInt"`
 }
@@ -99,7 +139,7 @@ func (i Item) SlotDisplayType() DisplayType {
 
 //codec:gen
 type ItemStack struct {
-	ItemStack slot.Slot
+	ItemStack slot.ItemStackTemplate
 }
 
 func (i ItemStack) SlotDisplayType() DisplayType {
@@ -113,6 +153,16 @@ type Tag struct {
 
 func (i Tag) SlotDisplayType() DisplayType {
 	return DisplayTag
+}
+
+//codec:gen
+type Dyed struct {
+	Dye    Display
+	Target Display
+}
+
+func (i Dyed) SlotDisplayType() DisplayType {
+	return DisplayDyed
 }
 
 //codec:gen
