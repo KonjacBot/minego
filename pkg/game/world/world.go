@@ -287,7 +287,7 @@ func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.B
 
 		// Check if current block matches target
 		if currentBlock, err := w.GetBlock(current); err == nil {
-			if currentBlock == blk {
+			if currentBlock.ID() == blk.ID() {
 				return current, nil
 			}
 		}
