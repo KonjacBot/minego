@@ -3,8 +3,8 @@ module autocraft
 go 1.25.3
 
 require (
-	github.com/KonjacBot/go-mc v0.0.0-20260701035653-a22100ce4568
-	github.com/KonjacBot/minego v0.0.0-20260321231112-66a50df3d420
+	github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f
+	github.com/KonjacBot/minego v0.0.0-20260701074655-029d954cce1e
 	github.com/go-gl/mathgl v1.2.0
 	github.com/pelletier/go-toml/v2 v2.3.0
 )

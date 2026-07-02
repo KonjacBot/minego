@@ -1,11 +1,11 @@
-github.com/KonjacBot/go-mc v0.0.0-20260303110648-e4aab80788cf h1:muAFBzkLOKVbNDD/rFeLryq/vIz45bKXii7x/AVkP6U=
-github.com/KonjacBot/go-mc v0.0.0-20260303110648-e4aab80788cf/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
-github.com/KonjacBot/go-mc v0.0.0-20260701033237-912abd4a7316 h1:zSSuLs2jejDCxiiP8cyDKfluBelqJqGu2+I8mYoi4jo=
-github.com/KonjacBot/go-mc v0.0.0-20260701033237-912abd4a7316/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
 github.com/KonjacBot/go-mc v0.0.0-20260701035653-a22100ce4568 h1:UOWdj2WB1HHSTnqqE811LFdiC6UhQkW+Ryb6uZg+cCA=
 github.com/KonjacBot/go-mc v0.0.0-20260701035653-a22100ce4568/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
+github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f h1:vAbiqnDpB3KEZTQpAR6lQl7uFd2ENEShyVGhVKXdlMs=
+github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
 github.com/KonjacBot/minego v0.0.0-20260321231112-66a50df3d420 h1:CSwCKMUEaalTbizPA7wYlJrj7I1BvPmsgNQg9BSb0LY=
 github.com/KonjacBot/minego v0.0.0-20260321231112-66a50df3d420/go.mod h1:jTbJg4LM8lJDT/YJhr5rLldnJKwWAb6HcJ+0U060ArA=
+github.com/KonjacBot/minego v0.0.0-20260701074655-029d954cce1e h1:YRjUqf+35xKPbXguujW7ebKd8HuJMGS4SdArcIzSaqw=
+github.com/KonjacBot/minego v0.0.0-20260701074655-029d954cce1e/go.mod h1:6TCEpV8OAgrGKr/iqDgo4bSrpWgwUkj6pVVxuddNdnM=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
 github.com/go-gl/mathgl v1.2.0/go.mod h1:pf9+b5J3LFP7iZ4XXaVzZrCle0Q/vNpB/vDe5+3ulRE=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

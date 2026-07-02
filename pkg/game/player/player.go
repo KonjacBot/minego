@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"sync"
 	"time"
@@ -168,7 +169,15 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		return nil // 已經在目標位置
 	}
 
-	segmentLength := 8.0
+	// 先通知伺服器玩家正在飛行 (PlayerAbilities flags 0x02 = isFlying)，
+	// 否則伺服器會把空中高速移動判定為「異常飛行」而踢線。
+	if err := p.c.WritePacket(context.Background(), &server.PlayerAbilities{Flags: 0x02}); err != nil {
+		return fmt.Errorf("failed to set flying ability: %w", err)
+	}
+
+	const segmentLength = 5.0
+
+	slog.Info("flyto begin", "from", vecString(currentPos), "target", vecString(pos), "distance", distance)
 
 	for {
 		currentPos = p.entity.Position()
@@ -176,7 +185,8 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		direction = pos.Sub(currentPos)
 		distance = direction.Len()
 
-		if distance == 0 {
+		if distance < 0.05 {
+			slog.Info("flyto done", "at", vecString(currentPos))
 			return nil
 		}
 
@@ -186,6 +196,8 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		moveDistance := math.Min(segmentLength, distance)
 
 		target := currentPos.Add(direction.Mul(moveDistance))
+
+		slog.Info("flyto step", "target", vecString(target), "remaining", distance)
 
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
 			X:     target.X(),
@@ -198,8 +210,10 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		p.entity.SetPosition(target)
 		time.Sleep(25 * time.Millisecond)
 	}
+}
 
-	return nil
+func vecString(v mgl64.Vec3) string {
+	return fmt.Sprintf("%.2f,%.2f,%.2f", v.X(), v.Y(), v.Z())
 }
 
 // WalkTo 使用 A* 演算法步行到指定位置

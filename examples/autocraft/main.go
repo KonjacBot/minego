@@ -24,6 +24,12 @@ import (
 var c bot.Client
 var cfg config.Config
 var glassRID int32
+var startCraftLoop = sync.OnceFunc(func() {
+	time.Sleep(500 * time.Millisecond)
+	for {
+		craft()
+	}
+})
 
 func main() {
 	var err error
@@ -39,23 +45,21 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	f := sync.OnceFunc(func() {
-		time.Sleep(500 * time.Millisecond)
-		for {
-			craft()
-		}
-	})
-
 	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
 		message := e.Message.ClearString()
-		if message == "[系統] 讀取人物成功。" {
+		if message == loadedMessage {
 			c.WritePacket(ctx, &server.ClientCommand{
 				Action: 0,
 			})
 			go func() {
-				f()
+				startCraftLoop()
 			}()
 		}
+		if balance, ok := parseEmeraldBalance(message); ok {
+			emeraldBalance.Store(balance)
+		}
+		handlePrivateMessage(message)
+		handleTeleportRequest(message)
 
 		fmt.Println(e.Message.String())
 		return nil
@@ -86,6 +90,12 @@ func main() {
 			Action: 0,
 		})
 	})
+	bot.AddHandler(c, func(ctx context.Context, p *cp.SetTabListHeaderAndFooter) {
+		message := p.Header.ClearString() + "\n" + p.Footer.ClearString()
+		if balance, ok := parseEmeraldBalance(message); ok {
+			emeraldBalance.Store(balance)
+		}
+	})
 
 	err = c.Connect(ctx, cfg.Address, &bot.ConnectOptions{
 		FakeHost: "mcfallout.net",
@@ -114,7 +124,7 @@ func craft() {
 	}
 
 	fmt.Println(glassCount, glassPaneCount)
-
+	time.Sleep(50 * time.Millisecond)
 }
 
 func putGlassPane() {
@@ -126,19 +136,18 @@ func putGlassPane() {
 			continue
 		}
 		c.Player().CheckServer()
-		time.Sleep(500 * time.Millisecond)
 
 		for i, s := range container.Slots() {
 			if i >= 27 && s.ItemID == (item.GlassPane{}.ID()) {
 				_ = container.Click(int16(i), 1, 0)
-				time.Sleep(50 * time.Millisecond)
+				time.Sleep(15 * time.Millisecond)
 			}
 			if i < 27 && (s.ItemID != 0 && s.ItemID != (item.GlassPane{}.ID())) {
 				_ = container.Click(int16(i), 1, 0)
-				time.Sleep(50 * time.Millisecond)
+				time.Sleep(15 * time.Millisecond)
 			}
 		}
-		time.Sleep(150 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -154,7 +163,7 @@ func takeGlass() {
 	for i, s := range container.Slots() {
 		if i < 27 && s.ItemID == (item.Glass{}.ID()) {
 			_ = container.Click(int16(i), 1, 0)
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(15 * time.Millisecond)
 			count++
 		}
 		if count > 14 {
@@ -173,7 +182,7 @@ func takeGlass() {
 		if i < 27 && (s.ItemID != (item.Glass{}.ID()) && s.ItemID != 0) {
 			f()
 			_ = container.Click(int16(i), 4, 1)
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 		}
 	}
 
@@ -203,13 +212,12 @@ func craftGlass() (int32, int32) {
 
 	c.Player().CheckServer()
 
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		_ = c.WritePacket(context.Background(), &server.PlaceRecipe{WindowID: c.Inventory().CurrentContainerID(), RecipeID: glassRID, MakeAll: true})
 
 		_ = con.Click(0, 1, 0)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(25 * time.Millisecond)
 	}
-	time.Sleep(150 * time.Millisecond)
 	glassCount := 0
 	glassPaneCount := 0
 	ff := false
@@ -234,7 +242,7 @@ func craftGlass() (int32, int32) {
 			ff = true
 
 			_ = con.Click(int16(i), 4, 1)
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(15 * time.Millisecond)
 		}
 	}
 	if ff {

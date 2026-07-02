@@ -12,6 +12,7 @@ type Config struct {
 	Address     string              `toml:"address"`
 	Proxy       *bot.ProxyConfig    `toml:"proxy,omitempty"`
 	UserCode    string              `toml:"user_code"`
+	Owners      []string            `toml:"owners"`
 	TakePos     protocol.Position   `toml:"take_pos"`
 	TakeButton  protocol.Position   `toml:"take_button"`
 	PlacePos    []protocol.Position `toml:"place_pos"`
@@ -26,6 +27,7 @@ func ReadConfig() (c Config, err error) {
 				Address:     "mcfallout.net",
 				Proxy:       &bot.ProxyConfig{},
 				UserCode:    "artif",
+				Owners:      []string{},
 				TakePos:     protocol.Position{0, 1, 2},
 				PlacePos:    []protocol.Position{{0, 1, 2}},
 				PlaceButton: []protocol.Position{{0, 1, 2}},

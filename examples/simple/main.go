@@ -19,7 +19,7 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	err := c.Connect(ctx, "mcfallout.net", nil)
+	err := c.Connect(ctx, "villagerfun.tw", nil)
 	if err != nil {
 		panic(err)
 	}

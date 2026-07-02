@@ -1,18 +1,16 @@
 module github.com/KonjacBot/minego
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
-	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
-	golang.org/x/sync v0.16.0
+	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
+	golang.org/x/sync v0.21.0
 )
 
 require (
 	github.com/go-gl/mathgl v1.2.0
-	golang.org/x/net v0.43.0
+	golang.org/x/net v0.56.0
 )
 
-require github.com/KonjacBot/go-mc v0.0.0-20260701033237-912abd4a7316
+require github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f
