@@ -23,8 +23,9 @@ import (
 type World struct {
 	c bot.Client
 
-	columns  map[level.ChunkPos]*level.Chunk
-	entities map[int32]*Entity
+	chunkHeight uint32
+	columns     map[level.ChunkPos]*level.Chunk
+	entities    map[int32]*Entity
 
 	entityLock sync.Mutex
 	chunkLock  sync.Mutex
@@ -44,13 +45,40 @@ func NewWorld(c bot.Client) *World {
 		w.columns[p.Pos] = p.Data
 	})
 
+	bot.AddHandler(c, func(ctx context.Context, p *cp.Login) {
+		switch p.CommonPlayerSpawnInfo.DimensionType {
+		case 0:
+			w.chunkHeight = 384
+		case 1, 2:
+			fallthrough
+		default:
+			w.chunkHeight = 256
+		}
+
+		w.chunkLock.Lock()
+		defer w.chunkLock.Unlock()
+
+		w.columns = make(map[level.ChunkPos]*level.Chunk)
+		w.entities = make(map[int32]*Entity)
+	})
+
 	bot.AddHandler(c, func(ctx context.Context, p *cp.ForgetLevelChunk) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
 		delete(w.columns, p.Pos)
 	})
+
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
+		switch p.CommonPlayerSpawnInfo.DimensionType {
+		case 0:
+			w.chunkHeight = 384
+		case 1, 2:
+			fallthrough
+		default:
+			w.chunkHeight = 256
+		}
+
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
@@ -151,6 +179,10 @@ func NewWorld(c bot.Client) *World {
 		sectionY := pos[1] >> 4
 		blockY := pos[1] & 15
 
+		if len(chunk.Sections) > 16 {
+			sectionY += 4
+		}
+
 		if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
 			return // invalid section Y coordinate
 		}
@@ -172,6 +204,10 @@ func NewWorld(c bot.Client) *World {
 		chunk, ok := w.columns[pos2d]
 		if !ok {
 			return // chunk not loaded, ignore update
+		}
+
+		if len(chunk.Sections) > 16 {
+			sectionY += 4
 		}
 
 		if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
@@ -210,6 +246,9 @@ func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
 	blockY := pos[1] & 15
 	blockIdx := (blockY << 8) | (blockZ << 4) | blockX
 	sectionY := pos[1] >> 4
+	if len(chunk.Sections) > 16 {
+		sectionY += 4
+	}
 	if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
 		return nil, errors.New("invalid section Y coordinate")
 	}
@@ -234,7 +273,9 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 	blockZ := pos[2] & 15
 	sectionY := pos[1] >> 4
 	blockY := pos[1] & 15
-
+	if len(chunk.Sections) > 16 {
+		sectionY += 4
+	}
 	if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
 		return errors.New("invalid section Y coordinate")
 	}
