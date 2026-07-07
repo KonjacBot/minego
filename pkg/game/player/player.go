@@ -23,6 +23,7 @@ import (
 type Player struct {
 	c bot.Client
 
+	abilities         int8
 	entity            *world.Entity
 	stateID, sequence int32
 
@@ -54,6 +55,9 @@ func New(c bot.Client) *Player {
 		_ = c.WritePacket(ctx, &server.KeepAlive{
 			ID: p.ID,
 		})
+	})
+	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerAbilities) {
+		pl.abilities = p.Flags
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
@@ -160,6 +164,9 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
+	if p.abilities&0x02 != 0 {
+		return fmt.Errorf("player abilities not requirements")
+	}
 
 	currentPos := p.entity.Position()
 	direction := pos.Sub(currentPos)
@@ -167,12 +174,6 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 
 	if distance == 0 {
 		return nil // 已經在目標位置
-	}
-
-	// 先通知伺服器玩家正在飛行 (PlayerAbilities flags 0x02 = isFlying)，
-	// 否則伺服器會把空中高速移動判定為「異常飛行」而踢線。
-	if err := p.c.WritePacket(context.Background(), &server.PlayerAbilities{Flags: 0x02}); err != nil {
-		return fmt.Errorf("failed to set flying ability: %w", err)
 	}
 
 	const segmentLength = 5.0
