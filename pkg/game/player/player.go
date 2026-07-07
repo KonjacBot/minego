@@ -199,6 +199,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		target := currentPos.Add(direction.Mul(moveDistance))
 
 		slog.Info("flyto step", "target", vecString(target), "remaining", distance)
+		p.entity.SetPosition(target)
 
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
 			X:     target.X(),
@@ -208,8 +209,8 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		}); err != nil {
 			return fmt.Errorf("failed to move player: %w", err)
 		}
-		p.entity.SetPosition(target)
-		time.Sleep(25 * time.Millisecond)
+
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
