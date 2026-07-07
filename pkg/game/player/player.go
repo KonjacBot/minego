@@ -211,7 +211,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 
-		if p.entity.Position().ApproxEqualThreshold(target, 0.5) {
+		if !p.entity.Position().ApproxEqualThreshold(target, 0.5) {
 			return fmt.Errorf("failed to move player: position updated by server")
 		}
 	}
