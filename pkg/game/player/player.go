@@ -164,7 +164,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
-	if p.abilities&0x04 == 0 {
+	if !(p.abilities&0x04 != 0) {
 		return fmt.Errorf("player abilities not requirements")
 	}
 
