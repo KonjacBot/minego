@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/KonjacBot/minego/pkg/protocol/packet"
 	"golang.org/x/sync/errgroup"
@@ -158,12 +159,19 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(15)
 
+	const readTimeout = 30 * time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			var p pk.Packet
+
+			if err := b.conn.Socket.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+				return err
+			}
+
 			if err := b.conn.ReadPacket(&p); err != nil {
 				return err
 			}
@@ -209,6 +217,8 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				continue
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)
+
+			_ = b.conn.Socket.SetReadDeadline(time.Time{})
 		}
 	}
 }
