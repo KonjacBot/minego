@@ -7,19 +7,18 @@ import (
 
 //codec:gen
 type WrittenBookContent struct {
-	RawTitle         string `mc:"String"`
-	HasFilteredTitle bool
-	FilteredTitle    pk.Option[pk.String, *pk.String]
-	Author           string `mc:"String"`
-	Generation       int32  `mc:"VarInt"`
-	Pages            []WrittenBookPage
+	RawTitle      string `mc:"String"`
+	FilteredTitle pk.Option[pk.String, *pk.String]
+	Author        string `mc:"String"`
+	Generation    int32  `mc:"VarInt"`
+	Pages         []WrittenBookPage
+	Resolved      bool
 }
 
 //codec:gen
 type WrittenBookPage struct {
-	RawContent         chat.Message
-	HasFilteredContent bool
-	FilteredContent    pk.Option[chat.Message, *chat.Message]
+	RawContent      chat.Message
+	FilteredContent pk.Option[chat.Message, *chat.Message]
 }
 
 func (*WrittenBookContent) ID() string {

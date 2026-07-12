@@ -3973,11 +3973,6 @@ func (c *WritableBookPage) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredContent).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	temp, err = (&c.FilteredContent).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -3993,11 +3988,6 @@ func (c WritableBookPage) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredContent).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	temp, err = (&c.FilteredContent).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -4008,11 +3998,6 @@ func (c WritableBookPage) WriteTo(w io.Writer) (n int64, err error) {
 func (c *WrittenBookContent) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.String)(&c.RawTitle).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredTitle).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4037,17 +4022,17 @@ func (c *WrittenBookContent) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.Resolved).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	return n, err
 }
 
 func (c WrittenBookContent) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.String)(&c.RawTitle).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredTitle).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4072,16 +4057,16 @@ func (c WrittenBookContent) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.Resolved).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	return n, err
 }
 func (c *WrittenBookPage) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (&c.RawContent).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredContent).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4097,11 +4082,6 @@ func (c *WrittenBookPage) ReadFrom(r io.Reader) (n int64, err error) {
 func (c WrittenBookPage) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (&c.RawContent).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasFilteredContent).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

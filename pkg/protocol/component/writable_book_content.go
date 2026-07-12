@@ -11,9 +11,8 @@ type WritableBookContent struct {
 
 //codec:gen
 type WritableBookPage struct {
-	RawContent         string `mc:"String"`
-	HasFilteredContent bool
-	FilteredContent    pk.Option[pk.String, *pk.String]
+	RawContent      string `mc:"String"`
+	FilteredContent pk.Option[pk.String, *pk.String]
 }
 
 func (*WritableBookContent) ID() string {
