@@ -1,14 +1,11 @@
 package client
 
-import (
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
-	slot2 "github.com/KonjacBot/minego/pkg/protocol/slot"
-)
+import "github.com/KonjacBot/minego/pkg/protocol/slot"
 
 //codec:gen
 type TradeOption struct {
 	Input          slot.TradeSlot
-	Output         slot2.Slot
+	Output         slot.Slot
 	HasSecondInput bool
 	//opt:optional:HasSecondInput
 	SecondInput     slot.TradeSlot

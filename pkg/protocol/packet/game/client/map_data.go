@@ -24,28 +24,43 @@ type MapColorPatch struct {
 
 func (c *MapColorPatch) ReadFrom(r io.Reader) (n int64, err error) {
 	t, err := (*pk.UnsignedByte)(&c.Columns).ReadFrom(r)
+	n += t
 	if err != nil {
-		return t, err
+		return n, err
 	}
 	if c.Columns <= 0 {
-		return t, err
+		return n, nil
 	}
-	a, err := (*pk.UnsignedByte)(&c.Rows).ReadFrom(r)
-	b, err := (*pk.UnsignedByte)(&c.X).ReadFrom(r)
-	d, err := (*pk.UnsignedByte)(&c.Z).ReadFrom(r)
-	e, err := pk.Array(&c.Data).ReadFrom(r)
-	return t + a + b + d + e, err
+	for _, field := range []*uint8{&c.Rows, &c.X, &c.Z} {
+		t, err = (*pk.UnsignedByte)(field).ReadFrom(r)
+		n += t
+		if err != nil {
+			return n, err
+		}
+	}
+	t, err = pk.Array(&c.Data).ReadFrom(r)
+	n += t
+	return n, err
 }
 
 func (c MapColorPatch) WriteTo(w io.Writer) (n int64, err error) {
-	n, err = pk.UnsignedByte(c.Columns).WriteTo(w)
-	if c.Columns <= 0 {
+	t, err := pk.UnsignedByte(c.Columns).WriteTo(w)
+	n += t
+	if err != nil {
 		return n, err
 	}
-	n, err = pk.UnsignedByte(c.Rows).WriteTo(w)
-	n, err = pk.UnsignedByte(c.X).WriteTo(w)
-	n, err = pk.UnsignedByte(c.Z).WriteTo(w)
-	n, err = pk.Array(&c.Data).WriteTo(w)
+	if c.Columns <= 0 {
+		return n, nil
+	}
+	for _, value := range []uint8{c.Rows, c.X, c.Z} {
+		t, err = pk.UnsignedByte(value).WriteTo(w)
+		n += t
+		if err != nil {
+			return n, err
+		}
+	}
+	t, err = pk.Array(&c.Data).WriteTo(w)
+	n += t
 	return n, err
 }
 

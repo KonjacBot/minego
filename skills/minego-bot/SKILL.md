@@ -42,6 +42,8 @@ The library is split into **interface** (`pkg/bot/`) and **implementation** (`pk
 ```go
 import (
     "context"
+    "os"
+
     "github.com/KonjacBot/minego/pkg/auth"
     "github.com/KonjacBot/minego/pkg/bot"
     "github.com/KonjacBot/minego/pkg/client"
@@ -52,7 +54,7 @@ import (
 
 ```go
 c := client.NewClient(&bot.ClientOptions{
-    AuthProvider: &auth.KonjacAuth{UserCode: "your-code"},
+    AuthProvider: &auth.KonjacAuth{UserCode: os.Getenv("MINEGO_USER_CODE")},
 })
 
 ctx, cancel := context.WithCancel(context.Background())
@@ -65,6 +67,7 @@ err := c.Connect(ctx, "server-address:25565", &bot.ConnectOptions{
 if err != nil {
     panic(err)
 }
+defer c.Close(context.Background())
 ```
 
 ### 3. Register event/packet handlers BEFORE or AFTER Connect, but BEFORE HandleGame
@@ -87,10 +90,24 @@ bot.AddHandler(c, func(ctx context.Context, p *cp.SetHealth) {
 err = c.HandleGame(ctx)
 ```
 
+## Runtime Safety Rules
+
+- Reuse one `Client`; do not call `Connect`, `HandleGame`, or `Close` concurrently.
+- Register packet handlers before `HandleGame`. Registration is concurrency-safe, but deterministic startup avoids missing early packets.
+- `WritePacket` serializes concurrent writes and observes an existing context deadline. Pass the handler context instead of `context.Background()` when available.
+- Typed packet handlers run on the packet loop. Keep them short; move long-running work to a goroutine that observes cancellation.
+- Raw packet handlers may run concurrently. Protect application state they share.
+- `World`, `Entity`, `InventoryHandler`, and `Container` snapshots are safe to read while packets update state. `Container.Slots`, `Entity.Metadata`, and `Entity.Equipment` return copies.
+- A missing chunk or block is unknown, not air. Pathfinding intentionally refuses routes through unloaded chunks.
+- `OpenContainer` waits for the matching window and initial content. Still handle its error and a possible nil result.
+- Interaction sequence IDs are managed by `Player`; do not construct interaction packets with inventory `StateID` as their sequence.
+
 ### 4. Send packets to the server
 
 ```go
-c.WritePacket(ctx, &server.ClientCommand{Action: 0})
+if err := c.WritePacket(ctx, &server.ClientCommand{Action: 0}); err != nil {
+    return err
+}
 ```
 
 ## Key Interfaces
@@ -226,6 +243,8 @@ c.WritePacket(ctx, &server.PlaceRecipe{
 })
 ```
 
+Always check the returned errors in production code. They report cancellation, a closed connection, and packet write failures.
+
 ## Common Patterns
 
 ### Opening and interacting with containers
@@ -235,12 +254,12 @@ container, err := c.Player().OpenContainer(pos, 1)  // hand=1
 if err != nil || container == nil {
     return
 }
-c.Player().CheckServer()
-time.Sleep(500 * time.Millisecond)  // wait for server sync
 
 for i, s := range container.Slots() {
     if s.ItemID == item.Glass{}.ID() {
-        _ = container.Click(int16(i), 1, 0)  // shift-click
+		if err := container.Click(int16(i), 1, 0); err != nil {
+			return
+		}
         time.Sleep(50 * time.Millisecond)
     }
 }
@@ -266,8 +285,10 @@ c.Player().UpdateLocation()
 ```go
 import "github.com/KonjacBot/minego/pkg/game/player"
 
-path, err := player.AStar(c.World(), startPos, goalPos)
+path, err := player.AStar(c.World(), startPos, goalPos, 4096)
 ```
+
+`AStar` returns `player.ErrMaxNodesExceeded` with the best partial path when it reaches the node limit. Decide explicitly whether the bot should follow that partial path.
 
 ### Proxy configuration
 

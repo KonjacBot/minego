@@ -21,7 +21,8 @@ import (
 )
 
 type Player struct {
-	c bot.Client
+	c  bot.Client
+	mu sync.RWMutex
 
 	abilities         int8
 	entity            *world.Entity
@@ -48,7 +49,9 @@ func New(c bot.Client) *Player {
 	})
 
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
+		pl.mu.Lock()
 		pl.lastReceivedPacketTime = time.Now()
+		pl.mu.Unlock()
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.KeepAlive) {
@@ -57,14 +60,16 @@ func New(c bot.Client) *Player {
 		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerAbilities) {
+		pl.mu.Lock()
 		pl.abilities = p.Flags
+		pl.mu.Unlock()
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
 		startup()
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
-		_ = c.WritePacket(ctx, &server.Pong{p.ID})
+		_ = c.WritePacket(ctx, &server.Pong{ID: p.ID})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.SystemChatMessage) {
 		if !p.Overlay {
@@ -107,13 +112,13 @@ func New(c bot.Client) *Player {
 		}
 		pl.entity.SetRotation(rot)
 
-		c.WritePacket(context.Background(), &server.AcceptTeleportation{TeleportID: p.ID})
-		c.WritePacket(context.Background(), &server.MovePlayerPosRot{
-			X:     p.X,
-			FeetY: p.Y,
-			Z:     p.Z,
-			XRot:  p.XRot,
-			YRot:  p.YRot,
+		_ = c.WritePacket(ctx, &server.AcceptTeleportation{TeleportID: p.ID})
+		_ = c.WritePacket(ctx, &server.MovePlayerPosRot{
+			X:     position[0],
+			FeetY: position[1],
+			Z:     position[2],
+			XRot:  float32(rot[0]),
+			YRot:  float32(rot[1]),
 			Flags: 0x00,
 		})
 	})
@@ -125,29 +130,53 @@ func New(c bot.Client) *Player {
 }
 
 func (p *Player) CheckServer() {
-	for time.Since(p.lastReceivedPacketTime) > 50*time.Millisecond && p.c.IsConnected() {
+	deadline := time.Now().Add(5 * time.Second)
+	for p.c.IsConnected() && time.Now().Before(deadline) {
+		p.mu.RLock()
+		lastReceived := p.lastReceivedPacketTime
+		p.mu.RUnlock()
+		if time.Since(lastReceived) <= 50*time.Millisecond {
+			return
+		}
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
 // StateID 返回當前狀態 ID
 func (p *Player) StateID() int32 {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.stateID
 }
 
 // UpdateStateID 更新狀態 ID
 func (p *Player) UpdateStateID(id int32) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.stateID = id
 }
 
 // Sequence 返回當前互動狀態 ID
 func (p *Player) Sequence() int32 {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.sequence
 }
 
 // UpdateSequence 更新互動狀態 ID
 func (p *Player) UpdateSequence(id int32) {
-	p.sequence = id
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if id > p.sequence {
+		p.sequence = id
+	}
+}
+
+func (p *Player) nextSequence() int32 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.sequence++
+	return p.sequence
 }
 
 // Entity 返回玩家實體
@@ -164,7 +193,10 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
-	if !(p.abilities&0x04 != 0) {
+	p.mu.RLock()
+	canFly := p.abilities&0x04 != 0
+	p.mu.RUnlock()
+	if !canFly {
 		return fmt.Errorf("player abilities not requirements")
 	}
 
@@ -211,7 +243,10 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 
-		if !(p.abilities&0x04 != 0) {
+		p.mu.RLock()
+		canFly = p.abilities&0x04 != 0
+		p.mu.RUnlock()
+		if !canFly {
 			return fmt.Errorf("player abilities not requirements")
 		}
 		if !p.entity.Position().ApproxEqualThreshold(target, 0.5) {
@@ -309,7 +344,7 @@ func (p *Player) BreakBlock(pos protocol.Position) error {
 	// 發送開始挖掘封包
 	startPacket := &server.PlayerAction{
 		Status:   0,
-		Sequence: p.stateID,
+		Sequence: p.nextSequence(),
 		Location: pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
 		Face:     1,
 	}
@@ -321,7 +356,7 @@ func (p *Player) BreakBlock(pos protocol.Position) error {
 	// 發送完成挖掘封包
 	finishPacket := &server.PlayerAction{
 		Status:   2,
-		Sequence: p.stateID,
+		Sequence: p.nextSequence(),
 		Location: pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
 		Face:     1,
 	}
@@ -343,7 +378,7 @@ func (p *Player) PlaceBlock(pos protocol.Position) error {
 		CursorY:     0.5,
 		CursorZ:     0.5,
 		InsideBlock: false,
-		Sequence:    p.stateID,
+		Sequence:    p.nextSequence(),
 	}
 
 	return p.c.WritePacket(context.Background(), packet)
@@ -355,7 +390,6 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 		return fmt.Errorf("client is not initialized")
 	}
 
-	p.sequence++
 	packet := &server.UseItemOn{
 		Hand:        0,
 		Location:    pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
@@ -364,7 +398,7 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 		CursorY:     float32(cursor[1]),
 		CursorZ:     float32(cursor[2]),
 		InsideBlock: false,
-		Sequence:    p.sequence,
+		Sequence:    p.nextSequence(),
 	}
 
 	return p.c.WritePacket(context.Background(), packet)
@@ -387,7 +421,7 @@ func (p *Player) OpenContainer(pos protocol.Position, hand int32) (bot.Container
 		return nil, fmt.Errorf("failed to open container: block at %v is air", pos)
 	}
 
-	p.sequence++
+	previousContainerID := p.c.Inventory().CurrentContainerID()
 	// 發送使用物品封包來打開容器
 	packet := &server.UseItemOn{
 		Hand:           hand,
@@ -398,32 +432,14 @@ func (p *Player) OpenContainer(pos protocol.Position, hand int32) (bot.Container
 		CursorZ:        0.5,
 		InsideBlock:    false,
 		WorldBorderHit: false,
-		Sequence:       p.sequence,
+		Sequence:       p.nextSequence(),
 	}
 
 	if err := p.c.WritePacket(context.Background(), packet); err != nil {
 		return nil, fmt.Errorf("failed to open container: %w", err)
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancelFunc()
-
-	for ctx.Err() == nil && p.c.Inventory().CurrentContainerID() <= 0 {
-		time.Sleep(time.Millisecond * 50)
-	}
-
-	for ctx.Err() == nil && p.c.Inventory().Container().SlotCount() == 0 {
-		time.Sleep(time.Millisecond * 50)
-	}
-
-	if ctx.Err() != nil {
-		return nil, fmt.Errorf("failed to open container: %w", ctx.Err())
-	}
-	if p.c.Inventory().CurrentContainerID() <= 0 {
-		return nil, fmt.Errorf("failed to open container: no container opened")
-	}
-
-	return p.c.Inventory().Container(), nil
+	return p.waitForContainer(previousContainerID)
 }
 
 // UseItem 使用指定手中的物品
@@ -434,7 +450,7 @@ func (p *Player) UseItem(hand int8) error {
 
 	return p.c.WritePacket(context.Background(), &server.UseItem{
 		Hand:     int32(hand),
-		Sequence: p.stateID,
+		Sequence: p.nextSequence(),
 		Yaw:      0,
 		Pitch:    0,
 	})
@@ -446,14 +462,34 @@ func (p *Player) OpenMenu(command string) (bot.Container, error) {
 		return nil, fmt.Errorf("client is not initialized")
 	}
 
+	previousContainerID := p.c.Inventory().CurrentContainerID()
 	if err := p.c.WritePacket(context.Background(), &server.ChatCommand{
 		Command: command,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to open menu with command '%s': %w", command, err)
 	}
 
-	// 返回客戶端的容器處理器
-	return p.c.Inventory().Container(), nil
+	return p.waitForContainer(previousContainerID)
+}
+
+func (p *Player) waitForContainer(previousID int32) (bot.Container, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		currentID := p.c.Inventory().CurrentContainerID()
+		container := p.c.Inventory().Container()
+		if currentID > 0 && currentID != previousID && container != nil && container.SlotCount() > 0 {
+			return container, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("failed to open container: %w", ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 func (p *Player) Command(msg string) error {

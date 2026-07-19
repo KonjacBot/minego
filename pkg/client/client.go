@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
-
-	"github.com/KonjacBot/minego/pkg/protocol/packet"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet"
 
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
@@ -26,9 +27,11 @@ import (
 
 type botClient struct {
 	conn          *mcnet.Conn
+	connMu        sync.RWMutex
+	writeMu       sync.Mutex
 	packetHandler *packetHandler
 	eventHandler  bot.EventHandler
-	connected     bool
+	connected     atomic.Bool
 	authProvider  auth.Provider
 
 	inventory *inventory.Manager
@@ -41,23 +44,55 @@ func (b *botClient) Player() bot.Player {
 }
 
 func (b *botClient) Close(ctx context.Context) error {
-	if err := b.conn.Close(); err != nil {
+	b.writeMu.Lock()
+	defer b.writeMu.Unlock()
+
+	b.connMu.Lock()
+	conn := b.conn
+	b.conn = nil
+	b.connected.Store(false)
+	b.connMu.Unlock()
+
+	if conn == nil {
+		return ctx.Err()
+	}
+	if err := conn.Close(); err != nil {
 		return err
 	}
-
-	return nil
+	return ctx.Err()
 }
 
 func (b *botClient) IsConnected() bool {
-	return b.connected
+	return b.connected.Load()
 }
 
 func (b *botClient) WritePacket(ctx context.Context, packet server.ServerboundPacket) error {
-	err := b.conn.WritePacket(pk.Marshal(packet.PacketID(), packet))
-	if err != nil {
+	return b.writeRawPacket(ctx, pk.Marshal(packet.PacketID(), packet))
+}
+
+func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return nil
+
+	b.writeMu.Lock()
+	defer b.writeMu.Unlock()
+
+	b.connMu.RLock()
+	conn := b.conn
+	b.connMu.RUnlock()
+	if conn == nil {
+		return errors.New("client is not connected")
+	}
+
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.Socket.SetWriteDeadline(deadline); err != nil {
+			return err
+		}
+		defer conn.Socket.SetWriteDeadline(time.Time{})
+	}
+
+	return conn.WritePacket(packet)
 }
 
 func (b *botClient) PacketHandler() bot.PacketHandler {
@@ -77,6 +112,13 @@ func (b *botClient) Inventory() bot.InventoryHandler {
 }
 
 func (b *botClient) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
+	b.connMu.RLock()
+	hasConnection := b.conn != nil
+	b.connMu.RUnlock()
+	if hasConnection {
+		return errors.New("client already has an open connection")
+	}
+
 	host, portStr, err := net.SplitHostPort(addr)
 	var port uint64
 	if err != nil {
@@ -89,7 +131,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 			return err
 		}
 	} else {
-		port, err = strconv.ParseUint(portStr, 0, 16)
+		port, err = strconv.ParseUint(portStr, 10, 16)
 		if err != nil {
 			return err
 		}
@@ -102,21 +144,30 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 			return err
 		}
 	}
-	b.conn, err = dialer.DialMCContext(ctx, addr)
+	conn, err := dialer.DialMCContext(ctx, addr)
 	if err != nil {
 		return err
 	}
+	b.connMu.Lock()
+	b.conn = conn
+	b.connMu.Unlock()
+	connected := false
+	defer func() {
+		if !connected {
+			_ = b.Close(context.Background())
+		}
+	}()
 
 	if options != nil && options.FakeHost != "" {
 		host = options.FakeHost
 	}
 
-	err = b.handshake(host, port)
+	err = b.handshake(ctx, host, port)
 	if err != nil {
 		return err
 	}
 
-	err = b.login()
+	err = b.login(ctx)
 	if err != nil {
 		return err
 	}
@@ -126,7 +177,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
-	err = b.configuration()
+	err = b.configuration(ctx)
 	if err != nil {
 		return err
 	}
@@ -136,17 +187,19 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
-	b.connected = true
+	b.connected.Store(true)
+	connected = true
 
 	return nil
 }
 
 func (b *botClient) HandleGame(ctx context.Context) error {
+	defer b.connected.Store(false)
 	return b.handlePackets(ctx)
 }
 
-func (b *botClient) handshake(host string, port uint64) error {
-	return b.conn.WritePacket(pk.Marshal(
+func (b *botClient) handshake(ctx context.Context, host string, port uint64) error {
+	return b.writeRawPacket(ctx, pk.Marshal(
 		0,
 		pk.VarInt(776), // TODO 版本更新時要記得改 current: 26.2
 		pk.String(host),
@@ -156,23 +209,49 @@ func (b *botClient) handshake(host string, port uint64) error {
 }
 
 func (b *botClient) handlePackets(ctx context.Context) error {
-	group, ctx := errgroup.WithContext(ctx)
-	group.SetLimit(15)
+	b.connMu.RLock()
+	conn := b.conn
+	b.connMu.RUnlock()
+	if conn == nil {
+		return errors.New("client is not connected")
+	}
+
+	handlerCtx, cancelHandlers := context.WithCancel(ctx)
+	var handlers sync.WaitGroup
+	semaphore := make(chan struct{}, 15)
+	defer func() {
+		cancelHandlers()
+		handlers.Wait()
+	}()
+	stopRead := context.AfterFunc(ctx, func() {
+		_ = conn.Socket.SetReadDeadline(time.Now())
+	})
+	defer func() {
+		stopRead()
+		_ = conn.Socket.SetReadDeadline(time.Time{})
+	}()
 
 	const readTimeout = 30 * time.Second
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return context.Cause(ctx)
 		default:
 			var p pk.Packet
 
-			if err := b.conn.Socket.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+			readDeadline := time.Now().Add(readTimeout)
+			if deadline, ok := ctx.Deadline(); ok && deadline.Before(readDeadline) {
+				readDeadline = deadline
+			}
+			if err := conn.Socket.SetReadDeadline(readDeadline); err != nil {
 				return err
 			}
 
-			if err := b.conn.ReadPacket(&p); err != nil {
+			if err := conn.ReadPacket(&p); err != nil {
+				if ctx.Err() != nil {
+					return context.Cause(ctx)
+				}
 				return err
 			}
 			pktID := packetid.ClientboundPacketID(p.ID)
@@ -182,12 +261,12 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 					return err
 				}
 
-				err = b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
+				err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
 				if err != nil {
 					return err
 				}
 
-				err = b.configuration()
+				err = b.configuration(ctx)
 				if err != nil {
 					return err
 				}
@@ -199,12 +278,19 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				continue
 			}
 
-			hs, ok := b.packetHandler.rawMap[pktID]
+			hs := b.packetHandler.rawHandlers(pktID)
 			for _, h := range hs {
-				group.Go(func() error {
-					h(ctx, p)
-					return nil
-				})
+				select {
+				case semaphore <- struct{}{}:
+				case <-ctx.Done():
+					return context.Cause(ctx)
+				}
+				handlers.Add(1)
+				go func() {
+					defer handlers.Done()
+					defer func() { <-semaphore }()
+					h(handlerCtx, p)
+				}()
 			}
 
 			creator, ok := client.ClientboundPackets[pktID]
@@ -214,11 +300,11 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			pkt := creator()
 			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
 			if err != nil {
-				continue
+				return fmt.Errorf("decode clientbound packet %d: %w", pktID, err)
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)
 
-			_ = b.conn.Socket.SetReadDeadline(time.Time{})
+			_ = conn.Socket.SetReadDeadline(time.Time{})
 		}
 	}
 }
@@ -227,10 +313,12 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 	c := &botClient{
 		packetHandler: newPacketHandler(),
 		eventHandler:  NewEventHandler(),
-		authProvider:  options.AuthProvider,
 	}
 
-	if options.AuthProvider == nil {
+	if options != nil {
+		c.authProvider = options.AuthProvider
+	}
+	if c.authProvider == nil {
 		c.authProvider = &auth.OfflineAuth{Username: "Steve"}
 	}
 
