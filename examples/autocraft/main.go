@@ -9,10 +9,10 @@ import (
 
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/level/item"
-	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/client"
 	"github.com/KonjacBot/minego/pkg/game/player"
+	"github.com/KonjacBot/minego/pkg/msa"
 	"github.com/KonjacBot/minego/pkg/protocol"
 	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -31,6 +31,17 @@ var startCraftLoop = sync.OnceFunc(func() {
 	}
 })
 
+type Store struct {
+}
+
+func (s *Store) LoadToken(ctx context.Context) (*msa.TokenState, error) {
+	return nil, nil
+}
+
+func (s *Store) SaveToken(ctx context.Context, state *msa.TokenState) error {
+	return nil
+}
+
 func main() {
 	var err error
 	cfg, err = config.ReadConfig()
@@ -38,9 +49,8 @@ func main() {
 		return
 	}
 
-	c = client.NewClient(&bot.ClientOptions{AuthProvider: &auth.KonjacAuth{
-		UserCode: cfg.UserCode,
-	}})
+	auth := msa.NewAuth("", &Store{})
+	c = client.NewClient(&bot.ClientOptions{AuthProvider: auth})
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

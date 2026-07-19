@@ -228,8 +228,7 @@ type PlayerInfoAddPlayer struct {
 
 //codec:gen
 type PlayerInfoChatData struct {
-	ChatSessionID uuid.UUID `mc:"UUID"`
-	Session       sign.Session
+	Session sign.Session
 }
 
 //codec:gen
