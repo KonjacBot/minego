@@ -53,7 +53,16 @@ type Auth struct {
 }
 
 func (a *Auth) HandleLogin(ctx context.Context) error {
+	if a.Provider == nil {
+		return errors.Join(ErrLogin, errors.New("authentication provider is nil"))
+	}
+	if a.Conn == nil {
+		return errors.Join(ErrLogin, errors.New("connection is nil"))
+	}
 	profile := a.FetchProfile(ctx)
+	if profile == nil {
+		return errors.Join(ErrLogin, errors.New("authentication provider returned no profile"))
+	}
 
 	err := a.WritePacket(pk.Marshal(packetid.ServerboundLoginHello, server.LoginHello{
 		Name: profile.Name,
@@ -74,6 +83,9 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 		case packetid.ClientboundLoginLoginDisconnect:
 			var reason chat.JsonMessage
 			err = p.Scan(&reason)
+			if err != nil {
+				return errors.Join(ErrLogin, fmt.Errorf("read disconnect reason fail: %w", err))
+			}
 
 			return errors.Join(ErrKick, fmt.Errorf("kicked by server: %s", chat.Message(reason).ClearString()))
 		case packetid.ClientboundLoginHello:
@@ -144,9 +156,12 @@ type OnlineAuth struct {
 }
 
 func (o *OnlineAuth) Authenticate(ctx context.Context, conn *net.Conn, content client.LoginHello) error {
-	key, encodeStream, decodeStream := newSymmetricEncryption()
+	key, encodeStream, decodeStream, err := newSymmetricEncryption()
+	if err != nil {
+		return errors.Join(ErrEncrypt, err)
+	}
 
-	err := o.LoginAuth(ctx, content, key)
+	err = o.LoginAuth(ctx, content, key)
 	if err != nil {
 		return errors.Join(ErrEncrypt, fmt.Errorf("login auth fail: %w", err))
 	}
@@ -174,7 +189,10 @@ func genEncryptionKeyResponse(shareSecret, publicKey, verifyToken []byte) (erp p
 		err = fmt.Errorf("decode public key fail: %v", err)
 		return
 	}
-	rsaKey := iPK.(*rsa.PublicKey)
+	rsaKey, ok := iPK.(*rsa.PublicKey)
+	if !ok {
+		return erp, fmt.Errorf("server public key is %T, want RSA", iPK)
+	}
 	cryptPK, err := rsa.EncryptPKCS1v15(rand.Reader, rsaKey, shareSecret)
 	if err != nil {
 		err = fmt.Errorf("encryption share secret fail: %v", err)
@@ -205,6 +223,9 @@ func (o *OnlineAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 		SelectedProfile: hex.EncodeToString(o.Profile.UUID[:]),
 		ServerID:        digest,
 	})
+	if err != nil {
+		return errors.Join(ErrEncrypt, fmt.Errorf("marshal session request fail: %w", err))
+	}
 
 	PostRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://sessionserver.mojang.com/session/minecraft/join",
 		bytes.NewReader(request))
@@ -220,22 +241,25 @@ func (o *OnlineAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return errors.Join(ErrEncrypt, fmt.Errorf("read session response fail: %w", err))
+	}
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Join(ErrEncrypt, fmt.Errorf("session join fail: %s", string(body)))
 	}
 	return nil
 }
 
-func newSymmetricEncryption() (key []byte, encoStream, decoStream cipher.Stream) {
+func newSymmetricEncryption() (key []byte, encoStream, decoStream cipher.Stream, err error) {
 	key = make([]byte, 16)
-	if _, err := rand.Read(key); err != nil {
-		panic(err)
+	if _, err = rand.Read(key); err != nil {
+		return nil, nil, nil, fmt.Errorf("generate shared secret: %w", err)
 	}
 
 	b, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		return nil, nil, nil, fmt.Errorf("create AES cipher: %w", err)
 	}
 	decoStream = CFB8.NewCFB8Decrypt(b, key)
 	encoStream = CFB8.NewCFB8Encrypt(b, key)
@@ -314,9 +338,12 @@ type KonjacAuth struct {
 }
 
 func (k *KonjacAuth) Authenticate(ctx context.Context, conn *net.Conn, content client.LoginHello) error {
-	key, encodeStream, decodeStream := newSymmetricEncryption()
+	key, encodeStream, decodeStream, err := newSymmetricEncryption()
+	if err != nil {
+		return errors.Join(ErrEncrypt, err)
+	}
 
-	err := k.LoginAuth(ctx, content, key)
+	err = k.LoginAuth(ctx, content, key)
 	if err != nil {
 		return errors.Join(ErrEncrypt, fmt.Errorf("login auth fail: %w", err))
 	}
@@ -350,6 +377,9 @@ func (k *KonjacAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 		SelectedProfile: "-",
 		ServerID:        digest,
 	})
+	if err != nil {
+		return errors.Join(ErrEncrypt, fmt.Errorf("marshal session request fail: %w", err))
+	}
 
 	PostRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://127.0.0.1:37565/ss/session/minecraft/join",
 		bytes.NewReader(request))
@@ -363,7 +393,10 @@ func (k *KonjacAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return errors.Join(ErrEncrypt, fmt.Errorf("read session response fail: %w", err))
+	}
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Join(ErrEncrypt, fmt.Errorf("session join fail: %s", string(body)))
 	}
@@ -397,7 +430,10 @@ func (k *KonjacAuth) FetchProfile(ctx context.Context) *Profile {
 		return nil
 	}
 	defer resp.Body.Close()
-	data, err = io.ReadAll(resp.Body)
+	data, err = io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil
+	}
 	if resp.StatusCode >= 300 {
 		return nil
 	}

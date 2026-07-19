@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"sync"
 
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
@@ -11,6 +12,7 @@ import (
 
 // Manager 管理inventory和container
 type Manager struct {
+	mu                 sync.RWMutex
 	c                  bot.Client
 	inventory          *Container
 	container          *Container
@@ -22,40 +24,69 @@ func NewManager(c bot.Client) *Manager {
 	m := &Manager{
 		c:                  c,
 		inventory:          NewContainerWithSize(c, 0, 45),
-		currentContainerID: 0,
+		currentContainerID: -1,
 	}
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.SetContainerContent) {
+		m.mu.Lock()
+		matched := false
 		if p.WindowID == 0 {
 			m.inventory.SetSlots(p.Slots)
-		} else if m.container != nil {
+			m.inventory.setStateID(p.StateID)
+			matched = true
+		} else if p.WindowID == m.currentContainerID && m.container != nil {
 			m.container.SetSlots(p.Slots)
+			m.container.setStateID(p.StateID)
+			matched = true
 		}
-		m.c.Player().UpdateStateID(p.StateID)
+		cursor := p.CarriedItem
+		if matched {
+			m.cursor = &cursor
+		}
+		m.mu.Unlock()
+		if matched {
+			m.c.Player().UpdateStateID(p.StateID)
+		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.BlockChangedAck) {
 		m.c.Player().UpdateSequence(p.Sequence)
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.ContainerSetSlot) {
-		if p.ContainerID == 0 {
+		m.mu.Lock()
+		matched := false
+		if p.ContainerID == -1 && p.Slot == -1 {
+			cursor := p.ItemStack
+			m.cursor = &cursor
+			matched = true
+		} else if p.ContainerID == 0 {
 			m.inventory.SetSlot(int(p.Slot), p.ItemStack)
-		} else if m.container != nil {
+			m.inventory.setStateID(p.StateID)
+			matched = true
+		} else if p.ContainerID == m.currentContainerID && m.container != nil {
 			m.container.SetSlot(int(p.Slot), p.ItemStack)
+			m.container.setStateID(p.StateID)
+			matched = true
 		}
-		m.c.Player().UpdateStateID(p.StateID)
+		m.mu.Unlock()
+		if matched {
+			m.c.Player().UpdateStateID(p.StateID)
+		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.CloseContainer) {
+		m.mu.Lock()
+		defer m.mu.Unlock()
 		if p.WindowID == m.currentContainerID {
 			m.currentContainerID = -1
-			if m.container != nil {
-				m.container = nil
-			}
+			m.container = nil
+			m.cursor = nil
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.OpenScreen) {
+		m.mu.Lock()
 		m.currentContainerID = p.WindowID
 		m.container = NewContainer(c, p.WindowID)
-		go bot.PublishEvent(m.c, ContainerOpenEvent{
+		m.mu.Unlock()
+		_ = bot.PublishEvent(m.c, ContainerOpenEvent{
 			WindowID: p.WindowID,
 			Type:     p.WindowType,
 			Title:    p.WindowTitle,
@@ -70,31 +101,56 @@ func (m *Manager) Inventory() bot.Container {
 }
 
 func (m *Manager) Container() bot.Container {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.container == nil {
+		return nil
+	}
 	return m.container
 }
 func (m *Manager) Cursor() *slot.Slot {
-	return m.cursor
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.cursor == nil {
+		return nil
+	}
+	cursor := m.cursor.Clone()
+	return &cursor
 }
 
 func (m *Manager) CurrentContainerID() int32 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.currentContainerID
 }
 
 func (m *Manager) Close() {
-	if m.currentContainerID != -1 {
-		_ = m.c.WritePacket(context.Background(), &server.ContainerClose{WindowID: m.currentContainerID})
-		m.currentContainerID = -1
-	} else {
-		_ = m.c.WritePacket(context.Background(), &server.ContainerClose{WindowID: 0})
-		m.currentContainerID = -1
+	m.mu.Lock()
+	id := m.currentContainerID
+	m.currentContainerID = -1
+	m.container = nil
+	m.cursor = nil
+	m.mu.Unlock()
+	if id >= 0 {
+		_ = m.c.WritePacket(context.Background(), &server.ContainerClose{WindowID: id})
 	}
 }
 
 // Click 點擊容器slot
 func (m *Manager) Click(id int32, slotIndex int16, mode int32, button int32) error {
+	m.mu.RLock()
+	container := m.container
+	currentID := m.currentContainerID
+	m.mu.RUnlock()
+	stateID := m.c.Player().StateID()
+	if id == 0 {
+		stateID = m.inventory.StateID()
+	} else if id == currentID && container != nil {
+		stateID = container.StateID()
+	}
 	clickPacket := &server.ContainerClick{
 		WindowID: id,
-		StateID:  m.c.Player().StateID(),
+		StateID:  stateID,
 		Slot:     slotIndex,
 		Button:   int8(button),
 		Mode:     mode,

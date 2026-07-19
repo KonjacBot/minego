@@ -9,7 +9,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
@@ -18,27 +22,33 @@ import (
 )
 
 func main() {
-	userCode := "your-code"
+	userCode := os.Getenv("MINEGO_USER_CODE")
+	if userCode == "" {
+		log.Fatal("MINEGO_USER_CODE is required")
+	}
+	address := os.Getenv("MINEGO_SERVER")
+	if address == "" {
+		address = "localhost:25565"
+	}
 	c := client.NewClient(&bot.ClientOptions{AuthProvider: &auth.KonjacAuth{
 		UserCode: userCode,
 	}})
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-	err := c.Connect(ctx, "mcfallout.net", nil)
-	if err != nil {
-		panic(err)
+	if err := c.Connect(ctx, address, nil); err != nil {
+		log.Fatal(err)
 	}
+	defer c.Close(context.Background())
 
 	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
 		fmt.Println(e.Message.String())
 		return nil
 	})
 
-	err = c.HandleGame(ctx)
-	if err != nil {
-		panic(err)
+	if err := c.HandleGame(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Fatal(err)
 	}
 }
 ```
@@ -48,6 +58,8 @@ func main() {
 - `Connect()` establishes the connection (pass `nil` for default options)
 - `bot.SubscribeEvent()` subscribes to typed events before entering the game loop
 - `HandleGame()` is the blocking main loop — call it last
+- Always close the client and treat `context.Canceled` as a normal shutdown
+- Read credentials and server addresses from configuration or environment variables
 
 ---
 
@@ -97,14 +109,17 @@ bot.AddHandler(c, func(ctx context.Context, p *cp.RecipeBookAdd) {
 
 // Auto-respawn on death
 bot.AddHandler(c, func(ctx context.Context, p *cp.SetHealth) {
-	c.WritePacket(ctx, &server.ClientCommand{Action: 0})
+	_ = c.WritePacket(ctx, &server.ClientCommand{Action: 0})
 })
 
-err = c.Connect(ctx, cfg.Address, &bot.ConnectOptions{
+if err := c.Connect(ctx, cfg.Address, &bot.ConnectOptions{
 	FakeHost: "mcfallout.net",
 	Proxy:    cfg.Proxy,
-})
-c.HandleGame(ctx)
+}); err != nil {
+	return err
+}
+defer c.Close(context.Background())
+return c.HandleGame(ctx)
 ```
 
 ### Container Interaction Pattern
@@ -115,14 +130,13 @@ container, err := c.Player().OpenContainer(pos, 1)
 if err != nil || container == nil {
 	return
 }
-c.Player().CheckServer()
-time.Sleep(500 * time.Millisecond)
-
 // Iterate slots and shift-click items
 for i, s := range container.Slots() {
-	if i >= 27 && s.ItemID == item.GlassPane{}.ID() {
-		_ = container.Click(int16(i), 1, 0)  // shift-click
-		time.Sleep(50 * time.Millisecond)
+    if i >= 27 && s.ItemID == item.GlassPane{}.ID() {
+		if err := container.Click(int16(i), 1, 0); err != nil {
+			return
+		}
+        time.Sleep(50 * time.Millisecond)
 	}
 }
 ```
@@ -142,17 +156,19 @@ con, err := c.Player().OpenContainer(craftingTablePos, 1)
 if err != nil {
 	return
 }
-c.Player().CheckServer()
-
 // Place recipe in crafting table
-c.WritePacket(ctx, &server.PlaceRecipe{
-	WindowID: c.Inventory().CurrentContainerID(),
-	RecipeID: glassRID,
-	MakeAll:  true,
-})
+if err := c.WritePacket(ctx, &server.PlaceRecipe{
+    WindowID: c.Inventory().CurrentContainerID(),
+    RecipeID: glassRID,
+    MakeAll:  true,
+}); err != nil {
+	return
+}
 
 // Take result from slot 0
-con.Click(0, 1, 0)
+if err := con.Click(0, 1, 0); err != nil {
+	return
+}
 ```
 
 ### Dropping Unwanted Items
@@ -162,15 +178,16 @@ con.Click(0, 1, 0)
 c.Player().Entity().SetRotation(mgl64.Vec2{yaw, 0})
 c.Player().UpdateLocation()
 time.Sleep(500 * time.Millisecond)
-c.Player().CheckServer()
 
 // Drop full stack from a container slot
-con.Click(int16(slotIndex), 4, 1)
+if err := con.Click(int16(slotIndex), 4, 1); err != nil {
+	return
+}
 ```
 
 **Key points:**
-- Always call `CheckServer()` after opening containers to sync state
-- Add `time.Sleep()` between click operations for reliability
+- `OpenContainer` already waits for the matching window and initial content
+- Add a small delay between click operations only when the target server rate-limits inventory actions
 - Use `sync.OnceFunc` to ensure one-time setup actions
 - Close containers with `c.Inventory().Close()` before opening new ones
 - Item IDs use zero-value struct pattern: `item.Glass{}.ID()`

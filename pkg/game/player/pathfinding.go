@@ -180,17 +180,23 @@ func isWalkable(world bot.World, pos protocol.Position) bool {
 	// 檢查腳部位置
 	footBlock, err := world.GetBlock(pos)
 	if err != nil {
-		footBlock = block.Air{}
+		return false
 	}
 
 	// 檢查頭部位置
 	headPos := protocol.Position{pos[0], pos[1] + 1, pos[2]}
 	headBlock, err := world.GetBlock(headPos)
 	if err != nil {
-		headBlock = block.Air{}
+		return false
 	}
 
-	return footBlock == block.Air{} && headBlock == block.Air{}
+	supportPos := protocol.Position{pos[0], pos[1] - 1, pos[2]}
+	supportBlock, err := world.GetBlock(supportPos)
+	if err != nil {
+		return false
+	}
+
+	return block.IsAirBlock(footBlock) && block.IsAirBlock(headBlock) && !block.IsAirBlock(supportBlock)
 }
 
 // reconstructPath 重建路徑

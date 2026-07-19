@@ -13,6 +13,9 @@ import (
 
 // createSOCKS5Dialer 建立 SOCKS5 dialer
 func socks5(proxyConfig *bot.ProxyConfig) (mcnet.MCDialer, error) {
+	if proxyConfig.Type != "" && proxyConfig.Type != "socks5" {
+		return nil, fmt.Errorf("unsupported proxy type %q", proxyConfig.Type)
+	}
 	var auth *proxy.Auth
 	if proxyConfig.Username != "" || proxyConfig.Password != "" {
 		auth = &proxy.Auth{
@@ -37,8 +40,11 @@ type socks5MCDialer struct {
 }
 
 func (d *socks5MCDialer) DialMCContext(ctx context.Context, address string) (*mcnet.Conn, error) {
-	// 使用 SOCKS5 proxy 建立連線
-	conn, err := d.dialer.Dial("tcp", address)
+	contextDialer, ok := d.dialer.(proxy.ContextDialer)
+	if !ok {
+		return nil, fmt.Errorf("SOCKS5 dialer does not support contexts")
+	}
+	conn, err := contextDialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial through SOCKS5 proxy: %w", err)
 	}

@@ -7,27 +7,35 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
+	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/auth"
 )
 
-func (b *botClient) login() error {
-	a := &auth.Auth{
-		Conn:     b.conn,
-		Provider: b.authProvider,
-	}
-
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+func (b *botClient) login(ctx context.Context) error {
+	ctx, cancelFunc := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFunc()
 
-	return a.HandleLogin(ctx)
+	return b.withReadContext(ctx, func(conn *mcnet.Conn) error {
+		a := &auth.Auth{Conn: conn, Provider: b.authProvider}
+		return a.HandleLogin(ctx)
+	})
 }
 
-func (b *botClient) configuration() (err error) {
+func (b *botClient) configuration(ctx context.Context) (err error) {
+	return b.withReadContext(ctx, func(conn *mcnet.Conn) error {
+		return b.readConfiguration(ctx, conn)
+	})
+}
+
+func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
 	var p pk.Packet
 	for {
-		err = b.conn.ReadPacket(&p)
+		err = conn.ReadPacket(&p)
+		if err != nil {
+			return err
+		}
 
 		switch packetid.ClientboundPacketID(p.ID) {
 		case packetid.ClientboundConfigDisconnect:
@@ -38,7 +46,7 @@ func (b *botClient) configuration() (err error) {
 			}
 			return errors.New("kicked: " + reason.String())
 		case packetid.ClientboundConfigFinishConfiguration:
-			err = b.conn.WritePacket(pk.Marshal(
+			err = b.writeRawPacket(ctx, pk.Marshal(
 				packetid.ServerboundConfigFinishConfiguration,
 			))
 			return err
@@ -48,7 +56,7 @@ func (b *botClient) configuration() (err error) {
 			if err != nil {
 				return err
 			}
-			err = b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigKeepAlive, keepAliveID))
+			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigKeepAlive, keepAliveID))
 			if err != nil {
 				return err
 			}
@@ -58,13 +66,13 @@ func (b *botClient) configuration() (err error) {
 			if err != nil {
 				return err
 			}
-			err = b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigPong, pingID))
+			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigPong, pingID))
 			if err != nil {
 				return err
 			}
 
 		case packetid.ClientboundConfigSelectKnownPacks:
-			err = b.conn.WritePacket(pk.Marshal(packetid.ServerboundConfigSelectKnownPacks, pk.VarInt(0)))
+			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigSelectKnownPacks, pk.VarInt(0)))
 			if err != nil {
 				return err
 			}
@@ -72,4 +80,32 @@ func (b *botClient) configuration() (err error) {
 			continue
 		}
 	}
+}
+
+func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) error) error {
+	b.connMu.RLock()
+	conn := b.conn
+	b.connMu.RUnlock()
+	if conn == nil {
+		return errors.New("client is not connected")
+	}
+
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.Socket.SetReadDeadline(deadline); err != nil {
+			return err
+		}
+	}
+	stop := context.AfterFunc(ctx, func() {
+		_ = conn.Socket.SetReadDeadline(time.Now())
+	})
+	defer func() {
+		stop()
+		_ = conn.Socket.SetReadDeadline(time.Time{})
+	}()
+
+	err := fn(conn)
+	if ctx.Err() != nil {
+		return context.Cause(ctx)
+	}
+	return err
 }

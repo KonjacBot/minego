@@ -15,7 +15,6 @@ import (
 
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol"
-	"github.com/KonjacBot/minego/pkg/protocol/metadata"
 	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
@@ -27,8 +26,8 @@ type World struct {
 	columns     map[level.ChunkPos]*level.Chunk
 	entities    map[int32]*Entity
 
-	entityLock sync.Mutex
-	chunkLock  sync.Mutex
+	entityLock sync.RWMutex
+	chunkLock  sync.RWMutex
 }
 
 func NewWorld(c bot.Client) *World {
@@ -46,6 +45,7 @@ func NewWorld(c bot.Client) *World {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Login) {
+		w.chunkLock.Lock()
 		switch p.CommonPlayerSpawnInfo.DimensionType {
 		case 0:
 			w.chunkHeight = 384
@@ -54,12 +54,12 @@ func NewWorld(c bot.Client) *World {
 		default:
 			w.chunkHeight = 256
 		}
-
-		w.chunkLock.Lock()
-		defer w.chunkLock.Unlock()
-
 		w.columns = make(map[level.ChunkPos]*level.Chunk)
+		w.chunkLock.Unlock()
+
+		w.entityLock.Lock()
 		w.entities = make(map[int32]*Entity)
+		w.entityLock.Unlock()
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.ForgetLevelChunk) {
@@ -70,6 +70,7 @@ func NewWorld(c bot.Client) *World {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
+		w.chunkLock.Lock()
 		switch p.CommonPlayerSpawnInfo.DimensionType {
 		case 0:
 			w.chunkHeight = 384
@@ -79,17 +80,16 @@ func NewWorld(c bot.Client) *World {
 			w.chunkHeight = 256
 		}
 
-		w.chunkLock.Lock()
-		defer w.chunkLock.Unlock()
-
 		w.columns = make(map[level.ChunkPos]*level.Chunk)
+		w.chunkLock.Unlock()
+
+		w.entityLock.Lock()
+		w.entities = make(map[int32]*Entity)
+		w.entityLock.Unlock()
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.AddEntity) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
-
-		w.entities[p.ID] = &Entity{
+		entity := &Entity{
 			id:         p.ID,
 			entityUUID: p.UUID,
 			entityType: entity.ID(p.Type),
@@ -98,65 +98,73 @@ func NewWorld(c bot.Client) *World {
 			metadata:   nil,
 			equipment:  nil,
 		}
+		w.entityLock.Lock()
+		w.entities[p.ID] = entity
+		w.entityLock.Unlock()
+		_ = bot.PublishEvent(c, EntityAddEvent{EntityID: p.ID})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.RemoveEntities) {
+		var removed []*Entity
 		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
 		for _, d := range p.EntityIDs {
 			e, ok := w.entities[d]
 			if ok {
-				bot.PublishEvent(c, EntityRemoveEvent{Entity: e})
 				delete(w.entities, d)
+				removed = append(removed, e)
 			}
+		}
+		w.entityLock.Unlock()
+		for _, e := range removed {
+			_ = bot.PublishEvent(c, EntityRemoveEvent{Entity: e})
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.SetEntityMetadata) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
+		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
 		if ok {
-			if e.metadata == nil {
-				e.metadata = make(map[uint8]metadata.Metadata)
-			}
-			for u, entityMetadata := range p.Metadata.Data {
-				e.metadata[u] = entityMetadata
-			}
+			e.updateMetadata(p.Metadata.Data)
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.SetEquipment) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
+		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
 		if ok {
+			e.mu.Lock()
 			if e.equipment == nil {
 				e.equipment = make(map[int8]slot.Slot)
 			}
 			for _, equipment := range p.Equipment {
-				e.equipment[equipment.Slot] = equipment.Item
+				e.equipment[equipment.Slot] = equipment.Item.Clone()
 			}
+			e.mu.Unlock()
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityPosition) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
+		w.entityLock.RLock()
+		defer w.entityLock.RUnlock()
 		if e, ok := w.entities[p.EntityID]; ok {
-			e.pos = e.pos.Add(mgl64.Vec3{float64(p.DeltaX) / 4096.0, float64(p.DeltaY) / 4096.0, float64(p.DeltaZ) / 4096.0})
+			e.addPosition(mgl64.Vec3{float64(p.DeltaX) / 4096.0, float64(p.DeltaY) / 4096.0, float64(p.DeltaZ) / 4096.0})
 		}
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityRotation) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
-		if e, ok := w.entities[p.EntityID]; ok {
-			e.rot = mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()}
+		w.entityLock.RLock()
+		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
+		if ok {
+			e.SetRotation(mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()})
 		}
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityPositionAndRotation) {
-		w.entityLock.Lock()
-		defer w.entityLock.Unlock()
-		if e, ok := w.entities[p.EntityID]; ok {
-			e.pos = e.pos.Add(mgl64.Vec3{float64(p.DeltaX) / 4096.0, float64(p.DeltaY) / 4096.0, float64(p.DeltaZ) / 4096.0})
+		w.entityLock.RLock()
+		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
+		if ok {
+			e.addPosition(mgl64.Vec3{float64(p.DeltaX) / 4096.0, float64(p.DeltaY) / 4096.0, float64(p.DeltaZ) / 4096.0})
+			e.SetRotation(mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()})
 		}
 	})
 
@@ -230,8 +238,8 @@ func NewWorld(c bot.Client) *World {
 }
 
 func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
-	w.chunkLock.Lock()
-	defer w.chunkLock.Unlock()
+	w.chunkLock.RLock()
+	defer w.chunkLock.RUnlock()
 	chunkX := pos[0] >> 4
 	chunkZ := pos[2] >> 4
 	pos2d := level.ChunkPos{chunkX, chunkZ}
@@ -253,6 +261,9 @@ func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
 		return nil, errors.New("invalid section Y coordinate")
 	}
 	blockStateId := chunk.Sections[sectionY].GetBlock(int(blockIdx))
+	if int(blockStateId) < 0 || int(blockStateId) >= len(block.StateList) {
+		return nil, errors.New("unknown block state")
+	}
 	return block.StateList[blockStateId], nil
 }
 
@@ -283,7 +294,11 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 	section := chunk.Sections[sectionY]
 
 	blockIdx := (blockY << 8) | (blockZ << 4) | blockX
-	section.SetBlock(int(blockIdx), block.ToStateID[blk])
+	stateID, ok := block.ToStateID[blk]
+	if !ok {
+		return errors.New("unknown block")
+	}
+	section.SetBlock(int(blockIdx), stateID)
 	return nil
 }
 
@@ -352,8 +367,8 @@ func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.B
 }
 
 func (w *World) Entities() []bot.Entity {
-	w.entityLock.Lock()
-	defer w.entityLock.Unlock()
+	w.entityLock.RLock()
+	defer w.entityLock.RUnlock()
 	var entities []bot.Entity
 	for _, e := range w.entities {
 		entities = append(entities, e)
@@ -362,21 +377,25 @@ func (w *World) Entities() []bot.Entity {
 }
 
 func (w *World) GetEntity(id int32) bot.Entity {
-	w.entityLock.Lock()
-	defer w.entityLock.Unlock()
-	return w.entities[id]
+	w.entityLock.RLock()
+	defer w.entityLock.RUnlock()
+	entity, ok := w.entities[id]
+	if !ok {
+		return nil
+	}
+	return entity
 }
 
 func (w *World) GetNearbyEntities(radius int32) []bot.Entity {
-	w.entityLock.Lock()
-	defer w.entityLock.Unlock()
+	w.entityLock.RLock()
+	defer w.entityLock.RUnlock()
 
 	selfPos := w.c.Player().Entity().Position()
 	var entities []bot.Entity
 
 	for _, e := range w.entities {
-		sqr := e.pos.Sub(selfPos).LenSqr()
-		if sqr <= float64(radius*radius) {
+		sqr := e.Position().Sub(selfPos).LenSqr()
+		if sqr <= float64(radius)*float64(radius) {
 			entities = append(entities, e)
 		}
 	}
@@ -384,12 +403,12 @@ func (w *World) GetNearbyEntities(radius int32) []bot.Entity {
 }
 
 func (w *World) GetEntitiesByType(entityType entity.ID) []bot.Entity {
-	w.entityLock.Lock()
-	defer w.entityLock.Unlock()
+	w.entityLock.RLock()
+	defer w.entityLock.RUnlock()
 
 	var entities []bot.Entity
 	for _, e := range w.entities {
-		if e.entityType == entityType {
+		if e.Type() == entityType {
 			entities = append(entities, e)
 		}
 	}

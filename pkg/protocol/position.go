@@ -8,16 +8,16 @@ import (
 type Position [3]int32
 
 func (p Position) DistanceTo(other Position) float64 {
-	dx := float64(p[0] - other[0])
-	dy := float64(p[1] - other[1])
-	dz := float64(p[2] - other[2])
+	dx := float64(p[0]) - float64(other[0])
+	dy := float64(p[1]) - float64(other[1])
+	dz := float64(p[2]) - float64(other[2])
 	return math.Sqrt(dx*dx + dy*dy + dz*dz)
 }
 
 func (p Position) DistanceToSquared(other Position) float64 {
-	dx := float64(p[0] - other[0])
-	dy := float64(p[1] - other[1])
-	dz := float64(p[2] - other[2])
+	dx := float64(p[0]) - float64(other[0])
+	dy := float64(p[1]) - float64(other[1])
+	dz := float64(p[2]) - float64(other[2])
 	return dx*dx + dy*dy + dz*dz
 }
 

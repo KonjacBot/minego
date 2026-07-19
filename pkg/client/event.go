@@ -12,12 +12,12 @@ type EventHandler struct {
 
 func (e *EventHandler) PublishEvent(event string, data any) error {
 	e.mu.RLock()
-	defer e.mu.RUnlock()
-	if hs, ok := e.handlers[event]; ok {
-		for _, h := range hs {
-			if err := h(data); err != nil {
-				return err
-			}
+	hs := append([]func(event any) error(nil), e.handlers[event]...)
+	e.mu.RUnlock()
+
+	for _, h := range hs {
+		if err := h(data); err != nil {
+			return err
 		}
 	}
 	return nil

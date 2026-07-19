@@ -32,11 +32,20 @@ const (
 func GetClientPacket(state State, id int32) ClientboundPacket {
 	switch state {
 	case StateLogin:
-		return loginclient.ClientboundPackets[packetid.ClientboundPacketID(id)]()
+		creator := loginclient.ClientboundPackets[packetid.ClientboundPacketID(id)]
+		if creator != nil {
+			return creator()
+		}
 	case StateConfig:
-		return configclient.ClientboundPackets[packetid.ClientboundPacketID(id)]()
+		creator := configclient.ClientboundPackets[packetid.ClientboundPacketID(id)]
+		if creator != nil {
+			return creator()
+		}
 	case StatePlay:
-		return gameclient.ClientboundPackets[packetid.ClientboundPacketID(id)]()
+		creator := gameclient.ClientboundPackets[packetid.ClientboundPacketID(id)]
+		if creator != nil {
+			return creator()
+		}
 	}
 	return nil
 }
