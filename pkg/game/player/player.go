@@ -67,6 +67,17 @@ func New(c bot.Client) *Player {
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
 		startup()
+		c.WritePacket(ctx, &server.ClientInformation{
+			Location:            "zh_TW",
+			ViewDistance:        16,
+			ChatMode:            0,
+			ChatColor:           true,
+			DisplayedSkinParts:  127,
+			MainHand:            0,
+			EnableTextFiltering: false,
+			AllowListing:        true,
+			ParticleStatus:      0,
+		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
 		_ = c.WritePacket(ctx, &server.Pong{ID: p.ID})

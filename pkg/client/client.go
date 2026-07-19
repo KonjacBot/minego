@@ -288,12 +288,10 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				case <-ctx.Done():
 					return context.Cause(ctx)
 				}
-				handlers.Add(1)
-				go func() {
-					defer handlers.Done()
+				handlers.Go(func() {
 					defer func() { <-semaphore }()
 					h(handlerCtx, p)
-				}()
+				})
 			}
 
 			creator, ok := client.ClientboundPackets[pktID]
