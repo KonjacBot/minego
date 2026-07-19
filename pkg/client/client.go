@@ -77,6 +77,9 @@ func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error 
 
 	b.writeMu.Lock()
 	defer b.writeMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	b.connMu.RLock()
 	conn := b.conn
