@@ -3,9 +3,8 @@
 package client
 
 import (
-	"io"
-
 	"github.com/KonjacBot/go-mc/net/packet"
+	"io"
 )
 
 func (c *LoginCookieRequest) ReadFrom(r io.Reader) (n int64, err error) {
@@ -39,7 +38,7 @@ func (c *LoginCustomQuery) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.ByteArray)(&c.Data).ReadFrom(r)
+	temp, err = (*packet.PluginMessageData)(&c.Data).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -59,7 +58,7 @@ func (c LoginCustomQuery) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.ByteArray)(&c.Data).WriteTo(w)
+	temp, err = (*packet.PluginMessageData)(&c.Data).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

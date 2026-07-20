@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"github.com/KonjacBot/go-mc/data/packetid"
@@ -24,6 +25,9 @@ func init() {
 }
 
 func (p CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
+	if len(p.Data) > 32767 {
+		return 0, errors.New("custom payload exceeds 32767 bytes")
+	}
 	n, err = pk.Identifier(p.Channel).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -39,11 +43,13 @@ func (p *CustomPayload) ReadFrom(r io.Reader) (n int64, err error) {
 		return
 	}
 
-	data := make([]byte, 32767)
-	nn, err := io.ReadFull(r, data)
-	if err != nil && (err != io.ErrUnexpectedEOF && err != io.EOF) {
-		return n + int64(nn), err
+	data, err := io.ReadAll(io.LimitReader(r, 32768))
+	if err != nil {
+		return n, err
+	}
+	if len(data) > 32767 {
+		return n + int64(len(data)), errors.New("custom payload exceeds 32767 bytes")
 	}
 	p.Data = data
-	return n + int64(nn), nil
+	return n + int64(len(data)), nil
 }

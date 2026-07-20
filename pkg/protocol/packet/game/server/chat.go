@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/KonjacBot/go-mc/chat/sign"
 	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
@@ -12,10 +13,10 @@ type Chat struct {
 	Salt         int64
 	HasSignature bool
 	//opt:optional:HasSignature
-	Signature    []byte         `mc:"ByteArray"`
+	Signature    sign.Signature
 	MessageCount int32          `mc:"VarInt"`
 	Acknowledged pk.FixedBitSet `mc:"FixedBitSet" size:"20"`
-	Checksum     int8
+	Checksum     uint8
 }
 
 func (*Chat) PacketID() packetid.ServerboundPacketID {

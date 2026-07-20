@@ -7,7 +7,7 @@ type CookieResponse struct {
 	Key        string `mc:"Identifier"`
 	HasPayload bool
 	//opt:optional:HasPayload
-	Payload []int8 `mc:"Byte"`
+	Payload []byte `mc:"ByteArray"`
 }
 
 func (*CookieResponse) PacketID() packetid.ServerboundPacketID {

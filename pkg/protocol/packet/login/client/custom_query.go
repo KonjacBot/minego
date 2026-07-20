@@ -6,7 +6,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 type LoginCustomQuery struct {
 	MessageID int32  `mc:"VarInt"`
 	Channel   string `mc:"Identifier"`
-	Data      []byte `mc:"ByteArray"`
+	Data      []byte `mc:"PluginMessageData"`
 }
 
 func (*LoginCustomQuery) PacketID() packetid.ClientboundPacketID {
