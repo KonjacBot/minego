@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"time"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/KonjacBot/minego/pkg/auth"
 )
+
+const resourcePackResultDeclined = 1
 
 func (b *botClient) login(ctx context.Context) error {
 	ctx, cancelFunc := context.WithTimeout(ctx, 30*time.Second)
@@ -71,8 +74,32 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 				return err
 			}
 
+		case packetid.ClientboundConfigResourcePackPush:
+			var packID pk.UUID
+			err = p.Scan(&packID)
+			if err != nil {
+				return err
+			}
+			err = b.writeRawPacket(ctx, pk.Marshal(
+				packetid.ServerboundConfigResourcePack,
+				packID,
+				pk.VarInt(resourcePackResultDeclined),
+			))
+			if err != nil {
+				return err
+			}
 		case packetid.ClientboundConfigSelectKnownPacks:
 			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigSelectKnownPacks, pk.VarInt(0)))
+			if err != nil {
+				return err
+			}
+		case packetid.ClientboundConfigCodeOfConduct:
+			// Consume the packet payload so malformed packets still fail cleanly.
+			var codeOfConduct pk.String
+			if _, err = (&codeOfConduct).ReadFrom(bytes.NewReader(p.Data)); err != nil {
+				return err
+			}
+			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigAcceptCodeOfConduct))
 			if err != nil {
 				return err
 			}

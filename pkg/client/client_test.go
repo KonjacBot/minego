@@ -5,11 +5,17 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
+	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
+	pk "github.com/KonjacBot/go-mc/net/packet"
+	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
@@ -82,6 +88,147 @@ func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
 	}
 	if writes := conn.writes.Load(); writes != 0 {
 		t.Fatalf("canceled WritePacket performed %d writes", writes)
+	}
+}
+
+func TestConfigurationHandlesResourcePackAndCodeOfConduct(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	acceptedConn := make(chan net.Conn, 1)
+	acceptErr := make(chan error, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			acceptErr <- err
+			return
+		}
+		acceptedConn <- conn
+	}()
+
+	clientConn, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clientConn.Close()
+
+	var serverConn net.Conn
+	select {
+	case serverConn = <-acceptedConn:
+		defer serverConn.Close()
+	case err = <-acceptErr:
+		t.Fatal(err)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for test server accept")
+	}
+
+	b := &botClient{conn: mcnet.WrapConn(clientConn)}
+	peer := mcnet.WrapConn(serverConn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() { done <- b.configuration(ctx) }()
+	var response pk.Packet
+
+	packID := uuid.MustParse("12345678-1234-5678-9abc-def012345678")
+	if err := peer.WritePacket(pk.Marshal(
+		packetid.ClientboundConfigResourcePackPush,
+		pk.UUID(packID),
+		pk.String("https://example.invalid/pack.zip"),
+		pk.String(strings.Repeat("0", 40)),
+		pk.Boolean(false),
+		pk.Boolean(false),
+	)); err != nil {
+		t.Fatal(err)
+	}
+	if err := peer.ReadPacket(&response); err != nil {
+		t.Fatal(err)
+	}
+	if got := packetid.ServerboundPacketID(response.ID); got != packetid.ServerboundConfigResourcePack {
+		t.Fatalf("response packet ID = %v, want %v", got, packetid.ServerboundConfigResourcePack)
+	}
+	var gotPackID pk.UUID
+	var result pk.VarInt
+	if err := response.Scan(&gotPackID, &result); err != nil {
+		t.Fatal(err)
+	}
+	if uuid.UUID(gotPackID) != packID || int32(result) != resourcePackResultDeclined {
+		t.Fatalf("resource pack response = (%v, %d)", uuid.UUID(gotPackID), result)
+	}
+
+	if err := peer.WritePacket(pk.Marshal(packetid.ClientboundConfigCodeOfConduct, pk.String("be nice"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := peer.ReadPacket(&response); err != nil {
+		t.Fatal(err)
+	}
+	if got := packetid.ServerboundPacketID(response.ID); got != packetid.ServerboundConfigAcceptCodeOfConduct {
+		t.Fatalf("response packet ID = %v, want %v", got, packetid.ServerboundConfigAcceptCodeOfConduct)
+	}
+	if len(response.Data) != 0 {
+		t.Fatalf("accept code of conduct payload = %v, want empty", response.Data)
+	}
+
+	if err := peer.WritePacket(pk.Marshal(packetid.ClientboundConfigFinishConfiguration)); err != nil {
+		t.Fatal(err)
+	}
+	if err := peer.ReadPacket(&response); err != nil {
+		t.Fatal(err)
+	}
+	if got := packetid.ServerboundPacketID(response.ID); got != packetid.ServerboundConfigFinishConfiguration {
+		t.Fatalf("response packet ID = %v, want %v", got, packetid.ServerboundConfigFinishConfiguration)
+	}
+
+	if err := <-done; err != nil {
+		t.Fatalf("configuration() error = %v", err)
+	}
+}
+
+func TestDecodeClientboundPacketRejectsTrailingData(t *testing.T) {
+	data := pk.Marshal(packetid.ClientboundKeepAlive, pk.Long(99)).Data
+	data = append(data, 0x01)
+
+	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundKeepAlive, data)
+	if pkt != nil || !handled || err == nil {
+		t.Fatalf("decodeClientboundPacket() = (%T, %t, %v), want handled trailing-data error", pkt, handled, err)
+	}
+}
+
+func TestDecodeClientboundPacketSkipsUnsupportedPacket(t *testing.T) {
+	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundPlayerChat, []byte{0x01, 0x02})
+	if pkt != nil || handled || err != nil {
+		t.Fatalf("decodeClientboundPacket() = (%T, %t, %v), want unsupported skip", pkt, handled, err)
+	}
+}
+
+func TestDecodeClientboundPacketUsesFixedResourcePackRegistry(t *testing.T) {
+	packID := uuid.MustParse("12345678-1234-5678-9abc-def012345678")
+	data := pk.Marshal(
+		packetid.ClientboundResourcePackPush,
+		pk.UUID(packID),
+		pk.String("https://example.invalid/pack.zip"),
+		pk.String(strings.Repeat("0", 40)),
+		pk.Boolean(false),
+		pk.Boolean(false),
+	).Data
+
+	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundResourcePackPush, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !handled {
+		t.Fatal("decodeClientboundPacket() skipped resource pack push")
+	}
+	resourcePack, ok := pkt.(*gameclient.AddResourcePack)
+	if !ok {
+		t.Fatalf("decoded packet = %T, want *gameclient.AddResourcePack", pkt)
+	}
+	if resourcePack.UUID != packID {
+		t.Fatalf("decoded resource pack UUID = %v, want %v", resourcePack.UUID, packID)
 	}
 }
 

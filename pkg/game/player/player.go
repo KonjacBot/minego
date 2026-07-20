@@ -134,7 +134,18 @@ func New(c bot.Client) *Player {
 		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerRotation) {
-		pl.entity.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
+		rot := pl.entity.Rotation()
+		if p.RelYaw {
+			rot[0] += float64(p.Yaw)
+		} else {
+			rot[0] = float64(p.Yaw)
+		}
+		if p.RelPitch {
+			rot[1] += float64(p.Pitch)
+		} else {
+			rot[1] = float64(p.Pitch)
+		}
+		pl.entity.SetRotation(rot)
 	})
 
 	return pl

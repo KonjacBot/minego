@@ -294,20 +294,38 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				})
 			}
 
-			creator, ok := client.ClientboundPackets[pktID]
-			if !ok {
+			if _, ok := client.ClientboundPackets[pktID]; !ok {
 				continue
 			}
-			pkt := creator()
-			_, err := pkt.ReadFrom(bytes.NewReader(p.Data))
+			pkt, handled, err := decodeClientboundPacket(pktID, p.Data)
 			if err != nil {
 				return fmt.Errorf("decode clientbound packet %d: %w", pktID, err)
 			}
-			b.packetHandler.HandlePacket(ctx, pkt)
+			if !handled {
+				continue
+			}
+			b.packetHandler.handlePacket(ctx, pktID, pkt)
 
 			_ = conn.Socket.SetReadDeadline(time.Time{})
 		}
 	}
+}
+
+func decodeClientboundPacket(id packetid.ClientboundPacketID, data []byte) (client.ClientboundPacket, bool, error) {
+	creator, ok := client.ClientboundPackets[id]
+	if !ok {
+		return nil, false, nil
+	}
+
+	pkt := creator()
+	read, err := pkt.ReadFrom(bytes.NewReader(data))
+	if err != nil {
+		return nil, true, err
+	}
+	if read != int64(len(data)) {
+		return nil, true, fmt.Errorf("decoded %d of %d bytes", read, len(data))
+	}
+	return pkt, true, nil
 }
 
 func NewClient(options *bot.ClientOptions) bot.Client {

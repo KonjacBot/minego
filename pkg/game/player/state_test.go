@@ -62,6 +62,23 @@ func TestInteractionsUseIncreasingSequences(t *testing.T) {
 	}
 }
 
+func TestPlayerRotationAppliesRelativeFlags(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+	p.entity.SetRotation(mgl64.Vec2{40, 50})
+
+	c.handler.HandlePacket(context.Background(), &gameclient.PlayerRotation{
+		Yaw: 3, RelYaw: true,
+		Pitch: 4, RelPitch: false,
+	})
+
+	rot := p.entity.Rotation()
+	if rot[0] != 43 || rot[1] != 4 {
+		t.Fatalf("player rotation = %v, want [43 4]", rot)
+	}
+}
+
 func TestWaitForContainerReturnsNewInitializedWindow(t *testing.T) {
 	c := newStateTestClient()
 	inventory := &waitInventory{id: -1}

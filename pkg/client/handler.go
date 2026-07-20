@@ -45,9 +45,13 @@ func (ph *packetHandler) AddRawPacketHandler(id packetid.ClientboundPacketID, ha
 }
 
 func (ph *packetHandler) HandlePacket(ctx context.Context, p client.ClientboundPacket) {
+	ph.handlePacket(ctx, p.PacketID(), p)
+}
+
+func (ph *packetHandler) handlePacket(ctx context.Context, id packetid.ClientboundPacketID, p client.ClientboundPacket) {
 	ph.mu.RLock()
 	genericHandlers := append([]func(context.Context, client.ClientboundPacket){}, ph.genericMap...)
-	handlers := append([]func(context.Context, client.ClientboundPacket){}, ph.handlerMap[p.PacketID()]...)
+	handlers := append([]func(context.Context, client.ClientboundPacket){}, ph.handlerMap[id]...)
 	ph.mu.RUnlock()
 
 	for _, handler := range genericHandlers {
