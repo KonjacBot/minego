@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 	"sync"
@@ -302,6 +303,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			reader := bytes.NewReader(p.Data)
 			_, err := pkt.ReadFrom(reader)
 			if err != nil {
+				slog.Error("decode clientbound packet", "packet", pktID, "dataLen", len(p.Data))
 				return fmt.Errorf("decode clientbound packet %d at byte %d/%d: %w", pktID, len(p.Data)-reader.Len(), len(p.Data), err)
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)
