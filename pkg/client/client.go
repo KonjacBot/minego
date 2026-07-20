@@ -318,12 +318,13 @@ func decodeClientboundPacket(id packetid.ClientboundPacketID, data []byte) (clie
 	}
 
 	pkt := creator()
-	read, err := pkt.ReadFrom(bytes.NewReader(data))
+	reader := bytes.NewReader(data)
+	_, err := pkt.ReadFrom(reader)
 	if err != nil {
 		return nil, true, err
 	}
-	if read != int64(len(data)) {
-		return nil, true, fmt.Errorf("decoded %d of %d bytes", read, len(data))
+	if reader.Len() != 0 {
+		return nil, true, fmt.Errorf("decoder left %d of %d bytes unread", reader.Len(), len(data))
 	}
 	return pkt, true, nil
 }

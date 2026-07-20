@@ -1,6 +1,7 @@
 package slot
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/KonjacBot/go-mc/chat"
@@ -30,84 +31,80 @@ type Display struct {
 }
 
 func (s Display) WriteTo(w io.Writer) (n int64, err error) {
-	pk.VarInt(s.SlotDisplay.SlotDisplayType()).WriteTo(w)
-	s.SlotDisplay.WriteTo(w)
-	return
+	if s.SlotDisplay == nil {
+		return 0, fmt.Errorf("slot display is nil")
+	}
+	temp, err := pk.VarInt(s.SlotDisplay.SlotDisplayType()).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = s.SlotDisplay.WriteTo(w)
+	n += temp
+	return n, err
 }
 
 func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
+	s.SlotDisplay = nil
 	var displayType DisplayType
-	_, err = (*pk.VarInt)(&displayType).ReadFrom(r)
+	temp, err := (*pk.VarInt)(&displayType).ReadFrom(r)
+	n += temp
 	if err != nil {
-		return
+		return n, err
+	}
+	read := func(display SlotDisplay) error {
+		read, readErr := display.ReadFrom(r)
+		n += read
+		if readErr == nil {
+			s.SlotDisplay = display
+		}
+		return readErr
 	}
 	switch displayType {
 	case DisplayEmpty:
-		return
+		s.SlotDisplay = Empty{}
 	case DisplayAnyFuel:
-		return
+		s.SlotDisplay = AnyFuel{}
 	case DisplayWithAnyPotion:
-		var potion WithAnyPotion
-		if _, err = potion.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &potion
+		err = read(&WithAnyPotion{})
 	case DisplayOnlyWithComponent:
-		var only OnlyWithComponent
-		if _, err = only.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &only
+		err = read(&OnlyWithComponent{})
 	case DisplayItem:
-		var item Item
-		if _, err = item.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &item
+		err = read(&Item{})
 	case DisplayItemStack:
-		var itemStack ItemStack
-		if _, err = itemStack.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &itemStack
+		err = read(&ItemStack{})
 	case DisplayTag:
-		var tag Tag
-		if _, err = tag.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &tag
+		err = read(&Tag{})
 	case DisplayDyed:
-		var dyed Dyed
-		if _, err = dyed.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &dyed
+		err = read(&Dyed{})
 	case DisplaySmithingTrim:
-		var trim SmithingTrim
-		if _, err = trim.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &trim
+		err = read(&SmithingTrim{})
 	case DisplayWithRemainder:
-		var remainder WithRemainder
-		if _, err = remainder.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &remainder
+		err = read(&WithRemainder{})
 	case DisplayComposite:
-		var composite Composite
-		if _, err = composite.ReadFrom(r); err != nil {
-			return
-		}
-		s.SlotDisplay = &composite
+		err = read(&Composite{})
+	default:
+		err = fmt.Errorf("unknown slot display type %d", displayType)
 	}
-	return
+	return n, err
 }
 
 type SlotDisplay interface {
 	SlotDisplayType() DisplayType
 	pk.Field
 }
+
+type Empty struct{}
+
+func (Empty) SlotDisplayType() DisplayType      { return DisplayEmpty }
+func (Empty) ReadFrom(io.Reader) (int64, error) { return 0, nil }
+func (Empty) WriteTo(io.Writer) (int64, error)  { return 0, nil }
+
+type AnyFuel struct{}
+
+func (AnyFuel) SlotDisplayType() DisplayType      { return DisplayAnyFuel }
+func (AnyFuel) ReadFrom(io.Reader) (int64, error) { return 0, nil }
+func (AnyFuel) WriteTo(io.Writer) (int64, error)  { return 0, nil }
 
 //codec:gen
 type WithAnyPotion struct {

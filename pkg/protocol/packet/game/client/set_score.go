@@ -7,7 +7,7 @@ import (
 
 //codec:gen
 type ScoreNumberFormat struct {
-	NumberFormat int32
+	NumberFormat int32 `mc:"VarInt"`
 	//opt:enum:NumberFormat:1
 	StyledTag nbt.RawMessage `mc:"NBT"`
 	//opt:enum:NumberFormat:2

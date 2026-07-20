@@ -3869,6 +3869,11 @@ func (c *RecipeBookSettings) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookFilterEnabled).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = (*packet.Boolean)(&c.SmokingRecipeBookOpen).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -3905,6 +3910,11 @@ func (c RecipeBookSettings) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookOpen).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookFilterEnabled).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4879,6 +4889,15 @@ func (c *ObjectivesData) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.VarInt)(&c.RenderType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.RenderType < 0 || c.RenderType > 1 {
+		return n, errors.New("unknown objective render type")
+	}
+	c.NumberFormat = nil
 	temp, err = (*packet.Boolean)(&c.HasNumberFormat).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -4897,7 +4916,18 @@ func (c *ObjectivesData) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c ObjectivesData) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
+	if c.RenderType < 0 || c.RenderType > 1 {
+		return n, errors.New("unknown objective render type")
+	}
+	if c.HasNumberFormat && c.NumberFormat == nil {
+		return n, errors.New("objective number format is missing")
+	}
 	temp, err = (&c.Value).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.RenderType).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -5345,10 +5375,15 @@ func (c UpdateTeamsRemoveEntities) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *ScoreNumberFormat) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Int)(&c.NumberFormat).ReadFrom(r)
+	c.StyledTag = (ScoreNumberFormat{}).StyledTag
+	c.Content = (ScoreNumberFormat{}).Content
+	temp, err = (*packet.VarInt)(&c.NumberFormat).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
+	}
+	if c.NumberFormat < 0 || c.NumberFormat > 2 {
+		return n, errors.New("unknown score number format")
 	}
 	if c.NumberFormat == 1 {
 		temp, err = packet.NBT(&c.StyledTag).ReadFrom(r)
@@ -5369,7 +5404,10 @@ func (c *ScoreNumberFormat) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c ScoreNumberFormat) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Int)(&c.NumberFormat).WriteTo(w)
+	if c.NumberFormat < 0 || c.NumberFormat > 2 {
+		return n, errors.New("unknown score number format")
+	}
+	temp, err = (*packet.VarInt)(&c.NumberFormat).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

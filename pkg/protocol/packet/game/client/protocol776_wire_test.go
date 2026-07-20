@@ -633,3 +633,58 @@ func TestStopSoundReadFromClearsOmittedFieldsOnReuse(t *testing.T) {
 		t.Fatalf("decoded empty stop sound = %#v", got)
 	}
 }
+
+func TestRecipeBookSettingsProtocol776Wire(t *testing.T) {
+	wire := []byte{1, 0, 1, 0, 1, 0, 1, 0}
+	var got RecipeBookSettings
+	n, err := got.ReadFrom(bytes.NewReader(wire))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != int64(len(wire)) {
+		t.Fatalf("bytes read = %d, want %d", n, len(wire))
+	}
+	if !got.CraftingRecipeBookOpen || got.CraftingRecipeBookFilterEnabled ||
+		!got.SmeltingRecipeBookOpen || got.SmeltingRecipeBookFilterEnabled ||
+		!got.BlastingFurnaceRecipeBookOpen || got.BlastingFurnaceRecipeBookFilterEnabled ||
+		!got.SmokingRecipeBookOpen || got.SmokingRecipeBookFilterEnabled {
+		t.Fatalf("decoded recipe book settings = %#v", got)
+	}
+
+	var encoded bytes.Buffer
+	written, err := got.WriteTo(&encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written != int64(len(wire)) || !bytes.Equal(encoded.Bytes(), wire) {
+		t.Fatalf("encoded recipe book settings = (%d, %v), want (%d, %v)", written, encoded.Bytes(), len(wire), wire)
+	}
+}
+
+func TestObjectivesDataProtocol776Wire(t *testing.T) {
+	wire := []byte{8, 0, 5, 's', 'c', 'o', 'r', 'e', 1, 1, 0}
+
+	var got ObjectivesData
+	n, err := got.ReadFrom(bytes.NewReader(wire))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != int64(len(wire)) || got.Value.ClearString() != "score" || got.RenderType != 1 || !got.HasNumberFormat || got.NumberFormat == nil {
+		t.Fatalf("decoded objectives data = (%d, %#v)", n, got)
+	}
+	if got.NumberFormat.NumberFormat != 0 {
+		t.Fatalf("decoded number format = %#v", got.NumberFormat)
+	}
+}
+
+func TestScoreNumberFormatFixedStringWire(t *testing.T) {
+	wire := []byte{2, 8, 0, 5, 'f', 'i', 'x', 'e', 'd'}
+	var got ScoreNumberFormat
+	n, err := got.ReadFrom(bytes.NewReader(wire))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != int64(len(wire)) || got.NumberFormat != 2 || got.Content.ClearString() != "fixed" {
+		t.Fatalf("decoded fixed number format = (%d, %#v)", n, got)
+	}
+}

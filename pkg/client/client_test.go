@@ -198,6 +198,19 @@ func TestDecodeClientboundPacketRejectsTrailingData(t *testing.T) {
 	}
 }
 
+func TestDecodeClientboundPacketUsesReaderConsumption(t *testing.T) {
+	original := gameclient.ClientboundPackets[packetid.ClientboundKeepAlive]
+	gameclient.ClientboundPackets[packetid.ClientboundKeepAlive] = func() gameclient.ClientboundPacket {
+		return &underreportingPacket{}
+	}
+	defer func() { gameclient.ClientboundPackets[packetid.ClientboundKeepAlive] = original }()
+
+	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundKeepAlive, []byte{0x2a})
+	if err != nil || !handled || pkt == nil {
+		t.Fatalf("decodeClientboundPacket() = (%T, %t, %v), want successful consumed decode", pkt, handled, err)
+	}
+}
+
 func TestDecodeClientboundPacketSkipsUnsupportedPacket(t *testing.T) {
 	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundPlayerChat, []byte{0x01, 0x02})
 	if pkt != nil || handled || err != nil {
@@ -235,6 +248,20 @@ func TestDecodeClientboundPacketUsesFixedResourcePackRegistry(t *testing.T) {
 type countingConn struct {
 	writes atomic.Int32
 }
+
+type underreportingPacket struct{}
+
+func (*underreportingPacket) PacketID() packetid.ClientboundPacketID {
+	return packetid.ClientboundKeepAlive
+}
+
+func (*underreportingPacket) ReadFrom(r io.Reader) (int64, error) {
+	var data [1]byte
+	_, err := io.ReadFull(r, data[:])
+	return 0, err
+}
+
+func (*underreportingPacket) WriteTo(io.Writer) (int64, error) { return 0, nil }
 
 func (*countingConn) Read([]byte) (int, error)         { return 0, io.EOF }
 func (c *countingConn) Write(p []byte) (int, error)    { c.writes.Add(1); return len(p), nil }

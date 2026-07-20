@@ -5,6 +5,7 @@ import "github.com/KonjacBot/go-mc/chat"
 //codec:gen
 type ObjectivesData struct {
 	Value           chat.Message
+	RenderType      int32 `mc:"VarInt"`
 	HasNumberFormat bool
 	//opt:optional:HasNumberFormat
 	NumberFormat *ScoreNumberFormat
