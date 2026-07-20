@@ -13,5 +13,5 @@ type EntitySoundEffect struct {
 	EntityID      int32 `mc:"VarInt"`
 	Volume        float32
 	Pitch         float32
-	Seed          int32
+	Seed          int64
 }

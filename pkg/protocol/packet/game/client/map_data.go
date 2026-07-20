@@ -23,6 +23,10 @@ type MapColorPatch struct {
 }
 
 func (c *MapColorPatch) ReadFrom(r io.Reader) (n int64, err error) {
+	c.Rows = 0
+	c.X = 0
+	c.Z = 0
+	c.Data = nil
 	t, err := (*pk.UnsignedByte)(&c.Columns).ReadFrom(r)
 	n += t
 	if err != nil {
@@ -38,6 +42,7 @@ func (c *MapColorPatch) ReadFrom(r io.Reader) (n int64, err error) {
 			return n, err
 		}
 	}
+	c.Data = nil
 	t, err = pk.Array(&c.Data).ReadFrom(r)
 	n += t
 	return n, err
@@ -66,7 +71,10 @@ func (c MapColorPatch) WriteTo(w io.Writer) (n int64, err error) {
 
 //codec:gen
 type MapData struct {
-	MapID  int32 `mc:"VarInt"`
-	Scale  int8
-	Locked bool
+	MapID          int32 `mc:"VarInt"`
+	Scale          int8
+	Locked         bool
+	HasDecorations bool
+	Decorations    []MapIcon
+	ColorPatch     MapColorPatch
 }

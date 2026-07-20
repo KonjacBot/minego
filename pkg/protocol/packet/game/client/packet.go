@@ -641,10 +641,10 @@ func (*ResetScore) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundResetScore
 }
 func (*AddResourcePack) PacketID() packetid.ClientboundPacketID {
-	return packetid.ClientboundResourcePackPop
+	return packetid.ClientboundResourcePackPush
 }
 func (*RemoveResourcePack) PacketID() packetid.ClientboundPacketID {
-	return packetid.ClientboundResourcePackPush
+	return packetid.ClientboundResourcePackPop
 }
 func (*Respawn) PacketID() packetid.ClientboundPacketID {
 	return packetid.ClientboundRespawn

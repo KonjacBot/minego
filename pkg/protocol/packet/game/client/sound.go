@@ -7,6 +7,7 @@ type SoundEffect struct {
 	SoundID int32 `mc:"VarInt"`
 	//opt:id:SoundID
 	SoundEvent                                        *component.SoundEvent
+	Source                                            int32 `mc:"VarInt"`
 	EffectPositionX, EffectPositionY, EffectPositionZ int32
 	Volume, Pitch                                     float32
 	Seed                                              int64

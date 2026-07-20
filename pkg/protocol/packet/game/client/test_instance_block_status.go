@@ -1,15 +1,11 @@
 package client
 
-import "github.com/KonjacBot/go-mc/chat"
+import (
+	"github.com/KonjacBot/go-mc/chat"
+	pk "github.com/KonjacBot/go-mc/net/packet"
+)
 
-//codec:gen
 type TestInstanceBlockStatus struct {
-	Status  chat.Message
-	HasSize bool
-	//opt:optional:HasSize
-	SizeX float64
-	//opt:optional:HasSize
-	SizeY float64
-	//opt:optional:HasSize
-	SizeZ float64
+	Status chat.Message
+	Size   pk.Option[WaypointVec3i, *WaypointVec3i]
 }

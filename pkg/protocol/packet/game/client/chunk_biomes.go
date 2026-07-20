@@ -1,8 +1,12 @@
 package client
 
-//codec:gen
+import "github.com/KonjacBot/go-mc/level"
+
+type ChunkBiomeData struct {
+	Pos  level.ChunkPos
+	Data []byte `mc:"ByteArray"`
+}
+
 type ChunkBiomes struct {
-	ChunkX int32
-	ChunkZ int32
-	Data   []byte `mc:"ByteArray"`
+	Chunks []ChunkBiomeData
 }

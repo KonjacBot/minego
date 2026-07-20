@@ -636,42 +636,15 @@ func (c ChunkBatchStart) WriteTo(w io.Writer) (n int64, err error) {
 	return 0, nil
 }
 func (c *ChunkBiomes) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Int)(&c.ChunkX).ReadFrom(r)
+	c.Chunks = nil
+	temp, err := packet.Array(&c.Chunks).ReadFrom(r)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Int)(&c.ChunkZ).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.ByteArray)(&c.Data).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	return n, err
 }
 
 func (c ChunkBiomes) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Int)(&c.ChunkX).WriteTo(w)
+	temp, err := packet.Array(&c.Chunks).WriteTo(w)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Int)(&c.ChunkZ).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.ByteArray)(&c.Data).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	return n, err
 }
 func (c *ClearDialog) ReadFrom(r io.Reader) (n int64, err error) {
@@ -798,11 +771,28 @@ func (c CommandSuggestions) WriteTo(w io.Writer) (n int64, err error) {
 	return n, err
 }
 func (c *Commands) ReadFrom(r io.Reader) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	c.Nodes = nil
+	temp, err = packet.Array(&c.Nodes).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.RootIndex).ReadFrom(r)
+	n += temp
+	return n, err
 }
 
 func (c Commands) WriteTo(w io.Writer) (n int64, err error) {
-	return 0, nil
+	var temp int64
+	temp, err = packet.Array(&c.Nodes).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.RootIndex).WriteTo(w)
+	n += temp
+	return n, err
 }
 func (c *SetContainerContent) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
@@ -2344,6 +2334,23 @@ func (c *MapData) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.HasDecorations).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasDecorations {
+		c.Decorations = nil
+		temp, err = packet.Array(&c.Decorations).ReadFrom(r)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	} else {
+		c.Decorations = nil
+	}
+	temp, err = (&c.ColorPatch).ReadFrom(r)
+	n += temp
 	return n, err
 }
 
@@ -2364,6 +2371,20 @@ func (c MapData) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.HasDecorations).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	if c.HasDecorations {
+		temp, err = packet.Array(&c.Decorations).WriteTo(w)
+		n += temp
+		if err != nil {
+			return n, err
+		}
+	}
+	temp, err = (&c.ColorPatch).WriteTo(w)
+	n += temp
 	return n, err
 }
 func (c *TradeOption) ReadFrom(r io.Reader) (n int64, err error) {
@@ -4737,6 +4758,8 @@ func (c *SetEquipment) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (&c.Equipment).ReadFrom(r)
+	n += temp
 	return n, err
 }
 
@@ -4747,6 +4770,8 @@ func (c SetEquipment) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (&c.Equipment).WriteTo(w)
+	n += temp
 	return n, err
 }
 func (c *SetExperience) ReadFrom(r io.Reader) (n int64, err error) {
@@ -5692,6 +5717,11 @@ func (c *SoundEffect) ReadFrom(r io.Reader) (n int64, err error) {
 			return n, err
 		}
 	}
+	temp, err = (*packet.VarInt)(&c.Source).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = (*packet.Int)(&c.EffectPositionX).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -5738,6 +5768,11 @@ func (c SoundEffect) WriteTo(w io.Writer) (n int64, err error) {
 		if err != nil {
 			return n, err
 		}
+	}
+	temp, err = (*packet.VarInt)(&c.Source).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
 	}
 	temp, err = (*packet.Int)(&c.EffectPositionX).WriteTo(w)
 	n += temp
@@ -5798,7 +5833,7 @@ func (c *EntitySoundEffect) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Int)(&c.Seed).ReadFrom(r)
+	temp, err = (*packet.Long)(&c.Seed).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -5833,7 +5868,7 @@ func (c EntitySoundEffect) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Int)(&c.Seed).WriteTo(w)
+	temp, err = (*packet.Long)(&c.Seed).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -6128,32 +6163,8 @@ func (c *TestInstanceBlockStatus) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasSize).ReadFrom(r)
+	temp, err = (&c.Size).ReadFrom(r)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeX).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeY).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeZ).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	return n, err
 }
 
@@ -6164,32 +6175,8 @@ func (c TestInstanceBlockStatus) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasSize).WriteTo(w)
+	temp, err = (&c.Size).WriteTo(w)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeX).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeY).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.HasSize {
-		temp, err = (*packet.Double)(&c.SizeZ).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	return n, err
 }
 func (c *SetTickingState) ReadFrom(r io.Reader) (n int64, err error) {
@@ -7079,6 +7066,7 @@ func (c *Waypoint) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.IsUUIDIdentifier == true {
+		c.Name = ""
 		temp, err = (*packet.UUID)(&c.UUID).ReadFrom(r)
 		n += temp
 		if err != nil {
@@ -7086,27 +7074,27 @@ func (c *Waypoint) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 	if c.IsUUIDIdentifier == false {
+		c.UUID = uuid.UUID{}
 		temp, err = (*packet.String)(&c.Name).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
 		}
 	}
-	temp, err = (*packet.Boolean)(&c.HasColor).ReadFrom(r)
+	temp, err = (&c.Icon).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasColor {
-		temp, err = (&c.Color).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	temp, err = (*packet.VarInt)(&c.WaypointType).ReadFrom(r)
 	n += temp
 	if err != nil {
+		return n, err
+	}
+	c.WaypointPlayerPos = WaypointVec3i{}
+	c.WaypointChunkPos = WaypointChunkPos{}
+	c.WaypointAzimuth = WaypointAzimuth{}
+	if c.WaypointType == 0 {
 		return n, err
 	}
 	if c.WaypointType == 1 {
@@ -7159,21 +7147,17 @@ func (c Waypoint) WriteTo(w io.Writer) (n int64, err error) {
 			return n, err
 		}
 	}
-	temp, err = (*packet.Boolean)(&c.HasColor).WriteTo(w)
+	temp, err = (&c.Icon).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasColor {
-		temp, err = (&c.Color).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	temp, err = (*packet.VarInt)(&c.WaypointType).WriteTo(w)
 	n += temp
 	if err != nil {
+		return n, err
+	}
+	if c.WaypointType == 0 {
 		return n, err
 	}
 	if c.WaypointType == 1 {
