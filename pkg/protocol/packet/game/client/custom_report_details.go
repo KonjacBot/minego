@@ -6,7 +6,6 @@ type ReportDetails struct {
 	Description string
 }
 
-//codec:gen
 type CustomReportDetails struct {
-	Details []ReportDetails
+	Details map[string]string
 }

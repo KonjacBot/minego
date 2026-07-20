@@ -8,6 +8,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/protocol/component"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 	"github.com/google/uuid"
 )
 
@@ -1015,7 +1016,7 @@ func (c *CustomPayload) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.PluginMessageData)(&c.Data).ReadFrom(r)
+	temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: maxRemainingPayloadBytes}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1030,7 +1031,7 @@ func (c CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.PluginMessageData)(&c.Data).WriteTo(w)
+	temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: maxRemainingPayloadBytes}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1068,7 +1069,7 @@ func (c ReportDetails) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *CustomReportDetails) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = packet.Array(&c.Details).ReadFrom(r)
+	temp, err = (*boundedReportDetails)(&c.Details).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1078,7 +1079,7 @@ func (c *CustomReportDetails) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c CustomReportDetails) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = packet.Array(&c.Details).WriteTo(w)
+	temp, err = boundedReportDetails(c.Details).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4056,7 +4057,7 @@ func (c *AddResourcePack) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Hash).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Hash, MaxChars: maxResourcePackHashChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -4093,7 +4094,7 @@ func (c AddResourcePack) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Hash).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Hash, MaxChars: maxResourcePackHashChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -5669,39 +5670,6 @@ func (c SetTitleAnimationTimes) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
-func (c *ShowDialog) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.VarInt)(&c.DialogID).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.DialogID == 0 {
-		temp, err = packet.NBT(&c.DialogData).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, err
-}
-
-func (c ShowDialog) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.VarInt)(&c.DialogID).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.DialogID == 0 {
-		temp, err = packet.NBT(&c.DialogData).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, err
-}
 func (c *SoundEffect) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.VarInt)(&c.SoundID).ReadFrom(r)
@@ -5889,7 +5857,7 @@ func (c *StoreCookie) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.ByteArray)(&c.Payload).ReadFrom(r)
+	temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: maxCookiePayloadBytes}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -5904,7 +5872,7 @@ func (c StoreCookie) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.ByteArray)(&c.Payload).WriteTo(w)
+	temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: maxCookiePayloadBytes}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

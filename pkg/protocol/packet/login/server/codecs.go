@@ -6,11 +6,12 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 )
 
 func (c *LoginCookieResponse) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Key).ReadFrom(r)
+	temp, err = (*packet.Identifier)(&c.Key).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -21,7 +22,7 @@ func (c *LoginCookieResponse) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasPayload {
-		temp, err = (*packet.ByteArray)(&c.Payload).ReadFrom(r)
+		temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: 5120}.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -32,7 +33,7 @@ func (c *LoginCookieResponse) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c LoginCookieResponse) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Key).WriteTo(w)
+	temp, err = (*packet.Identifier)(&c.Key).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -43,7 +44,7 @@ func (c LoginCookieResponse) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasPayload {
-		temp, err = (*packet.ByteArray)(&c.Payload).WriteTo(w)
+		temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: 5120}.WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
@@ -64,7 +65,7 @@ func (c *LoginCustomQueryAnswer) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasData {
-		temp, err = (*packet.PluginMessageData)(&c.Data).ReadFrom(r)
+		temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: 1 << 20}.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -86,7 +87,7 @@ func (c LoginCustomQueryAnswer) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasData {
-		temp, err = (*packet.PluginMessageData)(&c.Data).WriteTo(w)
+		temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: 1 << 20}.WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err

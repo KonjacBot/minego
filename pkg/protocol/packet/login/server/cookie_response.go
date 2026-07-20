@@ -4,7 +4,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 
 //codec:gen
 type LoginCookieResponse struct {
-	Key        string
+	Key        string `mc:"Identifier"`
 	HasPayload bool
 	//opt:optional:HasPayload
 	Payload []byte `mc:"ByteArray"`

@@ -12,6 +12,7 @@ import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/auth"
+	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
 )
 
 const resourcePackResultDeclined = 1
@@ -94,11 +95,16 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 				return err
 			}
 		case packetid.ClientboundConfigCodeOfConduct:
-			// Consume the packet payload so malformed packets still fail cleanly.
-			var codeOfConduct pk.String
-			if _, err = (&codeOfConduct).ReadFrom(bytes.NewReader(p.Data)); err != nil {
+			var codeOfConduct configclient.ConfigCodeOfConduct
+			payload := bytes.NewReader(p.Data)
+			if _, err = codeOfConduct.ReadFrom(payload); err != nil {
 				return err
 			}
+			if payload.Len() != 0 {
+				return errors.New("configuration code of conduct has trailing data")
+			}
+			// Minego auto-accepts the configuration code of conduct so the
+			// connection can complete unattended instead of hanging in config.
 			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigAcceptCodeOfConduct))
 			if err != nil {
 				return err

@@ -3,8 +3,10 @@
 package client
 
 import (
-	"github.com/KonjacBot/go-mc/net/packet"
 	"io"
+
+	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 )
 
 func (c *LoginCookieRequest) ReadFrom(r io.Reader) (n int64, err error) {
@@ -38,7 +40,7 @@ func (c *LoginCustomQuery) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.PluginMessageData)(&c.Data).ReadFrom(r)
+	temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: 1 << 20}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -58,7 +60,7 @@ func (c LoginCustomQuery) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.PluginMessageData)(&c.Data).WriteTo(w)
+	temp, err = codecutil.RemainingBytes{Value: &c.Data, MaxLen: 1 << 20}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

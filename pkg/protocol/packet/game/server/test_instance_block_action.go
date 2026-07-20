@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
@@ -10,16 +9,7 @@ import (
 type TestInstanceBlockAction struct {
 	Position pk.Position
 	Action   int32 `mc:"VarInt"`
-	IsTest   bool
-	//opt:optional:IsTest
-	Test                int32 `mc:"VarInt"`
-	SizeX, SizeY, SizeZ int32 `mc:"VarInt"`
-	Rotation            int32 `mc:"VarInt"`
-	IgnoredEntities     bool
-	Status              int32 `mc:"VarInt"`
-	HasErrorMessage     bool
-	//opt:optional:HasErrorMessage
-	ErrorMessage chat.Message
+	Data     TestInstanceBlockData
 }
 
 func (*TestInstanceBlockAction) PacketID() packetid.ServerboundPacketID {

@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 )
 
 func (c *AcceptTeleportation) ReadFrom(r io.Reader) (n int64, err error) {
@@ -145,7 +146,7 @@ func (c ChangeGameMode) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *Chat) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Message).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Message, MaxChars: maxChatMessageChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -193,7 +194,7 @@ func (c *Chat) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c Chat) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Message).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Message, MaxChars: maxChatMessageChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -277,7 +278,7 @@ func (c ChatCommand) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *SignedSignatures) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.ArgumentName).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.ArgumentName, MaxChars: maxArgumentNameChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -292,7 +293,7 @@ func (c *SignedSignatures) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c SignedSignatures) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.ArgumentName).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.ArgumentName, MaxChars: maxArgumentNameChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -321,7 +322,7 @@ func (c *ChatCommandSigned) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.Array(&c.ArgumentSignatures).ReadFrom(r)
+	temp, err = (*boundedArgumentSignatures)(&c.ArgumentSignatures).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -362,7 +363,7 @@ func (c ChatCommandSigned) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.Array(&c.ArgumentSignatures).WriteTo(w)
+	temp, err = boundedArgumentSignatures(c.ArgumentSignatures).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -453,7 +454,7 @@ func (c ClientCommand) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *ClientInformation) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Location).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Location, MaxChars: maxClientLanguageChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -503,7 +504,7 @@ func (c *ClientInformation) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c ClientInformation) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.String)(&c.Location).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Location, MaxChars: maxClientLanguageChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -564,7 +565,7 @@ func (c *CommandSuggestion) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Text).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Text, MaxChars: maxCommandSuggestionChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -579,7 +580,7 @@ func (c CommandSuggestion) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Text).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Text, MaxChars: maxCommandSuggestionChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -678,7 +679,7 @@ func (c *ContainerClick) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.Array(&c.ChangedSlots).ReadFrom(r)
+	temp, err = (*boundedChangedSlots)(&c.ChangedSlots).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -718,7 +719,7 @@ func (c ContainerClick) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.Array(&c.ChangedSlots).WriteTo(w)
+	temp, err = boundedChangedSlots(c.ChangedSlots).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -801,7 +802,7 @@ func (c *CookieResponse) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasPayload {
-		temp, err = (*packet.ByteArray)(&c.Payload).ReadFrom(r)
+		temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: 5120}.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -823,7 +824,7 @@ func (c CookieResponse) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasPayload {
-		temp, err = (*packet.ByteArray)(&c.Payload).WriteTo(w)
+		temp, err = codecutil.BoundedByteArray{Value: &c.Payload, MaxLen: 5120}.WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
@@ -838,7 +839,7 @@ func (c *CustomClickAction) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.NBT(&c.Payload).ReadFrom(r)
+	temp, err = codecutil.LengthPrefixedNBT{Value: &c.Payload, MaxLen: maxCustomClickNBTBytes}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -853,7 +854,7 @@ func (c CustomClickAction) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.NBT(&c.Payload).WriteTo(w)
+	temp, err = codecutil.LengthPrefixedNBT{Value: &c.Payload, MaxLen: maxCustomClickNBTBytes}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -886,7 +887,7 @@ func (c *EditBook) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*StringVarIntArray)(&c.Entries).ReadFrom(r)
+	temp, err = (*limitedBookEntries)(&c.Entries).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -897,7 +898,7 @@ func (c *EditBook) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasTitle {
-		temp, err = (*packet.String)(&c.Title).ReadFrom(r)
+		temp, err = codecutil.BoundedString{Value: &c.Title, MaxChars: maxBookTitleChars}.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -913,7 +914,7 @@ func (c EditBook) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*StringVarIntArray)(&c.Entries).WriteTo(w)
+	temp, err = limitedBookEntries(c.Entries).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -924,7 +925,7 @@ func (c EditBook) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasTitle {
-		temp, err = (*packet.String)(&c.Title).WriteTo(w)
+		temp, err = codecutil.BoundedString{Value: &c.Title, MaxChars: maxBookTitleChars}.WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
@@ -2337,22 +2338,22 @@ func (c *SignUpdate) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line1).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Line1, MaxChars: maxSignLineChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line2).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Line2, MaxChars: maxSignLineChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line3).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Line3, MaxChars: maxSignLineChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line4).ReadFrom(r)
+	temp, err = codecutil.BoundedString{Value: &c.Line4, MaxChars: maxSignLineChars}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -2372,22 +2373,22 @@ func (c SignUpdate) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line1).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Line1, MaxChars: maxSignLineChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line2).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Line2, MaxChars: maxSignLineChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line3).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Line3, MaxChars: maxSignLineChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.String)(&c.Line4).WriteTo(w)
+	temp, err = codecutil.BoundedString{Value: &c.Line4, MaxChars: maxSignLineChars}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -2463,60 +2464,8 @@ func (c *TestInstanceBlockAction) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.IsTest).ReadFrom(r)
+	temp, err = (&c.Data).ReadFrom(r)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.IsTest {
-		temp, err = (*packet.VarInt)(&c.Test).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.VarInt)(&c.SizeX).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.SizeY).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.SizeZ).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.Rotation).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.IgnoredEntities).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.Status).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasErrorMessage).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.HasErrorMessage {
-		temp, err = (&c.ErrorMessage).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	return n, err
 }
 
@@ -2532,60 +2481,8 @@ func (c TestInstanceBlockAction) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.IsTest).WriteTo(w)
+	temp, err = (&c.Data).WriteTo(w)
 	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.IsTest {
-		temp, err = (*packet.VarInt)(&c.Test).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.VarInt)(&c.SizeX).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.SizeY).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.SizeZ).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.Rotation).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.IgnoredEntities).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.Status).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasErrorMessage).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	if c.HasErrorMessage {
-		temp, err = (&c.ErrorMessage).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
 	return n, err
 }
 func (c *UseItem) ReadFrom(r io.Reader) (n int64, err error) {

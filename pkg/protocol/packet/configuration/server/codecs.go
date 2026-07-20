@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 )
 
 func (c *ConfigCustomClickAction) ReadFrom(r io.Reader) (n int64, err error) {
@@ -15,7 +16,7 @@ func (c *ConfigCustomClickAction) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.NBT(&c.Data).ReadFrom(r)
+	temp, err = codecutil.LengthPrefixedNBT{Value: &c.Data, MaxLen: 65536}.ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -30,7 +31,7 @@ func (c ConfigCustomClickAction) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = packet.NBT(&c.Data).WriteTo(w)
+	temp, err = codecutil.LengthPrefixedNBT{Value: &c.Data, MaxLen: 65536}.WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
