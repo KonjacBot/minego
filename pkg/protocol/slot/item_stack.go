@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -181,6 +182,7 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 				previous = append(previous, int(previousID))
 			}
 			sort.Ints(previous)
+			slog.Error("read slot item %d component %d/%d: %d (%s), after %v: %w", "itemid", s.ItemID, "component", i+1, "len", addLens, "id", id, "cid", c.ID(), "previuos", previous, "err", err)
 			return n, fmt.Errorf("read slot item %d component %d/%d: %d (%s), after %v: %w", s.ItemID, i+1, addLens, id, c.ID(), previous, err)
 		}
 		s.AddComponent[int32(id)] = c
