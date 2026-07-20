@@ -2,6 +2,6 @@ package client
 
 // codec:gen
 type ChangeDifficulty struct {
-	Difficulty int8
+	Difficulty int32 `mc:"VarInt"`
 	Locked     bool
 }

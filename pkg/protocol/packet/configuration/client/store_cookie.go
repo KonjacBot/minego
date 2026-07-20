@@ -5,7 +5,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 //codec:gen
 type ConfigStoreCookie struct {
 	Key     string `mc:"Identifier"`
-	Payload []int8
+	Payload []byte `mc:"ByteArray"`
 }
 
 func (*ConfigStoreCookie) PacketID() packetid.ClientboundPacketID {

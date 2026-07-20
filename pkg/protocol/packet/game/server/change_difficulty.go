@@ -4,7 +4,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 
 //codec:gen
 type ChangeDifficulty struct {
-	Difficulty uint8
+	Difficulty int32 `mc:"VarInt"`
 }
 
 func (*ChangeDifficulty) PacketID() packetid.ServerboundPacketID {

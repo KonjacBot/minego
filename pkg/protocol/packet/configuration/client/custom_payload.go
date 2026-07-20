@@ -5,7 +5,7 @@ import "github.com/KonjacBot/go-mc/data/packetid"
 //codec:gen
 type ConfigCustomPayload struct {
 	Channel string `mc:"Identifier"`
-	Data    []byte `mc:"ByteArray"`
+	Data    []byte `mc:"PluginMessageData"`
 }
 
 func (*ConfigCustomPayload) PacketID() packetid.ClientboundPacketID {
