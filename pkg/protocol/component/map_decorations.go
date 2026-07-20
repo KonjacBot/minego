@@ -1,12 +1,14 @@
 package component
 
-import (
-	"github.com/KonjacBot/go-mc/nbt"
-)
-
-//codec:gen
 type MapDecorations struct {
-	Data nbt.RawMessage `mc:"NBT"` // Always a Compound Tag
+	Decorations map[string]MapDecorationEntry
+}
+
+type MapDecorationEntry struct {
+	Type     string  `nbt:"type"`
+	X        float64 `nbt:"x"`
+	Z        float64 `nbt:"z"`
+	Rotation float32 `nbt:"rotation"`
 }
 
 func (*MapDecorations) ID() string {

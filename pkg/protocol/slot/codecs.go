@@ -39,6 +39,7 @@ func (c AddedHashedComponent) WriteTo(w io.Writer) (n int64, err error) {
 	return n, err
 }
 func (c *HashedSlot) ReadFrom(r io.Reader) (n int64, err error) {
+	*c = HashedSlot{}
 	var temp int64
 	temp, err = (*packet.Boolean)(&c.HasItem).ReadFrom(r)
 	n += temp
@@ -60,20 +61,58 @@ func (c *HashedSlot) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 	if c.HasItem {
-		temp, err = (&c.AddComponents).ReadFrom(r)
+		var size packet.VarInt
+		temp, err = size.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
+		}
+		if size < 0 {
+			return n, errors.New("array length less than zero")
+		}
+		if size > 256 {
+			return n, errors.New("array length greater than 256")
+		}
+		if cap(c.AddComponents) >= int(size) {
+			c.AddComponents = c.AddComponents[:int(size)]
+		} else {
+			c.AddComponents = make([]AddedHashedComponent, int(size))
+		}
+		for i := range c.AddComponents {
+			temp, err = (&c.AddComponents[i]).ReadFrom(r)
+			n += temp
+			if err != nil {
+				return n, err
+			}
 		}
 	}
 	if c.HasItem {
-		temp, err = (*Int32VarIntVarIntArray)(&c.RemovedComponents).ReadFrom(r)
+		var size packet.VarInt
+		temp, err = size.ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
 		}
+		if size < 0 {
+			return n, errors.New("array length less than zero")
+		}
+		if size > 256 {
+			return n, errors.New("array length greater than 256")
+		}
+		if cap(c.RemovedComponents) >= int(size) {
+			c.RemovedComponents = c.RemovedComponents[:int(size)]
+		} else {
+			c.RemovedComponents = make([]int32, int(size))
+		}
+		for i := range c.RemovedComponents {
+			temp, err = (*packet.VarInt)(&c.RemovedComponents[i]).ReadFrom(r)
+			n += temp
+			if err != nil {
+				return n, err
+			}
+		}
 	}
-	return n, err
+	return n, nil
 }
 
 func (c HashedSlot) WriteTo(w io.Writer) (n int64, err error) {
@@ -98,20 +137,40 @@ func (c HashedSlot) WriteTo(w io.Writer) (n int64, err error) {
 		}
 	}
 	if c.HasItem {
-		temp, err = (&c.AddComponents).WriteTo(w)
+		if len(c.AddComponents) > 256 {
+			return n, errors.New("array length greater than 256")
+		}
+		temp, err = packet.VarInt(len(c.AddComponents)).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
+		}
+		for i := range c.AddComponents {
+			temp, err = (&c.AddComponents[i]).WriteTo(w)
+			n += temp
+			if err != nil {
+				return n, err
+			}
 		}
 	}
 	if c.HasItem {
-		temp, err = (*Int32VarIntVarIntArray)(&c.RemovedComponents).WriteTo(w)
+		if len(c.RemovedComponents) > 256 {
+			return n, errors.New("array length greater than 256")
+		}
+		temp, err = packet.VarInt(len(c.RemovedComponents)).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
 		}
+		for i := range c.RemovedComponents {
+			temp, err = packet.VarInt(c.RemovedComponents[i]).WriteTo(w)
+			n += temp
+			if err != nil {
+				return n, err
+			}
+		}
 	}
-	return n, err
+	return n, nil
 }
 
 // Int32VarIntVarIntArray a utility type for encoding/decoding packet.VarInt -> int32[packet.VarInt] slice.

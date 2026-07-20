@@ -5,11 +5,14 @@ import (
 )
 
 //codec:gen
+type GlobalPosition struct {
+	Dimension pk.Identifier
+	Position  pk.Position
+}
+
 type LodestoneTracker struct {
-	HasGlobalPosition bool
-	Dimension         pk.Option[pk.Identifier, *pk.Identifier]
-	Position          pk.Option[pk.Position, *pk.Position]
-	Tracked           bool
+	Target  pk.Option[GlobalPosition, *GlobalPosition]
+	Tracked bool
 }
 
 func (*LodestoneTracker) ID() string {

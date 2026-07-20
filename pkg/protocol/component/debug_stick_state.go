@@ -1,12 +1,7 @@
 package component
 
-import (
-	"github.com/KonjacBot/go-mc/nbt"
-)
-
-//codec:gen
 type DebugStickState struct {
-	Data nbt.RawMessage `mc:"NBT"`
+	Properties map[string]string
 }
 
 func (*DebugStickState) ID() string {

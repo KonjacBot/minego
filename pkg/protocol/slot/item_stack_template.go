@@ -1,6 +1,7 @@
 package slot
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -20,6 +21,13 @@ type ItemStackTemplate struct {
 }
 
 func (s ItemStackTemplate) WriteTo(w io.Writer) (n int64, err error) {
+	if s.ItemID == 0 {
+		return 0, errors.New("item stack template must be non-empty")
+	}
+	if s.Count == 0 {
+		return 0, errors.New("item stack template must be non-empty")
+	}
+
 	temp, err := pk.VarInt(s.ItemID).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -63,11 +71,16 @@ func (s ItemStackTemplate) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
+	*s = ItemStackTemplate{}
+
 	var itemID int32
 	temp, err := (*pk.VarInt)(&itemID).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
+	}
+	if itemID == 0 {
+		return n, errors.New("item stack template must be non-empty")
 	}
 	s.ItemID = item.ID(itemID)
 
@@ -75,6 +88,9 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 	n += temp
 	if err != nil {
 		return n, err
+	}
+	if s.Count == 0 {
+		return n, errors.New("item stack template must be non-empty")
 	}
 
 	addLens, removeLens := int32(0), int32(0)

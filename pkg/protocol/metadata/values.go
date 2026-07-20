@@ -66,7 +66,7 @@ type OptChat struct {
 }
 
 func (b OptChat) EntityMetadataType() MetadataType {
-	return MetadataChat
+	return MetadataOptChat
 }
 
 type Slot struct {
@@ -135,7 +135,7 @@ func (b BlockState) EntityMetadataType() MetadataType {
 }
 
 type OptBlockState struct {
-	pk.VarInt
+	Value int32
 }
 
 func (b OptBlockState) EntityMetadataType() MetadataType {
@@ -178,7 +178,8 @@ func (b VillagerData) EntityMetadataType() MetadataType {
 }
 
 type OptVarInt struct {
-	pk.Option[pk.VarInt, *pk.VarInt]
+	Value int32
+	Has   bool
 }
 
 func (b OptVarInt) EntityMetadataType() MetadataType {

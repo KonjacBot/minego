@@ -1,12 +1,8 @@
 package component
 
-import (
-	"github.com/KonjacBot/go-mc/nbt"
-)
-
-//codec:gen
 type ContainerLoot struct {
-	Data nbt.RawMessage `mc:"NBT"`
+	LootTable string `nbt:"loot_table"`
+	Seed      int64  `nbt:"seed,omitempty"`
 }
 
 func (*ContainerLoot) ID() string {

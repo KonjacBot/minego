@@ -1,13 +1,15 @@
 package component
 
+import (
+	pk "github.com/KonjacBot/go-mc/net/packet"
+)
+
 //codec:gen
 type PotionContents struct {
-	HasPotionID    bool
-	PotionID       int32 `mc:"VarInt"`
-	HasCustomColor bool
-	CustomColor    int32 `mc:"Int"`
-	CustomEffects  []PotionEffect
-	CustomName     string
+	PotionID      pk.Option[pk.VarInt, *pk.VarInt]
+	CustomColor   pk.Option[pk.Int, *pk.Int]
+	CustomEffects []PotionEffect
+	CustomName    pk.Option[pk.String, *pk.String]
 }
 
 //codec:gen
@@ -25,8 +27,7 @@ type PotionEffectDetails struct {
 	ShowParticles   bool
 	ShowIcon        bool
 	HasHiddenEffect bool
-	//opt:optional:HasHiddenEffect
-	HiddenEffect *PotionEffect
+	HiddenEffect    *PotionEffect
 }
 
 func (*PotionContents) ID() string {

@@ -1,8 +1,12 @@
 package component
 
-//codec:gen
+import "github.com/KonjacBot/go-mc/level/item"
+
 type PotDecorations struct {
-	Decorations []int32 `mc:"VarInt"`
+	Back  *item.ID
+	Left  *item.ID
+	Right *item.ID
+	Front *item.ID
 }
 
 func (*PotDecorations) ID() string {

@@ -8,45 +8,16 @@ import (
 )
 
 type JukeboxPlayable struct {
-	Mode     int8
-	Name     packet.Identifier
-	SongData packet.OptID[JukeboxSongData, *JukeboxSongData]
+	Song packet.OptID[JukeboxSongData, *JukeboxSongData]
 }
 
 func (p *JukeboxPlayable) ReadFrom(r io.Reader) (n int64, err error) {
-	n1, err := (*packet.Byte)(&p.Mode).ReadFrom(r)
-	if err != nil {
-		return n1, err
-	}
-	if p.Mode == 0 {
-		n2, err := p.Name.ReadFrom(r)
-		return n1 + n2, err
-	}
-
-	if p.Mode == 1 {
-		n2, err := p.SongData.ReadFrom(r)
-		return n1 + n2, err
-	}
-
-	return n1, err
+	*p = JukeboxPlayable{}
+	return (&p.Song).ReadFrom(r)
 }
 
 func (p JukeboxPlayable) WriteTo(w io.Writer) (int64, error) {
-	n1, err := (*packet.Byte)(&p.Mode).WriteTo(w)
-	if err != nil {
-		return n1, err
-	}
-
-	if p.Mode == 0 {
-		n2, err := p.Name.WriteTo(w)
-		return n1 + n2, err
-	}
-
-	if p.Mode == 1 {
-		n2, err := p.SongData.WriteTo(w)
-		return n1 + n2, err
-	}
-	return n1, err
+	return (&p.Song).WriteTo(w)
 }
 
 //codec:gen

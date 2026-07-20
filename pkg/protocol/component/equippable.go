@@ -1,27 +1,22 @@
 package component
 
 import (
+	"github.com/KonjacBot/go-mc/net/packet"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
 
-//codec:gen
 type Equippable struct {
-	Slot         int32 `mc:"VarInt"` // 0=mainhand, 1=feet, 2=legs, etc.
-	EquipSoundID int32 `mc:"VarInt"`
-	//opt:id:EquipSoundID
-	EquipSoundEvent *SoundEvent
-	HasModel        bool
-	//opt:optional:HasModel
-	Model            string `mc:"Identifier"`
-	HasCameraOverlay bool
-	//opt:optional:HasCameraOverlay
-	CameraOverlay      string `mc:"Identifier"`
-	HasAllowedEntities bool
-	//opt:optional:HasAllowedEntities
-	AllowedEntitiesID pk.IDSet
-	Dispensable       bool
-	Swappable         bool
-	DamageOnHurt      bool
+	Slot            int32 `mc:"VarInt"` // 0=mainhand, 1=feet, 2=legs, etc.
+	EquipSound      packet.OptID[SoundEvent, *SoundEvent]
+	AssetID         pk.Option[pk.Identifier, *pk.Identifier]
+	CameraOverlay   pk.Option[pk.Identifier, *pk.Identifier]
+	AllowedEntities pk.Option[pk.IDSet, *pk.IDSet]
+	Dispensable     bool
+	Swappable       bool
+	DamageOnHurt    bool
+	EquipOnInteract bool
+	CanBeSheared    bool
+	ShearingSound   packet.OptID[SoundEvent, *SoundEvent]
 }
 
 func (*Equippable) ID() string {

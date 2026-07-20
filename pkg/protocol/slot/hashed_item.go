@@ -14,7 +14,7 @@ type HashedSlot struct {
 	//opt:optional:HasItem
 	ItemCount int32 `mc:"VarInt"`
 	//opt:optional:HasItem
-	AddComponents AddedHashedComponent
+	AddComponents []AddedHashedComponent
 	//opt:optional:HasItem
 	RemovedComponents []int32 `mc:"VarInt"`
 }

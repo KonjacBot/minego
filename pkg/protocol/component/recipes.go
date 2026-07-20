@@ -1,12 +1,7 @@
 package component
 
-import (
-	"github.com/KonjacBot/go-mc/nbt"
-)
-
-//codec:gen
 type Recipes struct {
-	Data nbt.RawMessage `mc:"NBT"`
+	RecipeIDs []string
 }
 
 func (*Recipes) ID() string {
