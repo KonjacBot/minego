@@ -102,8 +102,8 @@ func (c *ResolvableProfile) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 	if c.Type == 1 {
-		c.GameProfile = new(ResolvableProfile)
-		temp, err = (*ResolvableProfile)(c.GameProfile).ReadFrom(r)
+		c.GameProfile = new(GameProfile)
+		temp, err = (*GameProfile)(c.GameProfile).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -147,7 +147,7 @@ func (c ResolvableProfile) WriteTo(w io.Writer) (n int64, err error) {
 		}
 	}
 	if c.Type == 1 {
-		temp, err = (*ResolvableProfile)(c.GameProfile).WriteTo(w)
+		temp, err = (*GameProfile)(c.GameProfile).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err

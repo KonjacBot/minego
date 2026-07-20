@@ -176,7 +176,12 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		temp, err = c.ReadFrom(r)
 		n += temp
 		if err != nil {
-			return n, err
+			previous := make([]int, 0, len(s.AddComponent))
+			for previousID := range s.AddComponent {
+				previous = append(previous, int(previousID))
+			}
+			sort.Ints(previous)
+			return n, fmt.Errorf("read slot item %d component %d/%d: %d (%s), after %v: %w", s.ItemID, i+1, addLens, id, c.ID(), previous, err)
 		}
 		s.AddComponent[int32(id)] = c
 	}

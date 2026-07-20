@@ -26,7 +26,7 @@ type ResolvableProfile struct {
 	//opt:enum:Type:0
 	Partial *PartialProfile
 	//opt:enum:Type:1
-	GameProfile *ResolvableProfile
+	GameProfile *GameProfile
 
 	Body   pk.Option[pk.Identifier, *pk.Identifier]
 	Cape   pk.Option[pk.Identifier, *pk.Identifier]
