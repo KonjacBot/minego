@@ -2,12 +2,16 @@ package component
 
 //codec:gen
 type PotionContents struct {
-	HasPotionID    bool
+	HasPotionID bool
+	//opt:optional:HasPotionID
 	PotionID       int32 `mc:"VarInt"`
 	HasCustomColor bool
-	CustomColor    int32 `mc:"Int"`
-	CustomEffects  []PotionEffect
-	CustomName     string
+	//opt:optional:HasCustomColor
+	CustomColor   int32 `mc:"Int"`
+	CustomEffects []PotionEffect
+	HasCustomName bool
+	//opt:optional:HasCustomName
+	CustomName string
 }
 
 //codec:gen
