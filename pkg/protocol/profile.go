@@ -31,5 +31,5 @@ type ResolvableProfile struct {
 	Body   pk.Option[pk.Identifier, *pk.Identifier]
 	Cape   pk.Option[pk.Identifier, *pk.Identifier]
 	Elytra pk.Option[pk.Identifier, *pk.Identifier]
-	Model  pk.Option[pk.VarInt, *pk.VarInt]
+	Model  pk.Option[pk.Boolean, *pk.Boolean]
 }
