@@ -60,7 +60,7 @@ func (c *HashedSlot) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 	if c.HasItem {
-		temp, err = (&c.AddComponents).ReadFrom(r)
+		temp, err = packet.Array(&c.AddComponents).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -98,7 +98,7 @@ func (c HashedSlot) WriteTo(w io.Writer) (n int64, err error) {
 		}
 	}
 	if c.HasItem {
-		temp, err = (&c.AddComponents).WriteTo(w)
+		temp, err = packet.Array(&c.AddComponents).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -303,8 +304,17 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			reader := bytes.NewReader(p.Data)
 			_, err := pkt.ReadFrom(reader)
 			if err != nil {
-				slog.Error("decode clientbound packet", "packet", pktID, "dataLen", len(p.Data))
-				return fmt.Errorf("decode clientbound packet %d at byte %d/%d: %w", pktID, len(p.Data)-reader.Len(), len(p.Data), err)
+				temp, dumpErr := os.CreateTemp("", "packet")
+				filename := ""
+				if dumpErr == nil {
+					filename = temp.Name()
+					_, dumpErr = temp.Write(p.Data)
+					if closeErr := temp.Close(); dumpErr == nil {
+						dumpErr = closeErr
+					}
+				}
+				slog.Error("decode clientbound packet", "packet", pktID, "dataLen", len(p.Data), "err", err, "filename", filename, "dumpErr", dumpErr)
+				return fmt.Errorf("decode clientbound packet %d at byte %d/%d: %w TEMPPACKET: %s", pktID, len(p.Data)-reader.Len(), len(p.Data), err, filename)
 			}
 			b.packetHandler.HandlePacket(ctx, pkt)
 

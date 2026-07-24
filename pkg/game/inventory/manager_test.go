@@ -88,6 +88,76 @@ func TestContainerClickUsesItsOwnStateID(t *testing.T) {
 	}
 }
 
+func TestManagerTracksDedicatedCursorAndPlayerInventoryPackets(t *testing.T) {
+	c := newInventoryTestClient()
+	m := NewManager(c)
+	c.inventory = m
+
+	c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+		CarriedItem: slot.Slot{ItemID: 7, Count: 3},
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+		Slot: 0, Data: slot.Slot{ItemID: 8, Count: 2},
+	})
+	if cursor := m.Cursor(); cursor == nil || cursor.ItemID != 7 || cursor.Count != 3 {
+		t.Fatalf("dedicated cursor packet produced %#v", cursor)
+	}
+	if got := m.Inventory().GetSlot(36); got.ItemID != 8 || got.Count != 2 {
+		t.Fatalf("standalone hotbar slot = %#v", got)
+	}
+}
+
+func TestManagerClickSendsPredictionAndUpdatesLocalCache(t *testing.T) {
+	c := newInventoryTestClient()
+	m := NewManager(c)
+	c.inventory = m
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+		WindowID: 0, StateID: 12, Slots: make([]slot.Slot, 46),
+		CarriedItem: slot.Slot{ItemID: 7, Count: 3},
+	})
+
+	if err := m.Click(0, 9, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	click := c.writes[0].(*server.ContainerClick)
+	if click.StateID != 12 || len(click.ChangedSlots) != 1 || click.ChangedSlots[0].Slot != 9 {
+		t.Fatalf("click prediction = %#v", click)
+	}
+	if !click.ChangedSlots[0].SlotData.HasItem || click.ChangedSlots[0].SlotData.ItemCount != 3 || click.CarriedSlot.HasItem {
+		t.Fatalf("click hashed slots = changed %#v, carried %#v", click.ChangedSlots[0].SlotData, click.CarriedSlot)
+	}
+	if got := m.Inventory().GetSlot(9); got.ItemID != 7 || got.Count != 3 {
+		t.Fatalf("predicted local slot = %#v", got)
+	}
+	if cursor := m.Cursor(); cursor == nil || cursor.Count != 0 {
+		t.Fatalf("predicted cursor = %#v", cursor)
+	}
+}
+
+func TestManagerShiftClickUsesGenericContainerLayout(t *testing.T) {
+	c := newInventoryTestClient()
+	m := NewManager(c)
+	c.inventory = m
+	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5, WindowType: 2})
+	slots := make([]slot.Slot, 63)
+	slots[0] = slot.Slot{ItemID: 7, Count: 4}
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{WindowID: 5, StateID: 3, Slots: slots})
+
+	if err := m.Click(5, 0, 1, 0); err != nil {
+		t.Fatal(err)
+	}
+	click := c.writes[0].(*server.ContainerClick)
+	if len(click.ChangedSlots) != 2 || click.ChangedSlots[0].Slot != 0 || click.ChangedSlots[1].Slot != 62 {
+		t.Fatalf("shift-click changed slots = %#v", click.ChangedSlots)
+	}
+	if got := m.Container().GetSlot(0); got.Count != 0 {
+		t.Fatalf("source slot still contains %#v", got)
+	}
+	if got := m.Container().GetSlot(62); got.ItemID != 7 || got.Count != 4 {
+		t.Fatalf("predicted destination = %#v", got)
+	}
+}
+
 func TestContainerSlotsReturnsCopy(t *testing.T) {
 	c := NewContainerWithSize(nil, 0, 1)
 	c.SetSlot(0, slot.Slot{Count: 2, RemoveComponent: []int32{1}})
