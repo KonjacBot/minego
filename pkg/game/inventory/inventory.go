@@ -127,8 +127,12 @@ func (c *Container) StateID() int32 {
 }
 
 func (c *Container) Click(idx int16, mode int32, button int32) error {
+	return c.ClickContext(context.Background(), idx, mode, button)
+}
+
+func (c *Container) ClickContext(ctx context.Context, idx int16, mode int32, button int32) error {
 	if c.manager != nil {
-		return c.manager.click(c.containerID, idx, mode, button)
+		return c.manager.ClickContext(ctx, c.containerID, idx, mode, button)
 	}
 	clickPacket := &server.ContainerClick{
 		WindowID: c.containerID,
@@ -137,5 +141,8 @@ func (c *Container) Click(idx int16, mode int32, button int32) error {
 		Button:   int8(button),
 		Mode:     mode,
 	}
-	return c.c.WritePacket(context.Background(), clickPacket)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.c.WritePacket(ctx, clickPacket)
 }
