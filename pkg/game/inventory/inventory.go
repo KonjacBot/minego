@@ -18,7 +18,6 @@ type Container struct {
 	stateID     int32
 	slots       []slot.Slot
 	c           bot.Client
-	manager     *Manager
 }
 
 func NewContainer(c bot.Client, cID int32) *Container {
@@ -127,13 +126,6 @@ func (c *Container) StateID() int32 {
 }
 
 func (c *Container) Click(idx int16, mode int32, button int32) error {
-	return c.ClickContext(context.Background(), idx, mode, button)
-}
-
-func (c *Container) ClickContext(ctx context.Context, idx int16, mode int32, button int32) error {
-	if c.manager != nil {
-		return c.manager.ClickContext(ctx, c.containerID, idx, mode, button)
-	}
 	clickPacket := &server.ContainerClick{
 		WindowID: c.containerID,
 		StateID:  c.StateID(),
@@ -141,8 +133,5 @@ func (c *Container) ClickContext(ctx context.Context, idx int16, mode int32, but
 		Button:   int8(button),
 		Mode:     mode,
 	}
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	return c.c.WritePacket(ctx, clickPacket)
+	return c.c.WritePacket(context.Background(), clickPacket)
 }
