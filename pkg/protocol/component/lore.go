@@ -1,12 +1,12 @@
 package component
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type Lore struct {
-	Lines []chat.Message
+	Lines []wire.Message
 }
 
 func (*Lore) ID() string {

@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/nbt"
+	chat "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen

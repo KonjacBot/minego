@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -15,15 +16,24 @@ func (e *EventHandler) PublishEvent(event string, data any) error {
 	hs := append([]func(event any) error(nil), e.handlers[event]...)
 	e.mu.RUnlock()
 
-	for _, h := range hs {
-		if err := h(data); err != nil {
+	for i, h := range hs {
+		var callbackErr error
+		if err := invokeCallback(fmt.Sprintf("event %q handler[%d]", event, i), func() {
+			callbackErr = h(data)
+		}); err != nil {
 			return err
+		}
+		if callbackErr != nil {
+			return callbackErr
 		}
 	}
 	return nil
 }
 
 func (e *EventHandler) SubscribeEvent(event string, handler func(data any) error) {
+	if handler == nil {
+		return
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers[event] = append(e.handlers[event], handler)

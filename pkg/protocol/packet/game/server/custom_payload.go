@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/data/packetid"
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type CustomPayload struct {
@@ -28,7 +28,7 @@ func (p CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
 	if len(p.Data) > 32767 {
 		return 0, errors.New("custom payload exceeds 32767 bytes")
 	}
-	n, err = pk.Identifier(p.Channel).WriteTo(w)
+	n, err = wire.Identifier(p.Channel).WriteTo(w)
 	if err != nil {
 		return n, err
 	}
@@ -38,7 +38,7 @@ func (p CustomPayload) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (p *CustomPayload) ReadFrom(r io.Reader) (n int64, err error) {
-	n, err = (*pk.Identifier)(&p.Channel).ReadFrom(r)
+	n, err = (*wire.Identifier)(&p.Channel).ReadFrom(r)
 	if err != nil {
 		return
 	}

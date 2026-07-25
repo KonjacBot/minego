@@ -13,7 +13,12 @@ type ClientboundPacket interface {
 
 type clientBoundPacketCreator func() ClientboundPacket
 
+// ClientboundPackets is retained for compatibility and inspection. Runtime
+// decoding uses the immutable registry populated by registerPacket so callers
+// cannot race the connection loop by mutating this map.
 var ClientboundPackets = make(map[packetid.ClientboundPacketID]clientBoundPacketCreator)
+
+var clientboundPackets = make(map[packetid.ClientboundPacketID]clientBoundPacketCreator)
 
 func init() {
 	registerPacket(func() ClientboundPacket {
@@ -424,7 +429,17 @@ func init() {
 }
 
 func registerPacket(creator clientBoundPacketCreator) {
-	ClientboundPackets[creator().PacketID()] = creator
+	id := creator().PacketID()
+	ClientboundPackets[id] = creator
+	clientboundPackets[id] = creator
+}
+
+func NewClientboundPacket(id packetid.ClientboundPacketID) (ClientboundPacket, bool) {
+	creator, ok := clientboundPackets[id]
+	if !ok || creator == nil {
+		return nil, false
+	}
+	return creator(), true
 }
 
 func (*AddEntity) PacketID() packetid.ClientboundPacketID {

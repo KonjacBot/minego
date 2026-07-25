@@ -6,7 +6,7 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type BoundedString struct {

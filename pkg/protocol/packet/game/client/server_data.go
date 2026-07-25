@@ -1,14 +1,13 @@
 package client
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type ServerData struct {
-	MOTD    chat.Message
+	MOTD    wire.Message
 	HasIcon bool
 	//opt:optional:HasIcon
-	Icon pk.ByteArray
+	Icon wire.ByteArray
 }

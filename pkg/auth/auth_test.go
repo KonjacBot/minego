@@ -6,11 +6,25 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/json"
 	"testing"
 
 	mcnet "github.com/KonjacBot/go-mc/net"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/login/client"
 )
+
+func TestProfileDecodesYggdrasilSelectedProfile(t *testing.T) {
+	var response struct {
+		SelectedProfile Profile `json:"selectedProfile"`
+	}
+	err := json.Unmarshal([]byte(`{"selectedProfile":{"id":"12345678123456789abcdef012345678","name":"Steve"}}`), &response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.SelectedProfile.Name != "Steve" || response.SelectedProfile.UUID.String() != "12345678-1234-5678-9abc-def012345678" {
+		t.Fatalf("decoded profile = %#v", response.SelectedProfile)
+	}
+}
 
 type nilProfileProvider struct{}
 

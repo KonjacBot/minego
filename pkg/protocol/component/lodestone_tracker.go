@@ -2,11 +2,12 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type GlobalPosition struct {
-	Dimension pk.Identifier
+	Dimension wire.Identifier
 	Position  pk.Position
 }
 

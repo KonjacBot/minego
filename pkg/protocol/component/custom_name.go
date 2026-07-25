@@ -1,12 +1,12 @@
 package component
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type CustomName struct {
-	Name chat.Message
+	Name wire.Message
 }
 
 func (*CustomName) ID() string {

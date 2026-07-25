@@ -1,6 +1,6 @@
 package client
 
-import "github.com/KonjacBot/go-mc/chat"
+import chat "github.com/KonjacBot/minego/pkg/protocol/wire"
 
 //codec:gen
 type SystemChatMessage struct {

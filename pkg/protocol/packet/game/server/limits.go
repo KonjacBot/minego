@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 const (
@@ -207,12 +207,12 @@ func (v TestInstanceBlockVec3i) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 type TestInstanceBlockData struct {
-	Test           pk.Option[pk.Identifier, *pk.Identifier]
+	Test           pk.Option[wire.Identifier, *wire.Identifier]
 	Size           TestInstanceBlockVec3i
 	Rotation       int32 `mc:"VarInt"`
 	IgnoreEntities bool
 	Status         int32 `mc:"VarInt"`
-	ErrorMessage   pk.Option[chat.Message, *chat.Message]
+	ErrorMessage   pk.Option[wire.Message, *wire.Message]
 }
 
 func (d *TestInstanceBlockData) ReadFrom(r io.Reader) (n int64, err error) {

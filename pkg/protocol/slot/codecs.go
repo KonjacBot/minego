@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *AddedHashedComponent) ReadFrom(r io.Reader) (n int64, err error) {
@@ -178,6 +178,9 @@ type Int32VarIntVarIntArray []int32
 
 func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err

@@ -1,12 +1,12 @@
 package component
 
 import (
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type TooltipStyle struct {
-	Style pk.Identifier
+	Style wire.Identifier
 }
 
 func (*TooltipStyle) ID() string {

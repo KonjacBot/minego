@@ -11,9 +11,10 @@ Why:
 
 Deterministic runtime-worktree policy:
 
-- Treat checked-in `pkg/protocol/**/codecs.go` files as read-only inputs in this worktree.
-- Do not regenerate or hand-edit packet schema files here.
-- Make runtime-only fixes outside schema-owned files, then validate with tests.
+- Treat packet field order and schema logic in checked-in `pkg/protocol/**/codecs.go` files as generated inputs.
+- Generated codecs must import `pkg/protocol/wire` as `packet`; that compatibility layer enforces allocation, string, collection, and NBT limits without duplicating guards in every generated method.
+- Specialized generated array helpers that do not call `wire.Array` must reject lengths above `wire.MaxCollectionEntries` in both `ReadFrom` and `WriteTo`.
+- Do not hand-edit generated field order or optional/enum logic here. Make schema changes in the schema worktree, then validate the generated output with the runtime safety and fuzz tests.
 
 Schema-owner inputs for protocol 776:
 

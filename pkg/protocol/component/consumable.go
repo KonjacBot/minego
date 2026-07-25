@@ -1,7 +1,7 @@
 package component
 
 import (
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen

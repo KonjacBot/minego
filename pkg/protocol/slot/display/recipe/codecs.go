@@ -5,7 +5,7 @@ package recipe
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *Shapeless) ReadFrom(r io.Reader) (n int64, err error) {

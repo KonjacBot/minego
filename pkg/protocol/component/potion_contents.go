@@ -2,6 +2,7 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -9,7 +10,7 @@ type PotionContents struct {
 	PotionID      pk.Option[pk.VarInt, *pk.VarInt]
 	CustomColor   pk.Option[pk.Int, *pk.Int]
 	CustomEffects []PotionEffect
-	CustomName    pk.Option[pk.String, *pk.String]
+	CustomName    pk.Option[wire.String, *wire.String]
 }
 
 //codec:gen

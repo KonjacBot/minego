@@ -7,10 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/KonjacBot/go-mc/chat"
-	"github.com/KonjacBot/go-mc/chat/sign"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type PlayerInfo interface {
@@ -23,6 +21,9 @@ type PlayerInfoUpdate struct {
 }
 
 func (p PlayerInfoUpdate) WriteTo(w io.Writer) (n int64, err error) {
+	if len(p.Players) > wire.MaxCollectionEntries {
+		return 0, fmt.Errorf("player count %d exceeds %d", len(p.Players), wire.MaxCollectionEntries)
+	}
 	actions, err := collectPlayerInfoActions(p.Players)
 	if err != nil {
 		return 0, err
@@ -85,6 +86,12 @@ func (p *PlayerInfoUpdate) ReadFrom(r io.Reader) (n int64, err error) {
 		return n + n2, err
 	}
 	n += n2
+	if playerCount < 0 {
+		return n, fmt.Errorf("player count %d is negative", playerCount)
+	}
+	if playerCount > wire.MaxCollectionEntries {
+		return n, fmt.Errorf("player count %d exceeds %d", playerCount, wire.MaxCollectionEntries)
+	}
 
 	players := make(map[uuid.UUID][]PlayerInfo, int(playerCount))
 	for i := 0; i < int(playerCount); i++ {
@@ -223,12 +230,12 @@ var playerInfoActionMasks = [...]int{
 //codec:gen
 type PlayerInfoAddPlayer struct {
 	Name       string
-	Properties []user.Property
+	Properties []wire.Property
 }
 
 //codec:gen
 type PlayerInfoChatData struct {
-	Session sign.Session
+	Session wire.Session
 }
 
 //codec:gen
@@ -253,7 +260,7 @@ type PlayerInfoUpdateLatency struct {
 
 //codec:gen
 type PlayerInfoUpdateDisplayName struct {
-	DisplayName pk.Option[chat.Message, *chat.Message]
+	DisplayName pk.Option[wire.Message, *wire.Message]
 }
 
 //codec:gen

@@ -5,8 +5,8 @@ package client
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *LoginCookieRequest) ReadFrom(r io.Reader) (n int64, err error) {

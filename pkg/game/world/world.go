@@ -4,10 +4,10 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/go-gl/mathgl/mgl64"
-	"golang.org/x/exp/constraints"
 
 	"github.com/KonjacBot/go-mc/data/entity"
 	"github.com/KonjacBot/go-mc/level"
@@ -194,6 +194,9 @@ func NewWorld(c bot.Client) *World {
 		if sectionY < 0 || int(sectionY) >= len(chunk.Sections) {
 			return // invalid section Y coordinate
 		}
+		if !validBlockState(p.BlockState) {
+			return
+		}
 
 		section := chunk.Sections[sectionY]
 		blockIdx := (blockY << 8) | (blockZ << 4) | blockX
@@ -226,6 +229,9 @@ func NewWorld(c bot.Client) *World {
 		blocks := p.ParseBlocks()
 
 		for localPos, stateID := range blocks {
+			if !validBlockState(stateID) {
+				continue
+			}
 			blockX := localPos[0]
 			blockY := localPos[1]
 			blockZ := localPos[2]
@@ -235,6 +241,10 @@ func NewWorld(c bot.Client) *World {
 	})
 
 	return w
+}
+
+func validBlockState(stateID int32) bool {
+	return stateID >= 0 && int(stateID) < len(block.StateList)
 }
 
 func (w *World) GetBlock(pos protocol.Position) (block.Block, error) {
@@ -303,12 +313,19 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 }
 
 func (w *World) GetNearbyBlocks(pos protocol.Position, radius int32) ([]block.Block, error) {
+	if err := validateBlockQueryRadius(radius); err != nil {
+		return nil, err
+	}
 	var blocks []block.Block
 
-	for dx := -radius; dx <= radius; dx++ {
-		for dy := -radius; dy <= radius; dy++ {
-			for dz := -radius; dz <= radius; dz++ {
-				blk, err := w.GetBlock(protocol.Position{pos[0] + dx, pos[1] + dy, pos[2] + dz})
+	for dx := -int64(radius); dx <= int64(radius); dx++ {
+		for dy := -int64(radius); dy <= int64(radius); dy++ {
+			for dz := -int64(radius); dz <= int64(radius); dz++ {
+				candidate, ok := offsetPosition(pos, dx, dy, dz)
+				if !ok {
+					return nil, errors.New("nearby block query exceeds coordinate range")
+				}
+				blk, err := w.GetBlock(candidate)
 				if err != nil {
 					continue
 				}
@@ -321,6 +338,12 @@ func (w *World) GetNearbyBlocks(pos protocol.Position, radius int32) ([]block.Bl
 }
 
 func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.Block) (protocol.Position, error) {
+	if blk == nil {
+		return protocol.Position{}, errors.New("target block is nil")
+	}
+	if err := validateBlockQueryRadius(radius); err != nil {
+		return protocol.Position{}, err
+	}
 	visited := make(map[protocol.Position]bool)
 	queue := list.New()
 	start := pos
@@ -337,7 +360,9 @@ func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.B
 		current := queue.Remove(queue.Front()).(protocol.Position)
 
 		// Skip if beyond the radius
-		if abs(current[0]-pos[0]) > radius || abs(current[1]-pos[1]) > radius || abs(current[2]-pos[2]) > radius {
+		if abs64(int64(current[0])-int64(pos[0])) > int64(radius) ||
+			abs64(int64(current[1])-int64(pos[1])) > int64(radius) ||
+			abs64(int64(current[2])-int64(pos[2])) > int64(radius) {
 			continue
 		}
 
@@ -350,10 +375,9 @@ func (w *World) FindNearbyBlock(pos protocol.Position, radius int32, blk block.B
 
 		// Check all 6 adjacent blocks
 		for _, dir := range dirs {
-			next := protocol.Position{
-				current[0] + dir[0],
-				current[1] + dir[1],
-				current[2] + dir[2],
+			next, ok := offsetPosition(current, int64(dir[0]), int64(dir[1]), int64(dir[2]))
+			if !ok {
+				continue
 			}
 
 			if !visited[next] {
@@ -387,6 +411,9 @@ func (w *World) GetEntity(id int32) bot.Entity {
 }
 
 func (w *World) GetNearbyEntities(radius int32) []bot.Entity {
+	if radius < 0 {
+		return nil
+	}
 	w.entityLock.RLock()
 	defer w.entityLock.RUnlock()
 
@@ -415,7 +442,30 @@ func (w *World) GetEntitiesByType(entityType entity.ID) []bot.Entity {
 	return entities
 }
 
-func abs[T constraints.Signed | constraints.Float](x T) T {
+const maxBlockQueryVolume int64 = 1_000_000
+
+func validateBlockQueryRadius(radius int32) error {
+	if radius < 0 {
+		return errors.New("radius less than zero")
+	}
+	diameter := int64(radius)*2 + 1
+	if diameter > maxBlockQueryVolume || diameter*diameter > maxBlockQueryVolume || diameter*diameter*diameter > maxBlockQueryVolume {
+		return fmt.Errorf("block query volume exceeds %d", maxBlockQueryVolume)
+	}
+	return nil
+}
+
+func offsetPosition(pos protocol.Position, x, y, z int64) (protocol.Position, bool) {
+	values := [3]int64{int64(pos[0]) + x, int64(pos[1]) + y, int64(pos[2]) + z}
+	for _, value := range values {
+		if value < -1<<31 || value > 1<<31-1 {
+			return protocol.Position{}, false
+		}
+	}
+	return protocol.Position{int32(values[0]), int32(values[1]), int32(values[2])}, true
+}
+
+func abs64(x int64) int64 {
 	if x < 0 {
 		return -x
 	}

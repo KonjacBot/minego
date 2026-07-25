@@ -53,4 +53,13 @@ func TestDisplayRejectsUnknownType(t *testing.T) {
 	}
 }
 
+func TestDisplayRejectsExcessiveNesting(t *testing.T) {
+	data := bytes.Repeat([]byte{byte(DisplayWithAnyPotion)}, maxDisplayDecodeDepth+1)
+	data = append(data, byte(DisplayEmpty))
+	var display Display
+	if _, err := display.ReadFrom(bytes.NewReader(data)); err == nil {
+		t.Fatal("ReadFrom() accepted excessively nested displays")
+	}
+}
+
 var _ io.ReaderFrom = (*Display)(nil)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/level/item"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func TestLodestoneTrackerOfficialWire(t *testing.T) {
@@ -32,6 +33,13 @@ func TestLodestoneTrackerOfficialWire(t *testing.T) {
 	assertComponentGolden(t, wire, &want, new(LodestoneTracker))
 }
 
+func TestGeneratedComponentArrayRejectsOversizedWrite(t *testing.T) {
+	value := make(Int32VarIntArray, wire.MaxCollectionEntries+1)
+	if _, err := value.WriteTo(&bytes.Buffer{}); err == nil {
+		t.Fatal("WriteTo() accepted an oversized array")
+	}
+}
+
 func TestEquippableOfficialWire(t *testing.T) {
 	want := Equippable{
 		Slot:            3,
@@ -53,9 +61,9 @@ func TestEquippableReadClearsReusedValue(t *testing.T) {
 		func(c *Equippable) {
 			c.Slot = 3
 			c.EquipSound = pk.OptID[SoundEvent, *SoundEvent]{Has: true, ID: 2}
-			c.AssetID = pk.Option[pk.Identifier, *pk.Identifier]{Has: true, Val: "minecraft:test_asset"}
-			c.CameraOverlay = pk.Option[pk.Identifier, *pk.Identifier]{Has: true, Val: "minecraft:test_overlay"}
-			c.AllowedEntities = pk.Option[pk.IDSet, *pk.IDSet]{Has: true, Val: pk.IDSet{TagName: "minecraft:test", IDs: []int32{1}}}
+			c.AssetID = pk.Option[wire.Identifier, *wire.Identifier]{Has: true, Val: "minecraft:test_asset"}
+			c.CameraOverlay = pk.Option[wire.Identifier, *wire.Identifier]{Has: true, Val: "minecraft:test_overlay"}
+			c.AllowedEntities = pk.Option[wire.IDSet, *wire.IDSet]{Has: true, Val: wire.IDSet{TagName: "minecraft:test", IDs: []int32{1}}}
 			c.Dispensable = true
 			c.DamageOnHurt = true
 			c.EquipOnInteract = true
@@ -65,7 +73,7 @@ func TestEquippableReadClearsReusedValue(t *testing.T) {
 	)
 	minimal := []byte{3, 3, 0, 0, 0, 1, 0, 1, 0, 1, 6}
 
-	value := Equippable{AssetID: pk.Option[pk.Identifier, *pk.Identifier]{Has: true, Val: "stale"}}
+	value := Equippable{AssetID: pk.Option[wire.Identifier, *wire.Identifier]{Has: true, Val: "stale"}}
 	if _, err := value.ReadFrom(bytes.NewReader(full)); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +121,7 @@ func TestPotionContentsOfficialWireCustomNameOptional(t *testing.T) {
 	absent := PotionContents{}
 	assertComponentGolden(t, []byte{0, 0, 0, 0}, &absent, new(PotionContents))
 
-	present := PotionContents{CustomName: pk.Option[pk.String, *pk.String]{Has: true, Val: "custom"}}
+	present := PotionContents{CustomName: pk.Option[wire.String, *wire.String]{Has: true, Val: "custom"}}
 	assertComponentGolden(t, []byte{0, 0, 0, 1, 6, 'c', 'u', 's', 't', 'o', 'm'}, &present, new(PotionContents))
 }
 
@@ -122,11 +130,11 @@ func TestPotionContentsReadClearsReusedValue(t *testing.T) {
 		c.PotionID = pk.Option[pk.VarInt, *pk.VarInt]{Has: true, Val: 7}
 		c.CustomColor = pk.Option[pk.Int, *pk.Int]{Has: true, Val: 0x112233}
 		c.CustomEffects = []PotionEffect{{TypeID: 5, Details: PotionEffectDetails{HasHiddenEffect: true, HiddenEffect: &PotionEffect{TypeID: 9, Details: PotionEffectDetails{ShowParticles: true}}}}}
-		c.CustomName = pk.Option[pk.String, *pk.String]{Has: true, Val: "custom"}
+		c.CustomName = pk.Option[wire.String, *wire.String]{Has: true, Val: "custom"}
 	})
 	minimal := []byte{0, 0, 0, 0}
 
-	value := PotionContents{CustomName: pk.Option[pk.String, *pk.String]{Has: true, Val: "stale"}}
+	value := PotionContents{CustomName: pk.Option[wire.String, *wire.String]{Has: true, Val: "stale"}}
 	if _, err := value.ReadFrom(bytes.NewReader(full)); err != nil {
 		t.Fatal(err)
 	}

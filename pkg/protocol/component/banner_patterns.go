@@ -1,7 +1,7 @@
 package component
 
 import (
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -13,7 +13,7 @@ type BannerPatterns struct {
 type BannerLayer struct {
 	Pattern int32 `mc:"VarInt"`
 	//opt:enum:Pattern:0
-	AssetID pk.Identifier
+	AssetID wire.Identifier
 	//opt:enum:Pattern:0
 	TranslationKey string
 	Color          DyeColor

@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/google/uuid"
 
-	"github.com/KonjacBot/go-mc/chat"
+	chat "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen

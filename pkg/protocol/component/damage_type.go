@@ -2,6 +2,7 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -10,8 +11,8 @@ type DamageTypeData struct {
 	Scaling    string
 	Exhaustion float32
 
-	Effects          pk.Option[pk.String, *pk.String]
-	DeathMessageType pk.Option[pk.String, *pk.String]
+	Effects          pk.Option[wire.String, *wire.String]
+	DeathMessageType pk.Option[wire.String, *wire.String]
 }
 
 //codec:gen

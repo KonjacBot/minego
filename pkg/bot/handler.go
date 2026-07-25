@@ -19,9 +19,14 @@ type PacketHandler interface {
 type HandlerFunc[T client.ClientboundPacket] func(ctx context.Context, p T)
 
 func AddHandler[T client.ClientboundPacket](c Client, f HandlerFunc[T]) {
+	if c == nil || f == nil {
+		return
+	}
 	var t T
 	handler := c.PacketHandler()
 	handler.AddPacketHandler(t.PacketID(), func(ctx context.Context, p client.ClientboundPacket) {
-		f(ctx, p.(T))
+		if typed, ok := p.(T); ok {
+			f(ctx, typed)
+		}
 	})
 }

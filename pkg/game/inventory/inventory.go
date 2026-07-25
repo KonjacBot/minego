@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/KonjacBot/go-mc/level/item"
@@ -10,6 +11,8 @@ import (
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
+
+const maxContainerSlots = 32767
 
 // Container 代表一個容器
 type Container struct {
@@ -29,6 +32,9 @@ func NewContainer(c bot.Client, cID int32) *Container {
 }
 
 func NewContainerWithSize(c bot.Client, cID, size int32) *Container {
+	if size < 0 || size > maxContainerSlots {
+		size = 0
+	}
 	return &Container{
 		c:           c,
 		containerID: cID,
@@ -84,7 +90,7 @@ func (c *Container) FindItem(itemID item.ID) int16 {
 }
 
 func (c *Container) SetSlot(index int, s slot.Slot) {
-	if index < 0 {
+	if index < 0 || index >= maxContainerSlots {
 		return
 	}
 	c.mu.Lock()
@@ -99,6 +105,9 @@ func (c *Container) SetSlot(index int, s slot.Slot) {
 }
 
 func (c *Container) SetSlots(slots []slot.Slot) {
+	if len(slots) > maxContainerSlots {
+		slots = slots[:maxContainerSlots]
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.slots = make([]slot.Slot, len(slots))
@@ -126,6 +135,9 @@ func (c *Container) StateID() int32 {
 }
 
 func (c *Container) Click(idx int16, mode int32, button int32) error {
+	if c.c == nil {
+		return errors.New("container client is nil")
+	}
 	clickPacket := &server.ContainerClick{
 		WindowID: c.containerID,
 		StateID:  c.StateID(),

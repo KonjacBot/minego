@@ -1,8 +1,8 @@
 package component
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -15,7 +15,7 @@ type InstrumentData struct {
 	SoundEvent  packet.OptID[SoundEvent, *SoundEvent]
 	SoundRange  float32
 	Range       float32
-	Description chat.Message
+	Description wire.Message
 }
 
 func (*Instrument) ID() string {

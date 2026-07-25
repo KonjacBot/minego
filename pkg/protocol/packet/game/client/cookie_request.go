@@ -1,8 +1,8 @@
 package client
 
-import pk "github.com/KonjacBot/go-mc/net/packet"
+import "github.com/KonjacBot/minego/pkg/protocol/wire"
 
 //codec:gen
 type CookieRequest struct {
-	Key pk.Identifier
+	Key wire.Identifier
 }

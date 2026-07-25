@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type DisplayType int32
@@ -30,6 +30,13 @@ type Display struct {
 	SlotDisplay
 }
 
+const maxDisplayDecodeDepth = 64
+
+type displayDecodeReader struct {
+	io.Reader
+	depth int
+}
+
 func (s Display) WriteTo(w io.Writer) (n int64, err error) {
 	if s.SlotDisplay == nil {
 		return 0, fmt.Errorf("slot display is nil")
@@ -45,6 +52,17 @@ func (s Display) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (s *Display) ReadFrom(r io.Reader) (n int64, err error) {
+	reader, ok := r.(*displayDecodeReader)
+	if !ok {
+		reader = &displayDecodeReader{Reader: r}
+	}
+	if reader.depth >= maxDisplayDecodeDepth {
+		return 0, fmt.Errorf("slot display nesting exceeds %d", maxDisplayDecodeDepth)
+	}
+	reader.depth++
+	defer func() { reader.depth-- }()
+	r = reader
+
 	s.SlotDisplay = nil
 	var displayType DisplayType
 	temp, err := (*pk.VarInt)(&displayType).ReadFrom(r)
@@ -165,7 +183,7 @@ func (i Dyed) SlotDisplayType() DisplayType {
 //codec:gen
 type SmithingTrimData struct {
 	AssetId     string `mc:"Identifier"`
-	Description chat.Message
+	Description wire.Message
 	Decal       bool
 }
 

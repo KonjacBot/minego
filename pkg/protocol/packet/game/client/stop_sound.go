@@ -4,6 +4,7 @@ import (
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type StopSound struct {
@@ -26,7 +27,7 @@ func (s StopSound) WriteTo(w io.Writer) (n int64, err error) {
 		}
 	}
 	if s.Flags&0x02 != 0 {
-		temp, err = pk.Identifier(s.Sound).WriteTo(w)
+		temp, err = wire.Identifier(s.Sound).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
@@ -51,7 +52,7 @@ func (s *StopSound) ReadFrom(r io.Reader) (n int64, err error) {
 		s.Source = 0
 	}
 	if s.Flags&0x02 != 0 {
-		temp, err = (*pk.Identifier)(&s.Sound).ReadFrom(r)
+		temp, err = (*wire.Identifier)(&s.Sound).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err

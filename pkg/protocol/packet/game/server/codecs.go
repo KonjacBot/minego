@@ -6,8 +6,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *AcceptTeleportation) ReadFrom(r io.Reader) (n int64, err error) {
@@ -2639,6 +2639,9 @@ type StringVarIntArray []string
 
 func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err

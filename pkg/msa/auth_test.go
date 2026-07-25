@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -78,3 +79,73 @@ func TestSessionAuthenticationDoesNotClassifyNetworkFailure(t *testing.T) {
 		t.Fatalf("session authentication error = %v, want unclassified network failure", err)
 	}
 }
+
+func TestDoJSONRejectsOversizedResponse(t *testing.T) {
+	auth := NewAuth("", nil)
+	auth.Client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(strings.Repeat("x", (1<<20)+1))),
+		}, nil
+	})}
+	req, err := http.NewRequest(http.MethodGet, "https://example.invalid", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := auth.doJSON(req, nil); err == nil {
+		t.Fatal("doJSON() accepted an oversized response")
+	}
+}
+
+func TestDoJSONPropagatesBodyReadError(t *testing.T) {
+	auth := NewAuth("", nil)
+	auth.Client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(errorReader{}),
+		}, nil
+	})}
+	req, err := http.NewRequest(http.MethodGet, "https://example.invalid", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := auth.doJSON(req, nil); !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("doJSON() error = %v, want io.ErrUnexpectedEOF", err)
+	}
+}
+
+func TestCallbackHandlerIgnoresUnrelatedInvalidState(t *testing.T) {
+	codeCh := make(chan string, 1)
+	errCh := make(chan error, 1)
+	handler := callbackHandler("/callback", "expected", codeCh, errCh)
+
+	invalid := httptest.NewRequest(http.MethodGet, "/callback?state=wrong&code=attacker", nil)
+	invalidResponse := httptest.NewRecorder()
+	handler.ServeHTTP(invalidResponse, invalid)
+	if invalidResponse.Code != http.StatusBadRequest {
+		t.Fatalf("invalid-state status = %d, want %d", invalidResponse.Code, http.StatusBadRequest)
+	}
+	select {
+	case err := <-errCh:
+		t.Fatalf("invalid-state request aborted login: %v", err)
+	default:
+	}
+
+	valid := httptest.NewRequest(http.MethodGet, "/callback?state=expected&code=valid", nil)
+	validResponse := httptest.NewRecorder()
+	handler.ServeHTTP(validResponse, valid)
+	select {
+	case code := <-codeCh:
+		if code != "valid" {
+			t.Fatalf("code = %q, want valid", code)
+		}
+	default:
+		t.Fatal("valid callback did not publish its code")
+	}
+}
+
+type errorReader struct{}
+
+func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }

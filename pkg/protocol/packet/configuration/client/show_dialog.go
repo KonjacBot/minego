@@ -5,7 +5,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/nbt"
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type ConfigShowDialog struct {

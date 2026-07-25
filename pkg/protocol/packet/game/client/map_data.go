@@ -3,8 +3,8 @@ package client
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -12,7 +12,7 @@ type MapIcon struct {
 	Type        int32 `mc:"VarInt"`
 	X, Z        int8
 	Direction   int8
-	DisplayName pk.Option[chat.Message, *chat.Message]
+	DisplayName pk.Option[wire.Message, *wire.Message]
 }
 
 type MapColorPatch struct {
@@ -43,7 +43,7 @@ func (c *MapColorPatch) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 	c.Data = nil
-	t, err = pk.Array(&c.Data).ReadFrom(r)
+	t, err = wire.Array(&c.Data).ReadFrom(r)
 	n += t
 	return n, err
 }
@@ -64,7 +64,7 @@ func (c MapColorPatch) WriteTo(w io.Writer) (n int64, err error) {
 			return n, err
 		}
 	}
-	t, err = pk.Array(&c.Data).WriteTo(w)
+	t, err = wire.Array(&c.Data).WriteTo(w)
 	n += t
 	return n, err
 }

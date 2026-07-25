@@ -26,13 +26,17 @@ import (
 )
 
 type botClient struct {
-	conn          *mcnet.Conn
-	connMu        sync.RWMutex
-	writeMu       sync.Mutex
-	packetHandler *packetHandler
-	eventHandler  bot.EventHandler
-	connected     atomic.Bool
-	authProvider  auth.Provider
+	conn                 *mcnet.Conn
+	connMu               sync.RWMutex
+	connectMu            sync.Mutex
+	writeMu              sync.Mutex
+	packetHandler        *packetHandler
+	eventHandler         bot.EventHandler
+	connected            atomic.Bool
+	handling             atomic.Bool
+	compressionSet       atomic.Bool
+	compressionThreshold atomic.Int32
+	authProvider         auth.Provider
 
 	inventory *inventory.Manager
 	world     *world.World
@@ -44,9 +48,6 @@ func (b *botClient) Player() bot.Player {
 }
 
 func (b *botClient) Close(ctx context.Context) error {
-	b.writeMu.Lock()
-	defer b.writeMu.Unlock()
-
 	b.connMu.Lock()
 	conn := b.conn
 	b.conn = nil
@@ -56,10 +57,7 @@ func (b *botClient) Close(ctx context.Context) error {
 	if conn == nil {
 		return ctx.Err()
 	}
-	if err := conn.Close(); err != nil {
-		return err
-	}
-	return ctx.Err()
+	return conn.Close()
 }
 
 func (b *botClient) IsConnected() bool {
@@ -67,10 +65,48 @@ func (b *botClient) IsConnected() bool {
 }
 
 func (b *botClient) WritePacket(ctx context.Context, packet server.ServerboundPacket) error {
-	return b.writeRawPacket(ctx, pk.Marshal(packet.PacketID(), packet))
+	if err := ctx.Err(); err != nil {
+		return context.Cause(ctx)
+	}
+	encoded, err := marshalServerboundPacket(packet)
+	if err != nil {
+		return err
+	}
+	return b.writeRawPacket(ctx, encoded)
 }
 
-func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error {
+type packetValidator interface {
+	Validate() error
+}
+
+func marshalServerboundPacket(value server.ServerboundPacket) (result pk.Packet, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			result = pk.Packet{}
+			err = fmt.Errorf("encode serverbound packet %T panicked: %v", value, recovered)
+		}
+	}()
+
+	if value == nil {
+		return pk.Packet{}, errors.New("serverbound packet is nil")
+	}
+	if validator, ok := value.(packetValidator); ok {
+		if err := validator.Validate(); err != nil {
+			return pk.Packet{}, fmt.Errorf("validate serverbound packet %T: %w", value, err)
+		}
+	}
+	return packet.Marshal(value.PacketID(), value)
+}
+
+func (b *botClient) writePacketFields(ctx context.Context, id int32, fields ...pk.FieldEncoder) error {
+	encoded, err := packet.Marshal(id, fields...)
+	if err != nil {
+		return err
+	}
+	return b.writeRawPacket(ctx, encoded)
+}
+
+func (b *botClient) writeRawPacket(ctx context.Context, value pk.Packet) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -92,10 +128,31 @@ func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error 
 		if err := conn.Socket.SetWriteDeadline(deadline); err != nil {
 			return err
 		}
-		defer conn.Socket.SetWriteDeadline(time.Time{})
 	}
+	writeCanceled := make(chan struct{})
+	stopCancel := context.AfterFunc(ctx, func() {
+		_ = conn.Socket.SetWriteDeadline(time.Now())
+		close(writeCanceled)
+	})
+	defer func() {
+		if !stopCancel() {
+			<-writeCanceled
+		}
+		_ = conn.Socket.SetWriteDeadline(time.Time{})
+	}()
 
-	return conn.WritePacket(packet)
+	err := packet.WriteFrame(conn.Writer, b.frameThreshold(), value)
+	if ctx.Err() != nil {
+		return context.Cause(ctx)
+	}
+	return err
+}
+
+func (b *botClient) frameThreshold() int {
+	if !b.compressionSet.Load() {
+		return -1
+	}
+	return int(b.compressionThreshold.Load())
 }
 
 func (b *botClient) PacketHandler() bot.PacketHandler {
@@ -115,19 +172,23 @@ func (b *botClient) Inventory() bot.InventoryHandler {
 }
 
 func (b *botClient) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
+	b.connectMu.Lock()
+	defer b.connectMu.Unlock()
+
 	b.connMu.RLock()
 	hasConnection := b.conn != nil
 	b.connMu.RUnlock()
 	if hasConnection {
 		return errors.New("client already has an open connection")
 	}
+	b.compressionSet.Store(false)
 
 	host, portStr, err := net.SplitHostPort(addr)
 	var port uint64
 	if err != nil {
 		var addrErr *net.AddrError
 		const missingPort = "missing port in address"
-		if errors.As(err, &addrErr) && addrErr.Err == missingPort {
+		if (errors.As(err, &addrErr) && addrErr.Err == missingPort) || net.ParseIP(addr) != nil {
 			host = addr
 			port = 25565
 		} else {
@@ -141,13 +202,15 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	}
 
 	var dialer mcnet.MCDialer = &mcnet.DefaultDialer
+	dialAddress := addr
 	if options != nil && options.Proxy != nil {
 		dialer, err = socks5(options.Proxy)
 		if err != nil {
 			return err
 		}
+		dialAddress = net.JoinHostPort(host, strconv.FormatUint(port, 10))
 	}
-	conn, err := dialer.DialMCContext(ctx, addr)
+	conn, err := dialer.DialMCContext(ctx, dialAddress)
 	if err != nil {
 		return err
 	}
@@ -197,18 +260,21 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 }
 
 func (b *botClient) HandleGame(ctx context.Context) error {
+	if !b.handling.CompareAndSwap(false, true) {
+		return errors.New("client is already handling game packets")
+	}
+	defer b.handling.Store(false)
 	defer b.connected.Store(false)
 	return b.handlePackets(ctx)
 }
 
 func (b *botClient) handshake(ctx context.Context, host string, port uint64) error {
-	return b.writeRawPacket(ctx, pk.Marshal(
-		0,
+	return b.writePacketFields(ctx, 0,
 		pk.VarInt(776), // TODO 版本更新時要記得改 current: 26.2
 		pk.String(host),
 		pk.UnsignedShort(port),
 		pk.VarInt(2), // to game state
-	))
+	)
 }
 
 func (b *botClient) handlePackets(ctx context.Context) error {
@@ -220,12 +286,9 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 	}
 
 	handlerCtx, cancelHandlers := context.WithCancel(ctx)
-	var handlers sync.WaitGroup
 	semaphore := make(chan struct{}, 15)
-	defer func() {
-		cancelHandlers()
-		handlers.Wait()
-	}()
+	handlerErr := make(chan error, 1)
+	defer cancelHandlers()
 	stopRead := context.AfterFunc(ctx, func() {
 		_ = conn.Socket.SetReadDeadline(time.Now())
 	})
@@ -240,6 +303,8 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return context.Cause(ctx)
+		case err := <-handlerErr:
+			return err
 		default:
 			var p pk.Packet
 
@@ -251,7 +316,12 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				return err
 			}
 
-			if err := conn.ReadPacket(&p); err != nil {
+			if err := packet.ReadFrame(conn.Reader, b.frameThreshold(), &p); err != nil {
+				select {
+				case handlerFailure := <-handlerErr:
+					return handlerFailure
+				default:
+				}
 				if ctx.Err() != nil {
 					return context.Cause(ctx)
 				}
@@ -264,7 +334,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 					return err
 				}
 
-				err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
+				err = b.writePacketFields(ctx, int32(packetid.ServerboundConfigurationAcknowledged))
 				if err != nil {
 					return err
 				}
@@ -281,6 +351,11 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				continue
 			}
 
+			pkt, handled, err := decodeClientboundPacket(pktID, p.Data)
+			if err != nil {
+				return fmt.Errorf("decode clientbound packet %d: %w", pktID, err)
+			}
+
 			hs := b.packetHandler.rawHandlers(pktID)
 			for _, h := range hs {
 				select {
@@ -288,45 +363,91 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				case <-ctx.Done():
 					return context.Cause(ctx)
 				}
-				handlers.Go(func() {
+				rawPacket := pk.Packet{ID: p.ID, Data: bytes.Clone(p.Data)}
+				go func(handler func(context.Context, pk.Packet), packet pk.Packet) {
 					defer func() { <-semaphore }()
-					h(handlerCtx, p)
-				})
+					if callbackErr := invokeCallback("raw packet handler", func() {
+						handler(handlerCtx, packet)
+					}); callbackErr != nil {
+						select {
+						case handlerErr <- callbackErr:
+							_ = conn.Socket.SetReadDeadline(time.Now())
+						default:
+						}
+					}
+				}(h, rawPacket)
 			}
 
-			if _, ok := client.ClientboundPackets[pktID]; !ok {
-				continue
-			}
-			pkt, handled, err := decodeClientboundPacket(pktID, p.Data)
-			if err != nil {
-				return fmt.Errorf("decode clientbound packet %d: %w", pktID, err)
-			}
 			if !handled {
 				continue
 			}
-			b.packetHandler.handlePacket(ctx, pktID, pkt)
+			if err := b.packetHandler.handlePacket(ctx, pktID, pkt); err != nil {
+				return err
+			}
+			if err := b.handleControlPacket(ctx, pkt); err != nil {
+				return err
+			}
 
 			_ = conn.Socket.SetReadDeadline(time.Time{})
 		}
 	}
 }
 
-func decodeClientboundPacket(id packetid.ClientboundPacketID, data []byte) (client.ClientboundPacket, bool, error) {
-	creator, ok := client.ClientboundPackets[id]
-	if !ok {
+type DisconnectError struct {
+	Reason string
+}
+
+func (e *DisconnectError) Error() string {
+	return "server disconnected: " + e.Reason
+}
+
+func (b *botClient) handleControlPacket(ctx context.Context, value client.ClientboundPacket) error {
+	switch p := value.(type) {
+	case *client.Disconnect:
+		return &DisconnectError{Reason: p.Reason.String()}
+	case *client.CookieRequest:
+		return b.WritePacket(ctx, &server.CookieResponse{Key: string(p.Key)})
+	case *client.ChunkBatchFinished:
+		return b.WritePacket(ctx, &server.ChunkBatchReceived{ChunksPerTick: 7})
+	case *client.AddResourcePack:
+		return b.WritePacket(ctx, &server.ResourcePack{UUID: p.UUID, Result: resourcePackResultDeclined})
+	default:
+		return nil
+	}
+}
+
+func decodeClientboundPacket(id packetid.ClientboundPacketID, data []byte) (pkt client.ClientboundPacket, handled bool, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			pkt = nil
+			handled = true
+			err = fmt.Errorf("decoder panicked: %v", recovered)
+		}
+	}()
+
+	pkt, handled = client.NewClientboundPacket(id)
+	if !handled {
 		return nil, false, nil
 	}
+	if pkt == nil {
+		return nil, true, errors.New("packet registry returned a nil packet")
+	}
+	if err = decodeClientboundPayload(pkt, data); err != nil {
+		return nil, true, err
+	}
+	return pkt, true, nil
+}
 
-	pkt := creator()
+func decodeClientboundPayload(pkt client.ClientboundPacket, data []byte) error {
 	reader := bytes.NewReader(data)
 	_, err := pkt.ReadFrom(reader)
 	if err != nil {
-		return nil, true, err
+		return err
 	}
 	if reader.Len() != 0 {
-		return nil, true, fmt.Errorf("decoder left %d of %d bytes unread", reader.Len(), len(data))
+		return fmt.Errorf("decoder left %d of %d bytes unread", reader.Len(), len(data))
 	}
-	return pkt, true, nil
+	return nil
 }
 
 func NewClient(options *bot.ClientOptions) bot.Client {

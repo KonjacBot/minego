@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"fmt"
 	"io"
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
@@ -23,15 +24,26 @@ type Display struct {
 }
 
 func (d Display) WriteTo(w io.Writer) (n int64, err error) {
-	pk.VarInt(d.Display.RecipeType()).WriteTo(w)
-	return d.Display.WriteTo(w)
+	if d.Display == nil {
+		return 0, fmt.Errorf("recipe display is nil")
+	}
+	temp, err := pk.VarInt(d.Display.RecipeType()).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = d.Display.WriteTo(w)
+	n += temp
+	return n, err
 }
 
 func (d *Display) ReadFrom(r io.Reader) (n int64, err error) {
+	d.Display = nil
 	var displayType DisplayType
-	_, err = (*pk.VarInt)(&displayType).ReadFrom(r)
+	temp, err := (*pk.VarInt)(&displayType).ReadFrom(r)
+	n += temp
 	if err != nil {
-		return
+		return n, err
 	}
 	switch displayType {
 	case DisplayCraftingShapeless:
@@ -44,13 +56,12 @@ func (d *Display) ReadFrom(r io.Reader) (n int64, err error) {
 		d.Display = new(Stonecutter)
 	case DisplaySmithing:
 		d.Display = new(Smithing)
+	default:
+		return n, fmt.Errorf("unknown recipe display type %d", displayType)
 	}
-	if d.Display != nil {
-		from, err := d.Display.ReadFrom(r)
-		n += from
-		return n, err
-	}
-	return
+	from, err := d.Display.ReadFrom(r)
+	n += from
+	return n, err
 }
 
 type RecipeDisplay interface {

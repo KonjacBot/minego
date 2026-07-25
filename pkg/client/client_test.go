@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,6 +16,8 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	protocolpacket "github.com/KonjacBot/minego/pkg/protocol/packet"
+	configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
 	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
@@ -91,6 +94,125 @@ func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
 	}
 }
 
+func TestWritePacketReturnsEncodingErrors(t *testing.T) {
+	conn := &countingConn{}
+	b := &botClient{conn: mcnet.WrapConn(conn)}
+
+	err := b.WritePacket(context.Background(), &server.Chat{Message: "hello"})
+	if err == nil {
+		t.Fatal("WritePacket() accepted a chat packet without its fixed bit set")
+	}
+	if writes := conn.writes.Load(); writes != 0 {
+		t.Fatalf("invalid packet performed %d writes", writes)
+	}
+}
+
+func TestWritePacketCancellationInterruptsInFlightWrite(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+	b := &botClient{conn: mcnet.WrapConn(clientConn)}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- b.WritePacket(ctx, &server.Pong{ID: 1}) }()
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("WritePacket() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("WritePacket() did not stop after context cancellation")
+	}
+}
+
+func TestCloseInterruptsBlockedWrite(t *testing.T) {
+	conn := newBlockingConn()
+	b := &botClient{conn: mcnet.WrapConn(conn)}
+	writeDone := make(chan error, 1)
+	go func() { writeDone <- b.WritePacket(context.Background(), &server.Pong{ID: 1}) }()
+
+	select {
+	case <-conn.started:
+	case <-time.After(time.Second):
+		t.Fatal("write did not start")
+	}
+	if err := b.Close(context.Background()); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	select {
+	case err := <-writeDone:
+		if err == nil {
+			t.Fatal("blocked write returned nil after close")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Close() did not interrupt the blocked write")
+	}
+}
+
+func TestHandleGameContainsRawHandlerPanic(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+	b := &botClient{
+		conn:          mcnet.WrapConn(clientConn),
+		packetHandler: newPacketHandler(),
+		eventHandler:  NewEventHandler(),
+	}
+	b.packetHandler.AddRawPacketHandler(packetid.ClientboundKeepAlive, func(context.Context, pk.Packet) {
+		panic("raw handler failure")
+	})
+	done := make(chan error, 1)
+	go func() { done <- b.HandleGame(context.Background()) }()
+	peer := mcnet.WrapConn(serverConn)
+	if err := peer.WritePacket(pk.Marshal(packetid.ClientboundKeepAlive, pk.Long(1))); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case err := <-done:
+		var panicErr *CallbackPanicError
+		if !errors.As(err, &panicErr) {
+			t.Fatalf("HandleGame() error = %v, want CallbackPanicError", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("HandleGame() did not report raw handler panic")
+	}
+}
+
+func TestHandleGameContainsTypedHandlerPanic(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+	b := &botClient{
+		conn:          mcnet.WrapConn(clientConn),
+		packetHandler: newPacketHandler(),
+		eventHandler:  NewEventHandler(),
+	}
+	b.packetHandler.AddPacketHandler(packetid.ClientboundKeepAlive, func(context.Context, gameclient.ClientboundPacket) {
+		panic("typed handler failure")
+	})
+	done := make(chan error, 1)
+	go func() { done <- b.HandleGame(context.Background()) }()
+	peer := mcnet.WrapConn(serverConn)
+	if err := peer.WritePacket(pk.Marshal(packetid.ClientboundKeepAlive, pk.Long(1))); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case err := <-done:
+		var panicErr *CallbackPanicError
+		if !errors.As(err, &panicErr) {
+			t.Fatalf("HandleGame() error = %v, want CallbackPanicError", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("HandleGame() did not report typed handler panic")
+	}
+}
+
 func TestConfigurationHandlesResourcePackAndCodeOfConduct(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -133,6 +255,16 @@ func TestConfigurationHandlesResourcePackAndCodeOfConduct(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- b.configuration(ctx) }()
 	var response pk.Packet
+	if err := peer.ReadPacket(&response); err != nil {
+		t.Fatal(err)
+	}
+	if got := packetid.ServerboundPacketID(response.ID); got != packetid.ServerboundConfigClientInformation {
+		t.Fatalf("initial packet ID = %v, want %v", got, packetid.ServerboundConfigClientInformation)
+	}
+	var clientInformation configserver.ConfigClientInformation
+	if err := protocolpacket.Scan(response, &clientInformation); err != nil {
+		t.Fatalf("decode client information: %v", err)
+	}
 
 	packID := uuid.MustParse("12345678-1234-5678-9abc-def012345678")
 	if err := peer.WritePacket(pk.Marshal(
@@ -199,15 +331,8 @@ func TestDecodeClientboundPacketRejectsTrailingData(t *testing.T) {
 }
 
 func TestDecodeClientboundPacketUsesReaderConsumption(t *testing.T) {
-	original := gameclient.ClientboundPackets[packetid.ClientboundKeepAlive]
-	gameclient.ClientboundPackets[packetid.ClientboundKeepAlive] = func() gameclient.ClientboundPacket {
-		return &underreportingPacket{}
-	}
-	defer func() { gameclient.ClientboundPackets[packetid.ClientboundKeepAlive] = original }()
-
-	pkt, handled, err := decodeClientboundPacket(packetid.ClientboundKeepAlive, []byte{0x2a})
-	if err != nil || !handled || pkt == nil {
-		t.Fatalf("decodeClientboundPacket() = (%T, %t, %v), want successful consumed decode", pkt, handled, err)
+	if err := decodeClientboundPayload(&underreportingPacket{}, []byte{0x2a}); err != nil {
+		t.Fatalf("decodeClientboundPayload() error = %v, want successful consumed decode", err)
 	}
 }
 
@@ -245,8 +370,28 @@ func TestDecodeClientboundPacketUsesFixedResourcePackRegistry(t *testing.T) {
 	}
 }
 
+func TestDecodeClientboundPacketRejectsNegativeStringLength(t *testing.T) {
+	data := make([]byte, 16)
+	data = append(data, 0xff, 0xff, 0xff, 0xff, 0x0f)
+	packet, handled, err := decodeClientboundPacket(packetid.ClientboundResourcePackPush, data)
+	if packet != nil || !handled || err == nil {
+		t.Fatalf("decodeClientboundPacket() = (%T, %t, %v), want handled decode error", packet, handled, err)
+	}
+}
+
 type countingConn struct {
 	writes atomic.Int32
+}
+
+type blockingConn struct {
+	started chan struct{}
+	closed  chan struct{}
+	start   sync.Once
+	close   sync.Once
+}
+
+func newBlockingConn() *blockingConn {
+	return &blockingConn{started: make(chan struct{}), closed: make(chan struct{})}
 }
 
 type underreportingPacket struct{}
@@ -271,6 +416,22 @@ func (*countingConn) RemoteAddr() net.Addr             { return testAddr("remote
 func (*countingConn) SetDeadline(time.Time) error      { return nil }
 func (*countingConn) SetReadDeadline(time.Time) error  { return nil }
 func (*countingConn) SetWriteDeadline(time.Time) error { return nil }
+
+func (c *blockingConn) Read([]byte) (int, error) { return 0, io.EOF }
+func (c *blockingConn) Write([]byte) (int, error) {
+	c.start.Do(func() { close(c.started) })
+	<-c.closed
+	return 0, io.ErrClosedPipe
+}
+func (c *blockingConn) Close() error {
+	c.close.Do(func() { close(c.closed) })
+	return nil
+}
+func (*blockingConn) LocalAddr() net.Addr              { return testAddr("local") }
+func (*blockingConn) RemoteAddr() net.Addr             { return testAddr("remote") }
+func (*blockingConn) SetDeadline(time.Time) error      { return nil }
+func (*blockingConn) SetReadDeadline(time.Time) error  { return nil }
+func (*blockingConn) SetWriteDeadline(time.Time) error { return nil }
 
 type testAddr string
 

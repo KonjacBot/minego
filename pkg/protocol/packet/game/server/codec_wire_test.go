@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat/sign"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func TestChangeDifficultyUsesVarInt(t *testing.T) {
@@ -16,6 +17,13 @@ func TestChangeDifficultyUsesVarInt(t *testing.T) {
 	}
 	if got := encoded.Bytes(); !bytes.Equal(got, []byte{0x80, 0x01}) {
 		t.Fatalf("encoded difficulty = %v, want VarInt", got)
+	}
+}
+
+func TestGeneratedServerboundArrayRejectsOversizedWrite(t *testing.T) {
+	value := make(StringVarIntArray, wire.MaxCollectionEntries+1)
+	if _, err := value.WriteTo(&bytes.Buffer{}); err == nil {
+		t.Fatal("WriteTo() accepted an oversized array")
 	}
 }
 
@@ -185,7 +193,7 @@ func TestTestInstanceBlockActionUsesDataRecord(t *testing.T) {
 		Position: pk.Position{X: 1, Y: 2, Z: 3},
 		Action:   2,
 		Data: TestInstanceBlockData{
-			Test:           pk.Option[pk.Identifier, *pk.Identifier]{Has: true, Val: pk.Identifier("minecraft:test")},
+			Test:           pk.Option[wire.Identifier, *wire.Identifier]{Has: true, Val: wire.Identifier("minecraft:test")},
 			Size:           TestInstanceBlockVec3i{X: 4, Y: 5, Z: 6},
 			Rotation:       1,
 			IgnoreEntities: true,

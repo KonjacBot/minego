@@ -6,7 +6,7 @@ import (
 	"math"
 
 	"github.com/KonjacBot/go-mc/nbt"
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	pk "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 // ShowDialog matches the official 26.2 holder wire shape used by

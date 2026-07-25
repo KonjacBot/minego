@@ -1,13 +1,13 @@
 package client
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type ConfigDisconnect struct {
-	Reason chat.Message
+	Reason wire.Message
 }
 
 func (*ConfigDisconnect) PacketID() packetid.ClientboundPacketID {

@@ -3,9 +3,10 @@
 package protocol
 
 import (
+	"fmt"
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *GameProfile) ReadFrom(r io.Reader) (n int64, err error) {
@@ -93,21 +94,23 @@ func (c *ResolvableProfile) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	if c.Type == 0 {
+	switch c.Type {
+	case 0:
 		c.Partial = new(PartialProfile)
 		temp, err = (*PartialProfile)(c.Partial).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
 		}
-	}
-	if c.Type == 1 {
-		c.GameProfile = new(ResolvableProfile)
-		temp, err = (*ResolvableProfile)(c.GameProfile).ReadFrom(r)
+	case 1:
+		c.GameProfile = new(GameProfile)
+		temp, err = (*GameProfile)(c.GameProfile).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
 		}
+	default:
+		return n, fmt.Errorf("unknown resolvable profile type %d", c.Type)
 	}
 	temp, err = (&c.Body).ReadFrom(r)
 	n += temp
@@ -139,19 +142,27 @@ func (c ResolvableProfile) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	if c.Type == 0 {
+	switch c.Type {
+	case 0:
+		if c.Partial == nil {
+			return n, fmt.Errorf("partial profile is nil")
+		}
 		temp, err = (*PartialProfile)(c.Partial).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
 		}
-	}
-	if c.Type == 1 {
-		temp, err = (*ResolvableProfile)(c.GameProfile).WriteTo(w)
+	case 1:
+		if c.GameProfile == nil {
+			return n, fmt.Errorf("game profile is nil")
+		}
+		temp, err = (*GameProfile)(c.GameProfile).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
 		}
+	default:
+		return n, fmt.Errorf("unknown resolvable profile type %d", c.Type)
 	}
 	temp, err = (&c.Body).WriteTo(w)
 	n += temp

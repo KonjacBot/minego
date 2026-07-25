@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -21,5 +22,18 @@ func TestEventHandlerAllowsSubscriptionFromHandler(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("PublishEvent deadlocked during reentrant subscription")
+	}
+}
+
+func TestEventHandlerContainsSubscriberPanic(t *testing.T) {
+	e := NewEventHandler()
+	e.SubscribeEvent("test", func(any) error {
+		panic("subscriber failure")
+	})
+
+	err := e.PublishEvent("test", nil)
+	var panicErr *CallbackPanicError
+	if !errors.As(err, &panicErr) {
+		t.Fatalf("PublishEvent() error = %v, want CallbackPanicError", err)
 	}
 }

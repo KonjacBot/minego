@@ -6,9 +6,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/protocol/component"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 	"github.com/google/uuid"
 )
 
@@ -7195,6 +7195,9 @@ type Int32VarIntVarIntArray []int32
 
 func (a Int32VarIntVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7247,6 +7250,9 @@ type Int64VarLongVarIntArray []int64
 
 func (a Int64VarLongVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7299,6 +7305,9 @@ type StringStringVarIntArray []string
 
 func (a StringStringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7351,6 +7360,9 @@ type StringVarIntArray []string
 
 func (a StringVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7403,6 +7415,9 @@ type Int64VarIntArray []int64
 
 func (a Int64VarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7455,6 +7470,9 @@ type StringIdentifierVarIntArray []string
 
 func (a StringIdentifierVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err
@@ -7507,6 +7525,9 @@ type UuidUUIDUUIDVarIntArray []uuid.UUID
 
 func (a UuidUUIDUUIDVarIntArray) WriteTo(w io.Writer) (n int64, err error) {
 	size := len(a)
+	if size > 32767 {
+		return 0, errors.New("array length greater than 32767")
+	}
 	nn, err := packet.VarInt(size).WriteTo(w)
 	if err != nil {
 		return n, err

@@ -27,6 +27,8 @@ import (
 	"github.com/KonjacBot/go-mc/net/CFB8"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
+	protocolpacket "github.com/KonjacBot/minego/pkg/protocol/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/packet/codecutil"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/login/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/login/server"
 )
@@ -38,8 +40,8 @@ var (
 )
 
 type Profile struct {
-	Name string
-	UUID uuid.UUID
+	Name string    `json:"name"`
+	UUID uuid.UUID `json:"id"`
 }
 
 type Provider interface {
@@ -50,9 +52,16 @@ type Provider interface {
 type Auth struct {
 	*net.Conn
 	Provider
+	OnSetCompression func(threshold int)
 }
 
-func (a *Auth) HandleLogin(ctx context.Context) error {
+func (a *Auth) HandleLogin(ctx context.Context) (err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = errors.Join(ErrLogin, fmt.Errorf("login callback or decoder panicked: %v", recovered))
+		}
+	}()
+
 	if a.Provider == nil {
 		return errors.Join(ErrLogin, errors.New("authentication provider is nil"))
 	}
@@ -64,33 +73,49 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 		return errors.Join(ErrLogin, errors.New("authentication provider returned no profile"))
 	}
 
-	err := a.WritePacket(pk.Marshal(packetid.ServerboundLoginHello, server.LoginHello{
+	compressionThreshold := -1
+	writeFrame := func(value pk.Packet) error {
+		return protocolpacket.WriteFrame(a.Conn.Writer, compressionThreshold, value)
+	}
+	readFrame := func(value *pk.Packet) error {
+		return protocolpacket.ReadFrame(a.Conn.Reader, compressionThreshold, value)
+	}
+
+	packet, err := protocolpacket.Marshal(packetid.ServerboundLoginHello, server.LoginHello{
 		Name: profile.Name,
 		UUID: profile.UUID,
-	}))
+	})
+	if err != nil {
+		return errors.Join(ErrLogin, fmt.Errorf("encode login hello fail: %w", err))
+	}
+	err = writeFrame(packet)
 	if err != nil {
 		return errors.Join(ErrLogin, fmt.Errorf("write login hello fail: %w", err))
 	}
 
 	var p pk.Packet
 	for {
-		err = a.ReadPacket(&p)
+		err = readFrame(&p)
 		if err != nil {
 			return errors.Join(ErrLogin, fmt.Errorf("read packet fail: %w", err))
 		}
 
 		switch packetid.ClientboundPacketID(p.ID) {
 		case packetid.ClientboundLoginLoginDisconnect:
-			var reason chat.JsonMessage
-			err = p.Scan(&reason)
+			var reasonJSON string
+			err = protocolpacket.Scan(p, codecutil.BoundedString{Value: &reasonJSON, MaxChars: 32767})
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read disconnect reason fail: %w", err))
 			}
+			var reason chat.Message
+			if err = json.Unmarshal([]byte(reasonJSON), &reason); err != nil {
+				return errors.Join(ErrLogin, fmt.Errorf("decode disconnect reason fail: %w", err))
+			}
 
-			return errors.Join(ErrKick, fmt.Errorf("kicked by server: %s", chat.Message(reason).ClearString()))
+			return errors.Join(ErrKick, fmt.Errorf("kicked by server: %s", reason.ClearString()))
 		case packetid.ClientboundLoginHello:
 			var hello client.LoginHello
-			err = p.Scan(&hello)
+			err = protocolpacket.Scan(p, &hello)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login hello fail: %w", err))
 			}
@@ -100,7 +125,11 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 				return errors.Join(ErrLogin, fmt.Errorf("authenticate fail: %w", err))
 			}
 		case packetid.ClientboundLoginLoginFinished:
-			err = a.WritePacket(pk.Marshal(packetid.ServerboundLoginLoginAcknowledged))
+			packet, encodeErr := protocolpacket.Marshal(packetid.ServerboundLoginLoginAcknowledged)
+			if encodeErr != nil {
+				return errors.Join(ErrLogin, fmt.Errorf("encode login ack fail: %w", encodeErr))
+			}
+			err = writeFrame(packet)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("write login ack fail: %w", err))
 			}
@@ -108,36 +137,51 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 		case packetid.ClientboundLoginLoginCompression:
 			var threshold int32
 
-			err = p.Scan((*pk.VarInt)(&threshold))
+			err = protocolpacket.Scan(p, (*pk.VarInt)(&threshold))
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login compression fail: %w", err))
 			}
+			if threshold < 0 {
+				return errors.Join(ErrLogin, fmt.Errorf("invalid negative compression threshold %d", threshold))
+			}
+			compressionThreshold = int(threshold)
 			a.Conn.SetThreshold(int(threshold))
+			if a.OnSetCompression != nil {
+				a.OnSetCompression(int(threshold))
+			}
 		case packetid.ClientboundLoginCustomQuery:
 			var query client.LoginCustomQuery
 
-			err = p.Scan(&query)
+			err = protocolpacket.Scan(p, &query)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login custom query fail: %w", err))
 			}
 
-			err = a.WritePacket(pk.Marshal(
+			packet, encodeErr := protocolpacket.Marshal(
 				packetid.ServerboundLoginCustomQueryAnswer,
 				&server.LoginCustomQueryAnswer{MessageID: query.MessageID},
-			))
+			)
+			if encodeErr != nil {
+				return errors.Join(ErrLogin, fmt.Errorf("encode login custom query answer fail: %w", encodeErr))
+			}
+			err = writeFrame(packet)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login custom query fail: %w", err))
 			}
 		case packetid.ClientboundLoginCookieRequest:
 			var cookie client.LoginCookieRequest
-			err = p.Scan(&cookie)
+			err = protocolpacket.Scan(p, &cookie)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login cookie request fail: %w", err))
 			}
-			err = a.WritePacket(pk.Marshal(
+			packet, encodeErr := protocolpacket.Marshal(
 				packetid.ServerboundLoginCookieResponse,
 				&server.LoginCookieResponse{Key: cookie.Key},
-			))
+			)
+			if encodeErr != nil {
+				return errors.Join(ErrLogin, fmt.Errorf("encode login cookie response fail: %w", encodeErr))
+			}
+			err = writeFrame(packet)
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("read login cookie request fail: %w", err))
 			}
@@ -173,7 +217,7 @@ func (o *OnlineAuth) Authenticate(ctx context.Context, conn *net.Conn, content c
 		return fmt.Errorf("gen encryption key response fail: %v", err)
 	}
 
-	err = conn.WritePacket(pkt)
+	err = protocolpacket.WriteFrame(conn.Writer, -1, pkt)
 	if err != nil {
 		return err
 	}
@@ -204,11 +248,11 @@ func genEncryptionKeyResponse(shareSecret, publicKey, verifyToken []byte) (erp p
 		err = fmt.Errorf("encryption verfy tokenfail: %v", err)
 		return erp, err
 	}
-	return pk.Marshal(
+	return protocolpacket.Marshal(
 		packetid.ServerboundLoginKey,
 		pk.ByteArray(cryptPK),
 		pk.ByteArray(verifyT),
-	), nil
+	)
 }
 
 func (o *OnlineAuth) LoginAuth(ctx context.Context, content client.LoginHello, key []byte) error {
@@ -355,7 +399,7 @@ func (k *KonjacAuth) Authenticate(ctx context.Context, conn *net.Conn, content c
 		return fmt.Errorf("gen encryption key response fail: %v", err)
 	}
 
-	err = conn.WritePacket(pkt)
+	err = protocolpacket.WriteFrame(conn.Writer, -1, pkt)
 	if err != nil {
 		return err
 	}

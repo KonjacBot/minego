@@ -2,6 +2,7 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -12,7 +13,7 @@ type BlocksAttacks struct {
 	ItemDamageThreshold  float32
 	ItemDamageBase       float32
 	ItemDamageFactor     float32
-	BypassedBy           pk.Option[pk.IDSet, *pk.IDSet]
+	BypassedBy           pk.Option[wire.IDSet, *wire.IDSet]
 	HasBlockSound        bool
 	//opt:optional:HasBlockSound
 	BlockSoundID int32 `mc:"VarInt"`
@@ -33,7 +34,7 @@ type DamageReduction struct {
 	HorizontalBlockingAngle float32
 	HasType                 bool
 	//opt:optional:HasType
-	Type   pk.IDSet
+	Type   wire.IDSet
 	Base   float32
 	Factor float32
 }

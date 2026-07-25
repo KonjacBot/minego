@@ -5,7 +5,7 @@ package particle
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *Block) ReadFrom(r io.Reader) (n int64, err error) {

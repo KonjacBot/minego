@@ -21,11 +21,14 @@ type ItemStackTemplate struct {
 }
 
 func (s ItemStackTemplate) WriteTo(w io.Writer) (n int64, err error) {
-	if s.ItemID == 0 {
+	if s.ItemID <= 0 {
 		return 0, errors.New("item stack template must be non-empty")
 	}
-	if s.Count == 0 {
+	if s.Count <= 0 {
 		return 0, errors.New("item stack template must be non-empty")
+	}
+	if err := validateComponentPatch(s.AddComponent, s.RemoveComponent); err != nil {
+		return 0, err
 	}
 
 	temp, err := pk.VarInt(s.ItemID).WriteTo(w)
@@ -71,6 +74,13 @@ func (s ItemStackTemplate) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
+	reader, leave, err := enterComponentDecode(r)
+	if err != nil {
+		return 0, err
+	}
+	defer leave()
+	r = reader
+
 	*s = ItemStackTemplate{}
 
 	var itemID int32
@@ -79,7 +89,7 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	if itemID == 0 {
+	if itemID <= 0 {
 		return n, errors.New("item stack template must be non-empty")
 	}
 	s.ItemID = item.ID(itemID)
@@ -89,7 +99,7 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	if s.Count == 0 {
+	if s.Count <= 0 {
 		return n, errors.New("item stack template must be non-empty")
 	}
 
@@ -104,9 +114,15 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	if addLens < 0 || removeLens < 0 {
+		return n, errors.New("item stack template component count less than zero")
+	}
+	if addLens > maxComponentPatchEntries || removeLens > maxComponentPatchEntries {
+		return n, fmt.Errorf("item stack template component count greater than %d", maxComponentPatchEntries)
+	}
 
 	if addLens > 0 {
-		s.AddComponent = make(map[int32]Component)
+		s.AddComponent = make(map[int32]Component, min(int(addLens), len(components)))
 	}
 	var id int32
 	for i := int32(0); i < addLens; i++ {
@@ -114,6 +130,9 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 		n += temp
 		if err != nil {
 			return n, err
+		}
+		if _, exists := s.AddComponent[id]; exists {
+			return n, fmt.Errorf("duplicate item stack template component id %d", id)
 		}
 		c := ComponentFromID(int(id))
 		if c == nil {
@@ -133,6 +152,9 @@ func (s *ItemStackTemplate) ReadFrom(r io.Reader) (n int64, err error) {
 			return n, err
 		}
 		s.RemoveComponent = append(s.RemoveComponent, id)
+	}
+	if err := validateComponentPatch(s.AddComponent, s.RemoveComponent); err != nil {
+		return n, err
 	}
 	return n, nil
 }

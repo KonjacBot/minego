@@ -89,7 +89,7 @@ func NewManager(c bot.Client) *Manager {
 		_ = bot.PublishEvent(m.c, ContainerOpenEvent{
 			WindowID: p.WindowID,
 			Type:     p.WindowType,
-			Title:    p.WindowTitle,
+			Title:    p.WindowTitle.Message,
 		})
 	})
 

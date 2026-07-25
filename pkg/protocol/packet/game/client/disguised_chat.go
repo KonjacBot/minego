@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/net/packet"
+	chat "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 var _ ClientboundPacket = (*DisguisedChat)(nil)

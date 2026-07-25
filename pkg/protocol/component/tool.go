@@ -2,6 +2,7 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type Tool struct {
@@ -12,7 +13,7 @@ type Tool struct {
 }
 
 type ToolRule struct {
-	Blocks               pk.IDSet
+	Blocks               wire.IDSet
 	Speed                pk.Option[pk.Float, *pk.Float]
 	CorrectDropForBlocks pk.Option[pk.Boolean, *pk.Boolean]
 }

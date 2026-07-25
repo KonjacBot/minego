@@ -1,9 +1,8 @@
 package client
 
 import (
-	pk "github.com/KonjacBot/go-mc/net/packet"
-
 	"github.com/KonjacBot/minego/pkg/protocol/slot/display/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -14,7 +13,7 @@ type PropertySet struct {
 
 //codec:gen
 type StonecutterRecipe struct {
-	Ingredient  pk.IDSet
+	Ingredient  wire.IDSet
 	SlotDisplay slot.Display
 }
 

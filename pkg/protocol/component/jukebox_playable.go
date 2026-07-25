@@ -3,8 +3,8 @@ package component
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type JukeboxPlayable struct {
@@ -23,7 +23,7 @@ func (p JukeboxPlayable) WriteTo(w io.Writer) (int64, error) {
 //codec:gen
 type JukeboxSongData struct {
 	SoundEvent  packet.OptID[SoundEvent, *SoundEvent]
-	Description chat.Message
+	Description wire.Message
 	Duration    float32
 	Output      int32 `mc:"VarInt"`
 }

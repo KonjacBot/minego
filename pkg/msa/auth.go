@@ -421,13 +421,23 @@ func (m *Auth) loginByAuthCode(ctx context.Context) error {
 
 	codeCh := make(chan string, 1)
 	errCh := make(chan error, 1)
-	server := &http.Server{Handler: callbackHandler(m.CallbackPath, state, codeCh, errCh)}
+	server := &http.Server{
+		Handler:           callbackHandler(m.CallbackPath, state, codeCh, errCh),
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
 	go func() {
 		if err := server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
-	defer server.Shutdown(context.Background())
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			_ = server.Close()
+		}
+	}()
 
 	if m.OnAuthURL != nil {
 		if err := m.OnAuthURL(ctx, authURL); err != nil {
@@ -472,10 +482,6 @@ func callbackHandler(path, expectedState string, codeCh chan<- string, errCh cha
 		gotState := q.Get("state")
 		if subtle.ConstantTimeCompare([]byte(gotState), []byte(expectedState)) != 1 {
 			http.Error(w, "invalid state", http.StatusBadRequest)
-			select {
-			case errCh <- errors.New("invalid OAuth state"):
-			default:
-			}
 			return
 		}
 		if e := q.Get("error"); e != "" {
@@ -696,7 +702,14 @@ func (m *Auth) doJSON(req *http.Request, out any) error {
 		return err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	const maxResponseBytes = 1 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+	if err != nil {
+		return fmt.Errorf("read authentication response: %w", err)
+	}
+	if len(body) > maxResponseBytes {
+		return fmt.Errorf("authentication response exceeds %d bytes", maxResponseBytes)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var oe oauthError
 		if json.Unmarshal(body, &oe) == nil && oe.Code != "" {

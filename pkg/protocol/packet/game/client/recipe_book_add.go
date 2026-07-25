@@ -1,14 +1,13 @@
 package client
 
 import (
-	pk "github.com/KonjacBot/go-mc/net/packet"
-
 	"github.com/KonjacBot/minego/pkg/protocol/slot/display/recipe"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type RecipeIngredients struct {
-	Data []pk.IDSet
+	Data []wire.IDSet
 }
 
 //codec:gen
@@ -19,7 +18,7 @@ type Recipe struct {
 	CategoryID     int32 `mc:"VarInt"`
 	HasIngredients bool
 	//opt:optional:HasIngredients
-	Ingredients []pk.IDSet
+	Ingredients []wire.IDSet
 	Flags       int8
 }
 

@@ -1,5 +1,5 @@
-github.com/Miku0139oao/go-mc v1.16.2-0.20260720040442-ecc0a9ad2a57 h1:NHmMw/Ics3viUs6PhRDmeJPFtMqRZz32Z9G/mMokJJM=
-github.com/Miku0139oao/go-mc v1.16.2-0.20260720040442-ecc0a9ad2a57/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
+github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f h1:vAbiqnDpB3KEZTQpAR6lQl7uFd2ENEShyVGhVKXdlMs=
+github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f/go.mod h1:f0+5qgwpQP70Ft4gQe/t02fyPc0NEZHC6AWc8DUyIh0=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
 github.com/go-gl/mathgl v1.2.0/go.mod h1:pf9+b5J3LFP7iZ4XXaVzZrCle0Q/vNpB/vDe5+3ulRE=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

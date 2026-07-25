@@ -1,12 +1,12 @@
 package component
 
 import (
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type DamageResistant struct {
-	Types pk.IDSet // HolderSet of damage types
+	Types wire.IDSet // HolderSet of damage types
 }
 
 func (*DamageResistant) ID() string {

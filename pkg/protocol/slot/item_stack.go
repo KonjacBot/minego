@@ -53,6 +53,9 @@ func (s Slot) String() string {
 }
 
 func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
+	if err := validateComponentPatch(s.AddComponent, s.RemoveComponent); err != nil {
+		return 0, err
+	}
 	temp, err := pk.VarInt(s.Count).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -63,6 +66,9 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	if s.Count == 0 {
 		return n, nil
+	}
+	if s.ItemID < 0 {
+		return n, errors.New("slot item id less than zero")
 	}
 	temp, err = pk.VarInt(s.ItemID).WriteTo(w)
 	n += temp
@@ -90,9 +96,6 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 	for _, componentID := range componentIDs {
 		id := int32(componentID)
 		c := s.AddComponent[id]
-		if c == nil {
-			return n, fmt.Errorf("slot component %d is nil", id)
-		}
 		temp, err = pk.VarInt(id).WriteTo(w)
 		n += temp
 		if err != nil {
@@ -116,6 +119,13 @@ func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
+	reader, leave, err := enterComponentDecode(r)
+	if err != nil {
+		return 0, err
+	}
+	defer leave()
+	r = reader
+
 	*s = Slot{}
 	temp, err := (*pk.VarInt)(&s.Count).ReadFrom(r)
 	n += temp
@@ -137,6 +147,9 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	s.ItemID = item.ID(itemID)
+	if itemID < 0 {
+		return n, errors.New("slot item id less than zero")
+	}
 
 	addLens := int32(0)
 	temp, err = (*pk.VarInt)(&addLens).ReadFrom(r)
@@ -154,8 +167,8 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 	if addLens < 0 || removeLens < 0 {
 		return n, errors.New("slot component count less than zero")
 	}
-	if addLens > 32767 || removeLens > 32767 {
-		return n, errors.New("slot component count greater than 32767")
+	if addLens > maxComponentPatchEntries || removeLens > maxComponentPatchEntries {
+		return n, fmt.Errorf("slot component count greater than %d", maxComponentPatchEntries)
 	}
 
 	var id int32
@@ -167,6 +180,9 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 		n += temp
 		if err != nil {
 			return n, err
+		}
+		if _, exists := s.AddComponent[id]; exists {
+			return n, fmt.Errorf("duplicate slot component id %d", id)
 		}
 		c := ComponentFromID(int(id))
 		if c == nil {
@@ -187,6 +203,9 @@ func (s *Slot) ReadFrom(r io.Reader) (n int64, err error) {
 			return n, err
 		}
 		s.RemoveComponent = append(s.RemoveComponent, id)
+	}
+	if err := validateComponentPatch(s.AddComponent, s.RemoveComponent); err != nil {
+		return n, err
 	}
 	return n, nil
 }

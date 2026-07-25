@@ -5,8 +5,8 @@ package metadata
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/protocol"
+	packet "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func (c *Rotation) ReadFrom(r io.Reader) (n int64, err error) {

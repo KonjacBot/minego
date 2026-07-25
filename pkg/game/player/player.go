@@ -84,7 +84,7 @@ func New(c bot.Client) *Player {
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.SystemChatMessage) {
 		if !p.Overlay {
-			bot.PublishEvent(c, MessageEvent{Message: p.Content})
+			bot.PublishEvent(c, MessageEvent{Message: p.Content.Message})
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerPosition) {
@@ -215,6 +215,9 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
+	if !finiteVec3(pos) {
+		return fmt.Errorf("target position must be finite")
+	}
 	p.mu.RLock()
 	canFly := p.abilities&0x04 != 0
 	p.mu.RUnlock()
@@ -253,8 +256,6 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		target := currentPos.Add(direction.Mul(moveDistance))
 
 		slog.Info("flyto step", "target", vecString(target), "remaining", distance)
-		p.entity.SetPosition(target)
-
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
 			X:     target.X(),
 			FeetY: target.Y(),
@@ -263,6 +264,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		}); err != nil {
 			return fmt.Errorf("failed to move player: %w", err)
 		}
+		p.entity.SetPosition(target)
 		time.Sleep(50 * time.Millisecond)
 
 		p.mu.RLock()
@@ -290,6 +292,9 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
+	if !finiteVec3(pos) {
+		return fmt.Errorf("target position must be finite")
+	}
 
 	currentPos := p.entity.Position()
 
@@ -312,6 +317,7 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 		}); err != nil {
 			return fmt.Errorf("failed to move to waypoint: %w", err)
 		}
+		p.entity.SetPosition(mgl64.Vec3{waypoint.X() + 0.5, waypoint.Y(), waypoint.Z() + 0.5})
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -339,22 +345,41 @@ func (p *Player) LookAt(target mgl64.Vec3) error {
 	if p.entity == nil {
 		return fmt.Errorf("player entity is not initialized")
 	}
+	if !finiteVec3(target) {
+		return fmt.Errorf("target position must be finite")
+	}
 
 	// 計算視角
 	playerPos := p.entity.Position()
-	direction := target.Sub(playerPos).Normalize()
+	direction := target.Sub(playerPos)
+	if direction.LenSqr() == 0 {
+		return nil
+	}
+	direction = direction.Normalize()
 
 	// 計算 yaw 和 pitch
 	yaw := float32(math.Atan2(-direction.X(), direction.Z()) * 180 / math.Pi)
 	pitch := float32(math.Asin(-direction.Y()) * 180 / math.Pi)
 
-	p.entity.SetRotation(mgl64.Vec2{float64(yaw), float64(pitch)})
-
-	return p.c.WritePacket(context.Background(), &server.MovePlayerRot{
+	err := p.c.WritePacket(context.Background(), &server.MovePlayerRot{
 		XRot:  yaw,
 		YRot:  pitch,
 		Flags: 0x00,
 	})
+	if err != nil {
+		return err
+	}
+	p.entity.SetRotation(mgl64.Vec2{float64(yaw), float64(pitch)})
+	return nil
+}
+
+func finiteVec3(value mgl64.Vec3) bool {
+	for _, coordinate := range value {
+		if math.IsNaN(coordinate) || math.IsInf(coordinate, 0) {
+			return false
+		}
+	}
+	return true
 }
 
 // BreakBlock 破壞指定位置的方塊
@@ -522,6 +547,8 @@ func (p *Player) Command(msg string) error {
 
 func (p *Player) Chat(msg string) error {
 	return p.c.WritePacket(context.Background(), &server.Chat{
-		Message: msg,
+		Message:      msg,
+		Timestamp:    time.Now().UnixMilli(),
+		Acknowledged: pk.NewFixedBitSet(20),
 	})
 }

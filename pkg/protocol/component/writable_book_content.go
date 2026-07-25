@@ -2,6 +2,7 @@ package component
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -12,7 +13,7 @@ type WritableBookContent struct {
 //codec:gen
 type WritableBookPage struct {
 	RawContent      string `mc:"String"`
-	FilteredContent pk.Option[pk.String, *pk.String]
+	FilteredContent pk.Option[wire.String, *wire.String]
 }
 
 func (*WritableBookContent) ID() string {

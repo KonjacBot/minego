@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 func TestOptChatUsesOptionalMetadataType(t *testing.T) {
@@ -77,7 +78,7 @@ func TestOptVarIntOfficialWire(t *testing.T) {
 
 func TestEntityMetadataWritesOptionalChatTypeID(t *testing.T) {
 	meta := EntityMetadata{Data: map[uint8]Metadata{
-		1: &OptChat{Option: pk.Option[chat.Message, *chat.Message]{Has: true, Val: chat.Text("hello")}},
+		1: &OptChat{Option: pk.Option[wire.Message, *wire.Message]{Has: true, Val: wire.NewMessage(chat.Text("hello"))}},
 	}}
 	encoded := writeMetadataValue(t, meta)
 	if len(encoded) < 2 || encoded[0] != 1 || encoded[1] != byte(MetadataOptChat) {

@@ -11,6 +11,7 @@ import (
 	"github.com/KonjacBot/go-mc/chat/sign"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 	"github.com/google/uuid"
 )
 
@@ -42,12 +43,14 @@ func TestPlayerInfoUpdateInitializeChatRoundTrip(t *testing.T) {
 					Data: pk.Option[PlayerInfoChatData, *PlayerInfoChatData]{
 						Has: true,
 						Val: PlayerInfoChatData{
-							Session: sign.Session{
-								SessionID: sessionID,
-								PublicKey: user.PublicKey{
-									ExpiresAt: time.UnixMilli(1_700_000_000_000),
-									PubKey:    &priv.PublicKey,
-									Signature: sig,
+							Session: wire.Session{
+								Session: sign.Session{
+									SessionID: sessionID,
+									PublicKey: user.PublicKey{
+										ExpiresAt: time.UnixMilli(1_700_000_000_000),
+										PubKey:    &priv.PublicKey,
+										Signature: sig,
+									},
 								},
 							},
 						},
@@ -138,5 +141,21 @@ func TestPlayerInfoUpdateInitializeChatWireDecode(t *testing.T) {
 	initChat := infos[0].(*PlayerInfoInitializeChat)
 	if initChat.Data.Val.Session.SessionID != sessionID {
 		t.Fatalf("session id = %v", initChat.Data.Val.Session.SessionID)
+	}
+}
+
+func TestPlayerInfoUpdateRejectsOversizedPlayerCount(t *testing.T) {
+	var buf bytes.Buffer
+	bitset := pk.NewFixedBitSet(8)
+	if _, err := bitset.WriteTo(&buf); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pk.VarInt(wire.MaxCollectionEntries + 1).WriteTo(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	var update PlayerInfoUpdate
+	if _, err := update.ReadFrom(&buf); err == nil {
+		t.Fatal("ReadFrom accepted an oversized player count")
 	}
 }

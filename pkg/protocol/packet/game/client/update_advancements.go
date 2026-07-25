@@ -3,16 +3,16 @@ package client
 import (
 	"io"
 
-	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
 type AdvancementDisplay struct {
-	Title       chat.Message
-	Description chat.Message
+	Title       wire.Message
+	Description wire.Message
 	Icon        slot.Slot
 	FrameType   int32 `mc:"VarInt"`
 	Flag        AdvancementDisplayFlag
@@ -35,7 +35,7 @@ func (a AdvancementDisplayFlag) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	var nn int64
 	if a.AssetsId != "" {
-		nn, err = pk.Identifier(a.AssetsId).WriteTo(w)
+		nn, err = wire.Identifier(a.AssetsId).WriteTo(w)
 		if err != nil {
 			return n + nn, err
 		}
@@ -50,7 +50,7 @@ func (a *AdvancementDisplayFlag) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	var nn int64
 	if a.Flag&1 != 0 {
-		nn, err = (*pk.Identifier)(&a.AssetsId).ReadFrom(r)
+		nn, err = (*wire.Identifier)(&a.AssetsId).ReadFrom(r)
 		if err != nil {
 			return n + nn, err
 		}
@@ -67,7 +67,7 @@ type AdvancementRequirements struct {
 //codec:gen
 type Advancement struct {
 	ID             string `mc:"Identifier"`
-	ParentID       pk.Option[pk.Identifier, *pk.Identifier]
+	ParentID       pk.Option[wire.Identifier, *wire.Identifier]
 	HasDisplayData bool
 	//opt:optional:HasDisplayData
 	DisplayData       AdvancementDisplay

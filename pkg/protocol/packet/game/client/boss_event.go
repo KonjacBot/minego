@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/KonjacBot/go-mc/chat"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	chat "github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 // codec:gen

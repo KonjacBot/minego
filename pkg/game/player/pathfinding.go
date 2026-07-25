@@ -14,6 +14,7 @@ import (
 )
 
 var ErrMaxNodesExceeded = errors.New("a* pathfinding exceeded max node count")
+var ErrInvalidPathRequest = errors.New("invalid a* pathfinding request")
 
 // Node 表示 A* 演算法中的節點
 type Node struct {
@@ -54,6 +55,15 @@ func (h *NodeHeap) Pop() interface{} {
 
 // AStar 使用 A* 演算法尋找路徑（新增 maxNodeCount 限制）
 func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.Vec3, error) {
+	if world == nil {
+		return nil, errors.Join(ErrInvalidPathRequest, errors.New("world is nil"))
+	}
+	if maxNodeCount <= 0 {
+		return nil, errors.Join(ErrInvalidPathRequest, errors.New("max node count must be positive"))
+	}
+	if !validPathCoordinate(start) || !validPathCoordinate(goal) {
+		return nil, errors.Join(ErrInvalidPathRequest, errors.New("coordinates must be finite int32 values"))
+	}
 	// 將浮點數座標轉換為區塊整數座標
 	startPos := protocol.Position{int32(math.Floor(start.X())), int32(math.Floor(start.Y())), int32(math.Floor(start.Z()))}
 	goalPos := protocol.Position{int32(math.Floor(goal.X())), int32(math.Floor(goal.Y())), int32(math.Floor(goal.Z()))}
@@ -87,7 +97,7 @@ func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.V
 
 	for openSet.Len() > 0 {
 		// 檢查是否超過最大節點搜尋限制
-		if maxNodeCount > 0 && nodesExplored >= maxNodeCount {
+		if nodesExplored >= maxNodeCount {
 			// 選擇 1：返回目前為止最接近終點的路徑（推薦，機器人不會卡死）
 			return reconstructPath(bestNode), ErrMaxNodesExceeded
 		}
@@ -151,26 +161,33 @@ func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.V
 
 // heuristic 計算啟發式距離（曼哈頓距離）
 func heuristic(a, b protocol.Position) float64 {
-	return math.Abs(float64(a[0]-b[0])) + math.Abs(float64(a[1]-b[1])) + math.Abs(float64(a[2]-b[2]))
+	return math.Abs(float64(a[0])-float64(b[0])) +
+		math.Abs(float64(a[1])-float64(b[1])) +
+		math.Abs(float64(a[2])-float64(b[2]))
 }
 
 // distance 計算兩點間的實際距離
 func distance(a, b protocol.Position) float64 {
-	dx := float64(a[0] - b[0])
-	dy := float64(a[1] - b[1])
-	dz := float64(a[2] - b[2])
+	dx := float64(a[0]) - float64(b[0])
+	dy := float64(a[1]) - float64(b[1])
+	dz := float64(a[2]) - float64(b[2])
 	return math.Sqrt(dx*dx + dy*dy + dz*dz)
 }
 
 // getNeighbors 獲取相鄰節點
 func getNeighbors(pos protocol.Position) []protocol.Position {
-	neighbors := []protocol.Position{
-		{pos[0] + 1, pos[1], pos[2]}, // 東
-		{pos[0] - 1, pos[1], pos[2]}, // 西
-		{pos[0], pos[1], pos[2] + 1}, // 南
-		{pos[0], pos[1], pos[2] - 1}, // 北
-		{pos[0], pos[1] + 1, pos[2]}, // 上
-		{pos[0], pos[1] - 1, pos[2]}, // 下
+	neighbors := make([]protocol.Position, 0, 6)
+	for axis := range 3 {
+		if pos[axis] < math.MaxInt32 {
+			next := pos
+			next[axis]++
+			neighbors = append(neighbors, next)
+		}
+		if pos[axis] > math.MinInt32 {
+			next := pos
+			next[axis]--
+			neighbors = append(neighbors, next)
+		}
 	}
 	return neighbors
 }
@@ -184,6 +201,9 @@ func isWalkable(world bot.World, pos protocol.Position) bool {
 	}
 
 	// 檢查頭部位置
+	if pos[1] == math.MaxInt32 || pos[1] == math.MinInt32 {
+		return false
+	}
 	headPos := protocol.Position{pos[0], pos[1] + 1, pos[2]}
 	headBlock, err := world.GetBlock(headPos)
 	if err != nil {
@@ -210,9 +230,21 @@ func reconstructPath(node *Node) []mgl64.Vec3 {
 			float64(current.Position[1]),
 			float64(current.Position[2]),
 		}
-		path = append([]mgl64.Vec3{pos}, path...)
+		path = append(path, pos)
 		current = current.Parent
+	}
+	for left, right := 0, len(path)-1; left < right; left, right = left+1, right-1 {
+		path[left], path[right] = path[right], path[left]
 	}
 
 	return path
+}
+
+func validPathCoordinate(position mgl64.Vec3) bool {
+	for _, value := range position {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < math.MinInt32 || value > math.MaxInt32 {
+			return false
+		}
+	}
+	return true
 }

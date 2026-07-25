@@ -1,16 +1,15 @@
 package metadata
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/nbt"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/go-mc/yggdrasil/user"
 	"github.com/KonjacBot/minego/pkg/protocol"
 	"github.com/google/uuid"
 
 	"github.com/KonjacBot/minego/pkg/protocol/component"
 	"github.com/KonjacBot/minego/pkg/protocol/particle"
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 type Byte struct {
@@ -46,7 +45,7 @@ func (b Float) EntityMetadataType() MetadataType {
 }
 
 type String struct {
-	pk.String
+	wire.String
 }
 
 func (b String) EntityMetadataType() MetadataType {
@@ -54,7 +53,7 @@ func (b String) EntityMetadataType() MetadataType {
 }
 
 type Chat struct {
-	chat.Message
+	wire.Message
 }
 
 func (b Chat) EntityMetadataType() MetadataType {
@@ -62,7 +61,7 @@ func (b Chat) EntityMetadataType() MetadataType {
 }
 
 type OptChat struct {
-	pk.Option[chat.Message, *chat.Message]
+	pk.Option[wire.Message, *wire.Message]
 }
 
 func (b OptChat) EntityMetadataType() MetadataType {
@@ -284,7 +283,7 @@ func (ChickenSoundVariant) EntityMetadataType() MetadataType {
 
 //codec:gen
 type GlobalPosition struct {
-	Dimension pk.Identifier
+	Dimension wire.Identifier
 	Position  pk.Position
 }
 
@@ -375,7 +374,7 @@ func (Quaternion) EntityMetadataType() MetadataType {
 type ResolvableProfilePartial struct {
 	Name     string
 	UUID     uuid.UUID `mc:"UUID"`
-	Property []user.Property
+	Property []wire.Property
 }
 
 //codec:gen
@@ -385,9 +384,9 @@ type ResolvableProfile struct {
 	Profile *protocol.GameProfile
 	//opt:enum:IsFullProfile:false
 	Partial *ResolvableProfilePartial
-	Body    pk.Option[pk.Identifier, *pk.Identifier]
-	Cape    pk.Option[pk.Identifier, *pk.Identifier]
-	Elytra  pk.Option[pk.Identifier, *pk.Identifier]
+	Body    pk.Option[wire.Identifier, *wire.Identifier]
+	Cape    pk.Option[wire.Identifier, *wire.Identifier]
+	Elytra  pk.Option[wire.Identifier, *wire.Identifier]
 	Model   bool
 }
 

@@ -1,8 +1,7 @@
 package component
 
 import (
-	"github.com/KonjacBot/go-mc/chat"
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
 
 //codec:gen
@@ -15,12 +14,12 @@ type Trim struct {
 type TrimMaterial struct {
 	Suffix      string
 	Overrides   []TrimOverride
-	Description chat.Message
+	Description wire.Message
 }
 
 //codec:gen
 type TrimOverride struct {
-	MaterialType      pk.Identifier
+	MaterialType      wire.Identifier
 	OverrideAssetName string
 }
 
@@ -28,7 +27,7 @@ type TrimOverride struct {
 type TrimPattern struct {
 	AssetName    string
 	TemplateItem int32 `mc:"VarInt"`
-	Description  chat.Message
+	Description  wire.Message
 	Decal        bool
 }
 

@@ -6,7 +6,15 @@ import (
 	"testing"
 
 	"github.com/KonjacBot/go-mc/nbt"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 )
+
+func TestGeneratedConfigArrayRejectsOversizedWrite(t *testing.T) {
+	value := make(StringIdentifierVarIntArray, wire.MaxCollectionEntries+1)
+	if _, err := value.WriteTo(&bytes.Buffer{}); err == nil {
+		t.Fatal("WriteTo() accepted an oversized array")
+	}
+}
 
 func TestConfigCustomPayloadUsesRemainingPacketData(t *testing.T) {
 	want := ConfigCustomPayload{Channel: "x", Data: []byte{0x80, 0x01}}

@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/KonjacBot/go-mc/data/entity"
@@ -10,8 +11,10 @@ import (
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/level/item"
 	"github.com/KonjacBot/go-mc/net/packet"
+	"github.com/go-gl/mathgl/mgl64"
 
 	"github.com/KonjacBot/minego/pkg/bot"
+	gameworld "github.com/KonjacBot/minego/pkg/game/world"
 	"github.com/KonjacBot/minego/pkg/protocol"
 	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -37,10 +40,42 @@ func TestOpenContainerRefusesAirBlock(t *testing.T) {
 	}
 }
 
+func TestLookAtSamePositionDoesNotSendNaNRotation(t *testing.T) {
+	c := &openContainerTestClient{}
+	entity := &gameworld.Entity{}
+	entity.SetPosition(mgl64.Vec3{1, 2, 3})
+	p := &Player{c: c, entity: entity}
+	if err := p.LookAt(mgl64.Vec3{1, 2, 3}); err != nil {
+		t.Fatal(err)
+	}
+	if c.writes != 0 {
+		t.Fatalf("LookAt() performed %d writes for the current position", c.writes)
+	}
+	if err := p.LookAt(mgl64.Vec3{math.NaN(), 0, 0}); err == nil {
+		t.Fatal("LookAt() accepted a NaN target")
+	}
+}
+
+func TestFlyToDoesNotCommitFailedWrite(t *testing.T) {
+	writeErr := errors.New("write failed")
+	c := &openContainerTestClient{writeErr: writeErr}
+	entity := &gameworld.Entity{}
+	start := mgl64.Vec3{1, 2, 3}
+	entity.SetPosition(start)
+	p := &Player{c: c, entity: entity, abilities: 0x04}
+	if err := p.FlyTo(mgl64.Vec3{2, 2, 3}); !errors.Is(err, writeErr) {
+		t.Fatalf("FlyTo() error = %v, want write failure", err)
+	}
+	if got := entity.Position(); got != start {
+		t.Fatalf("position after failed write = %v, want %v", got, start)
+	}
+}
+
 type openContainerTestClient struct {
 	world     bot.World
 	inventory bot.InventoryHandler
 	writes    int
+	writeErr  error
 }
 
 func (c *openContainerTestClient) Connect(context.Context, string, *bot.ConnectOptions) error {
@@ -51,7 +86,7 @@ func (c *openContainerTestClient) Close(context.Context) error      { return nil
 func (c *openContainerTestClient) IsConnected() bool                { return true }
 func (c *openContainerTestClient) WritePacket(context.Context, server.ServerboundPacket) error {
 	c.writes++
-	return nil
+	return c.writeErr
 }
 func (c *openContainerTestClient) PacketHandler() bot.PacketHandler {
 	return openContainerTestPacketHandler{}

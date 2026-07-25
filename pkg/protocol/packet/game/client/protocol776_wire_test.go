@@ -31,6 +31,13 @@ func mustWire(t *testing.T, fields ...writerTo) []byte {
 	return buf.Bytes()
 }
 
+func TestGeneratedClientboundArrayRejectsOversizedWrite(t *testing.T) {
+	value := make(Int32VarIntVarIntArray, 32768)
+	if _, err := value.WriteTo(&bytes.Buffer{}); err == nil {
+		t.Fatal("WriteTo() accepted an oversized array")
+	}
+}
+
 // Derived from the protocol 776 server jar via:
 // javap -classpath <server-26.2.jar> -p -c net.minecraft.commands.synchronization.ArgumentTypeInfos
 // The static initializer registers command argument types in wire-registry order.

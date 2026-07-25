@@ -1,9 +1,9 @@
 package client
 
-import pk "github.com/KonjacBot/go-mc/net/packet"
+import "github.com/KonjacBot/minego/pkg/protocol/wire"
 
 //codec:gen
 type CustomPayload struct {
-	Channel pk.Identifier
+	Channel wire.Identifier
 	Data    []byte `mc:"PluginMessageData"`
 }

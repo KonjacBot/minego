@@ -2,12 +2,15 @@ package world
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/KonjacBot/go-mc/data/packetid"
+	"github.com/KonjacBot/go-mc/level"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/protocol"
 	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
@@ -49,6 +52,36 @@ func TestRespawnClearsEntities(t *testing.T) {
 	c.handler.HandlePacket(context.Background(), &gameclient.Respawn{})
 	if entity := w.GetEntity(1); entity != nil {
 		t.Fatalf("entity survived respawn: %#v", entity)
+	}
+}
+
+func TestInvalidBlockStateUpdatesAreIgnored(t *testing.T) {
+	c := newWorldTestClient()
+	w := NewWorld(c)
+	c.world = w
+	w.columns[level.ChunkPos{0, 0}] = level.EmptyChunk(36)
+
+	c.handler.HandlePacket(context.Background(), &gameclient.BlockUpdate{
+		Position:   pk.Position{X: 0, Y: 0, Z: 0},
+		BlockState: -1,
+	})
+	sectionUpdate := &gameclient.UpdateSectionsBlocks{}
+	sectionUpdate.SetSectionPos(0, -4, 0)
+	sectionUpdate.AddBlock(0, 0, 0, -1)
+	c.handler.HandlePacket(context.Background(), sectionUpdate)
+}
+
+func TestBlockQueriesRejectUnboundedInputs(t *testing.T) {
+	c := newWorldTestClient()
+	w := NewWorld(c)
+	if _, err := w.GetNearbyBlocks(protocol.Position{}, math.MaxInt32); err == nil {
+		t.Fatal("GetNearbyBlocks() accepted an unbounded radius")
+	}
+	if _, err := w.GetNearbyBlocks(protocol.Position{}, -1); err == nil {
+		t.Fatal("GetNearbyBlocks() accepted a negative radius")
+	}
+	if _, err := w.FindNearbyBlock(protocol.Position{}, 1, nil); err == nil {
+		t.Fatal("FindNearbyBlock() accepted a nil target")
 	}
 }
 

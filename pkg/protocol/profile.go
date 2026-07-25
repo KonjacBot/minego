@@ -2,7 +2,7 @@ package protocol
 
 import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/go-mc/yggdrasil/user"
+	"github.com/KonjacBot/minego/pkg/protocol/wire"
 	"github.com/google/uuid"
 )
 
@@ -10,14 +10,14 @@ import (
 type GameProfile struct {
 	UUID       uuid.UUID       `mc:"UUID" json:"id"`
 	Name       string          `json:"name"`
-	Properties []user.Property `json:"properties"`
+	Properties []wire.Property `json:"properties"`
 }
 
 //codec:gen
 type PartialProfile struct {
-	Username   pk.Option[pk.String, *pk.String]
+	Username   pk.Option[wire.String, *wire.String]
 	UUID       pk.Option[pk.UUID, *pk.UUID]
-	Properties []user.Property
+	Properties []wire.Property
 }
 
 //codec:gen
@@ -26,10 +26,10 @@ type ResolvableProfile struct {
 	//opt:enum:Type:0
 	Partial *PartialProfile
 	//opt:enum:Type:1
-	GameProfile *ResolvableProfile
+	GameProfile *GameProfile
 
-	Body   pk.Option[pk.Identifier, *pk.Identifier]
-	Cape   pk.Option[pk.Identifier, *pk.Identifier]
-	Elytra pk.Option[pk.Identifier, *pk.Identifier]
+	Body   pk.Option[wire.Identifier, *wire.Identifier]
+	Cape   pk.Option[wire.Identifier, *wire.Identifier]
+	Elytra pk.Option[wire.Identifier, *wire.Identifier]
 	Model  pk.Option[pk.VarInt, *pk.VarInt]
 }
