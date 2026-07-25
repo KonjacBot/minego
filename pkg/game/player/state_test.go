@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
+	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/entity"
 	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/level/block"
@@ -177,6 +178,9 @@ func (i *waitInventory) CurrentContainerID() int32 {
 	defer i.mu.RUnlock()
 	return i.id
 }
+func (*waitInventory) CurrentMenuType() int32                 { return -1 }
+func (*waitInventory) CurrentMenuTitle() chat.Message         { return chat.Message{} }
+func (*waitInventory) Cursor() *slot.Slot                     { return nil }
 func (*waitInventory) Click(int32, int16, int32, int32) error { return nil }
 func (*waitInventory) Close()                                 {}
 

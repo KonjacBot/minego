@@ -6,8 +6,9 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
+	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
-	pk "github.com/KonjacBot/go-mc/net/packet"
+	packet "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol"
@@ -50,7 +51,14 @@ func TestManagerTracksCursorSlotAndClearsClosedContainer(t *testing.T) {
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	title := chat.Text("Test ").SetColor(chat.Gold).Append(chat.Text("Menu"))
+	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{
+		WindowID: 5, WindowType: 12, WindowTitle: title,
+	})
+	if got := m.CurrentMenuTitle(); m.CurrentMenuType() != 12 ||
+		got.Color != chat.Gold || got.ClearString() != "Test Menu" {
+		t.Fatalf("menu metadata = (%d, %#v), want type 12 and complete title component", m.CurrentMenuType(), got)
+	}
 	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
 		ContainerID: -1, Slot: -1, StateID: 7, ItemStack: slot.Slot{Count: 6},
 	})
@@ -62,8 +70,10 @@ func TestManagerTracksCursorSlotAndClearsClosedContainer(t *testing.T) {
 	}
 
 	c.handler.HandlePacket(context.Background(), &gameclient.CloseContainer{WindowID: 5})
-	if m.CurrentContainerID() != -1 || m.Container() != nil || m.Cursor() != nil {
-		t.Fatalf("closed manager retained state: id=%d container=%#v cursor=%#v", m.CurrentContainerID(), m.Container(), m.Cursor())
+	if m.CurrentContainerID() != -1 || m.CurrentMenuType() != -1 || m.CurrentMenuTitle().ClearString() != "" ||
+		m.Container() != nil || m.Cursor() != nil {
+		t.Fatalf("closed manager retained state: id=%d type=%d title=%#v container=%#v cursor=%#v",
+			m.CurrentContainerID(), m.CurrentMenuType(), m.CurrentMenuTitle(), m.Container(), m.Cursor())
 	}
 }
 
@@ -156,9 +166,11 @@ func TestManagerLoginAndRespawnClearOpenContainerWithoutClientClose(t *testing.T
 		c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
 		c.handler.HandlePacket(context.Background(), lifecyclePacket)
 
-		if m.CurrentContainerID() != -1 || m.Container() != nil {
-			t.Fatalf("%T left stale container: id=%d container=%#v",
-				lifecyclePacket, m.CurrentContainerID(), m.Container())
+		title := m.CurrentMenuTitle()
+		if m.CurrentContainerID() != -1 || m.CurrentMenuType() != -1 ||
+			title.ClearString() != "" || m.Container() != nil {
+			t.Fatalf("%T left stale container: id=%d type=%d title=%#v container=%#v",
+				lifecyclePacket, m.CurrentContainerID(), m.CurrentMenuType(), m.CurrentMenuTitle(), m.Container())
 		}
 		if len(c.writes) != 0 {
 			t.Fatalf("%T sent an unnecessary client close packet: %#v", lifecyclePacket, c.writes)
@@ -215,7 +227,7 @@ type inventoryPacketHandler struct {
 func (h *inventoryPacketHandler) AddPacketHandler(id packetid.ClientboundPacketID, handler func(context.Context, gameclient.ClientboundPacket)) {
 	h.handlers[id] = append(h.handlers[id], handler)
 }
-func (*inventoryPacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, pk.Packet)) {
+func (*inventoryPacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, packet.Packet)) {
 }
 func (*inventoryPacketHandler) AddGenericPacketHandler(func(context.Context, gameclient.ClientboundPacket)) {
 }

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	mcnet "github.com/KonjacBot/go-mc/net"
+	"github.com/KonjacBot/minego/pkg/auth"
+	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
@@ -17,6 +19,14 @@ func TestNewClientAllowsNilOptions(t *testing.T) {
 	c := NewClient(nil)
 	if c == nil {
 		t.Fatal("NewClient(nil) returned nil")
+	}
+}
+
+func TestNewClientUsesConfiguredReadIdleTimeout(t *testing.T) {
+	const timeout = 17 * time.Second
+	c := NewClient(&bot.ClientOptions{ReadIdleTimeout: timeout}).(*botClient)
+	if c.readIdleTimeout != timeout {
+		t.Fatalf("read idle timeout = %s, want %s", c.readIdleTimeout, timeout)
 	}
 }
 
@@ -60,6 +70,58 @@ func TestHandleGameStopsPromptlyWhenContextIsCanceled(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("HandleGame did not stop after context cancellation")
+	}
+}
+
+func TestHandleGameReturnsAfterReadIdleTimeout(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	b := &botClient{
+		conn:            mcnet.WrapConn(clientConn),
+		packetHandler:   newPacketHandler(),
+		eventHandler:    NewEventHandler(),
+		readIdleTimeout: 25 * time.Millisecond,
+	}
+
+	started := time.Now()
+	err := b.HandleGame(context.Background())
+	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+		t.Fatalf("HandleGame() error = %v, want network timeout", err)
+	}
+	if elapsed := time.Since(started); elapsed > 500*time.Millisecond {
+		t.Fatalf("HandleGame() returned after %s, want prompt idle timeout", elapsed)
+	}
+}
+
+func TestConfigurationReturnsAfterReadIdleTimeout(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	b := &botClient{
+		conn:            mcnet.WrapConn(clientConn),
+		readIdleTimeout: 25 * time.Millisecond,
+	}
+
+	err := b.configuration(context.Background())
+	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+		t.Fatalf("configuration() error = %v, want network timeout", err)
+	}
+}
+
+func TestLoginReturnsAfterReadIdleTimeout(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	go func() {
+		_, _ = io.Copy(io.Discard, serverConn)
+	}()
+	b := &botClient{
+		conn:            mcnet.WrapConn(clientConn),
+		authProvider:    &auth.OfflineAuth{Username: "idle-test"},
+		readIdleTimeout: 25 * time.Millisecond,
+	}
+
+	err := b.login(context.Background())
+	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+		t.Fatalf("login() error = %v, want network timeout", err)
 	}
 }
 

@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"time"
 
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -23,6 +24,9 @@ type Client interface {
 
 type ClientOptions struct {
 	AuthProvider auth.Provider
+	// ReadIdleTimeout is renewed before each login, configuration, and play
+	// packet read. Values at or below zero use the client default.
+	ReadIdleTimeout time.Duration
 }
 
 type ProxyConfig struct {

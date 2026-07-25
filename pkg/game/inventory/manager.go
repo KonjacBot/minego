@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -18,6 +19,8 @@ type Manager struct {
 	container          *Container
 	cursor             *slot.Slot
 	currentContainerID int32
+	currentMenuType    int32
+	currentMenuTitle   chat.Message
 }
 
 func NewManager(c bot.Client) *Manager {
@@ -25,6 +28,7 @@ func NewManager(c bot.Client) *Manager {
 		c:                  c,
 		inventory:          NewContainerWithSize(c, 0, 46),
 		currentContainerID: -1,
+		currentMenuType:    -1,
 	}
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.SetContainerContent) {
@@ -101,6 +105,8 @@ func NewManager(c bot.Client) *Manager {
 	bot.AddHandler(c, func(ctx context.Context, p *client.OpenScreen) {
 		m.mu.Lock()
 		m.currentContainerID = p.WindowID
+		m.currentMenuType = p.WindowType
+		m.currentMenuTitle = p.WindowTitle
 		m.container = NewContainer(c, p.WindowID)
 		m.mu.Unlock()
 		_ = bot.PublishEvent(m.c, ContainerOpenEvent{
@@ -142,6 +148,18 @@ func (m *Manager) CurrentContainerID() int32 {
 	return m.currentContainerID
 }
 
+func (m *Manager) CurrentMenuType() int32 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.currentMenuType
+}
+
+func (m *Manager) CurrentMenuTitle() chat.Message {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.currentMenuTitle
+}
+
 func (m *Manager) Close() {
 	m.mu.Lock()
 	id := m.currentContainerID
@@ -162,6 +180,8 @@ func (m *Manager) resetCurrentContainerFromLifecycle() {
 
 func (m *Manager) resetCurrentContainerLocked() {
 	m.currentContainerID = -1
+	m.currentMenuType = -1
+	m.currentMenuTitle = chat.Message{}
 	m.container = nil
 	m.cursor = nil
 }

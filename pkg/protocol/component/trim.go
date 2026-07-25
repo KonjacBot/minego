@@ -7,8 +7,8 @@ import (
 
 //codec:gen
 type Trim struct {
-	TrimMaterial TrimMaterial
-	TrimPattern  TrimPattern
+	TrimMaterial pk.OptID[TrimMaterial, *TrimMaterial]
+	TrimPattern  pk.OptID[TrimPattern, *TrimPattern]
 }
 
 //codec:gen

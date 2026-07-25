@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/level/item"
 
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
@@ -19,6 +20,9 @@ type InventoryHandler interface {
 	Inventory() Container
 	Container() Container
 	CurrentContainerID() int32
+	CurrentMenuType() int32
+	CurrentMenuTitle() chat.Message
+	Cursor() *slot.Slot
 	Click(container int32, slot int16, mode int32, button int32) error
 	Close()
 }

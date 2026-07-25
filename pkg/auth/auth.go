@@ -50,6 +50,7 @@ type Provider interface {
 type Auth struct {
 	*net.Conn
 	Provider
+	ReadIdleTimeout time.Duration
 }
 
 func (a *Auth) HandleLogin(ctx context.Context) error {
@@ -74,6 +75,9 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 
 	var p pk.Packet
 	for {
+		if err = a.setReadDeadline(ctx); err != nil {
+			return errors.Join(ErrLogin, fmt.Errorf("set read deadline fail: %w", err))
+		}
 		err = a.ReadPacket(&p)
 		if err != nil {
 			return errors.Join(ErrLogin, fmt.Errorf("read packet fail: %w", err))
@@ -143,6 +147,17 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (a *Auth) setReadDeadline(ctx context.Context) error {
+	var deadline time.Time
+	if a.ReadIdleTimeout > 0 {
+		deadline = time.Now().Add(a.ReadIdleTimeout)
+	}
+	if contextDeadline, ok := ctx.Deadline(); ok && (deadline.IsZero() || contextDeadline.Before(deadline)) {
+		deadline = contextDeadline
+	}
+	return a.Socket.SetReadDeadline(deadline)
 }
 
 type OnlineAuthServer struct {

@@ -18,7 +18,11 @@ func (b *botClient) login(ctx context.Context) error {
 	defer cancelFunc()
 
 	return b.withReadContext(ctx, func(conn *mcnet.Conn) error {
-		a := &auth.Auth{Conn: conn, Provider: b.authProvider}
+		a := &auth.Auth{
+			Conn:            conn,
+			Provider:        b.authProvider,
+			ReadIdleTimeout: b.readIdleTimeout,
+		}
 		return a.HandleLogin(ctx)
 	})
 }
@@ -32,6 +36,9 @@ func (b *botClient) configuration(ctx context.Context) (err error) {
 func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
 	var p pk.Packet
 	for {
+		if err = b.setReadDeadline(ctx, conn); err != nil {
+			return err
+		}
 		err = conn.ReadPacket(&p)
 		if err != nil {
 			return err
@@ -90,10 +97,8 @@ func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) er
 		return errors.New("client is not connected")
 	}
 
-	if deadline, ok := ctx.Deadline(); ok {
-		if err := conn.Socket.SetReadDeadline(deadline); err != nil {
-			return err
-		}
+	if err := b.setReadDeadline(ctx, conn); err != nil {
+		return err
 	}
 	stop := context.AfterFunc(ctx, func() {
 		_ = conn.Socket.SetReadDeadline(time.Now())
@@ -108,4 +113,15 @@ func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) er
 		return context.Cause(ctx)
 	}
 	return err
+}
+
+func (b *botClient) setReadDeadline(ctx context.Context, conn *mcnet.Conn) error {
+	var deadline time.Time
+	if b.readIdleTimeout > 0 {
+		deadline = time.Now().Add(b.readIdleTimeout)
+	}
+	if contextDeadline, ok := ctx.Deadline(); ok && (deadline.IsZero() || contextDeadline.Before(deadline)) {
+		deadline = contextDeadline
+	}
+	return conn.Socket.SetReadDeadline(deadline)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/entity"
 	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/level/block"
@@ -96,6 +97,9 @@ type openContainerTestInventory struct {
 func (i openContainerTestInventory) Inventory() bot.Container               { return i.container }
 func (i openContainerTestInventory) Container() bot.Container               { return i.container }
 func (i openContainerTestInventory) CurrentContainerID() int32              { return i.id }
+func (i openContainerTestInventory) CurrentMenuType() int32                 { return -1 }
+func (i openContainerTestInventory) CurrentMenuTitle() chat.Message         { return chat.Message{} }
+func (i openContainerTestInventory) Cursor() *slot.Slot                     { return nil }
 func (i openContainerTestInventory) Click(int32, int16, int32, int32) error { return nil }
 func (i openContainerTestInventory) Close()                                 {}
 

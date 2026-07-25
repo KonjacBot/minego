@@ -28,13 +28,14 @@ import (
 )
 
 type botClient struct {
-	conn          *mcnet.Conn
-	connMu        sync.RWMutex
-	writeMu       sync.Mutex
-	packetHandler *packetHandler
-	eventHandler  bot.EventHandler
-	connected     atomic.Bool
-	authProvider  auth.Provider
+	conn            *mcnet.Conn
+	connMu          sync.RWMutex
+	writeMu         sync.Mutex
+	packetHandler   *packetHandler
+	eventHandler    bot.EventHandler
+	connected       atomic.Bool
+	authProvider    auth.Provider
+	readIdleTimeout time.Duration
 
 	inventory *inventory.Manager
 	world     *world.World
@@ -236,8 +237,6 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 		_ = conn.Socket.SetReadDeadline(time.Time{})
 	}()
 
-	const readTimeout = 30 * time.Second
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -245,11 +244,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 		default:
 			var p pk.Packet
 
-			readDeadline := time.Now().Add(readTimeout)
-			if deadline, ok := ctx.Deadline(); ok && deadline.Before(readDeadline) {
-				readDeadline = deadline
-			}
-			if err := conn.Socket.SetReadDeadline(readDeadline); err != nil {
+			if err := b.setReadDeadline(ctx, conn); err != nil {
 				return err
 			}
 
@@ -325,12 +320,16 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 
 func NewClient(options *bot.ClientOptions) bot.Client {
 	c := &botClient{
-		packetHandler: newPacketHandler(),
-		eventHandler:  NewEventHandler(),
+		packetHandler:   newPacketHandler(),
+		eventHandler:    NewEventHandler(),
+		readIdleTimeout: 30 * time.Second,
 	}
 
 	if options != nil {
 		c.authProvider = options.AuthProvider
+		if options.ReadIdleTimeout > 0 {
+			c.readIdleTimeout = options.ReadIdleTimeout
+		}
 	}
 	if c.authProvider == nil {
 		c.authProvider = &auth.OfflineAuth{Username: "Steve"}
