@@ -15,204 +15,274 @@ import (
 
 var ErrMaxNodesExceeded = errors.New("a* pathfinding exceeded max node count")
 
-// Node 表示 A* 演算法中的節點
+const fastAStarHeuristicWeight = 1.25
+
 type Node struct {
 	Position protocol.Position
-	G        float64 // 從起點到當前節點的實際距離
-	H        float64 // 從當前節點到終點的啟發式距離
-	F        float64 // G + H
+	G        float64
+	H        float64
+	F        float64
 	Parent   *Node
-	Index    int // heap 索引
+	Index    int
 }
 
-// NodeHeap 實現 heap.Interface 用於優先佇列
 type NodeHeap []*Node
 
-func (h NodeHeap) Len() int           { return len(h) }
-func (h NodeHeap) Less(i, j int) bool { return h[i].F < h[j].F }
-func (h NodeHeap) Swap(i, j int) {
-	h[i], h[j] = h[j], h[i]
-	h[i].Index = i
-	h[j].Index = j
+func (h NodeHeap) Len() int { return len(h) }
+func (h NodeHeap) Less(left, right int) bool {
+	if h[left].F != h[right].F {
+		return h[left].F < h[right].F
+	}
+	if h[left].H != h[right].H {
+		return h[left].H < h[right].H
+	}
+	return positionLess(h[left].Position, h[right].Position)
 }
-
-func (h *NodeHeap) Push(x interface{}) {
-	n := len(*h)
-	node := x.(*Node)
-	node.Index = n
+func (h NodeHeap) Swap(left, right int) {
+	h[left], h[right] = h[right], h[left]
+	h[left].Index = left
+	h[right].Index = right
+}
+func (h *NodeHeap) Push(value any) {
+	node := value.(*Node)
+	node.Index = len(*h)
 	*h = append(*h, node)
 }
-
-func (h *NodeHeap) Pop() interface{} {
+func (h *NodeHeap) Pop() any {
 	old := *h
-	n := len(old)
-	node := old[n-1]
+	last := len(old) - 1
+	node := old[last]
+	old[last] = nil
 	node.Index = -1
-	*h = old[0 : n-1]
+	*h = old[:last]
 	return node
 }
 
-// AStar 使用 A* 演算法尋找路徑（新增 maxNodeCount 限制）
-func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.Vec3, error) {
-	// 將浮點數座標轉換為區塊整數座標
-	startPos := protocol.Position{int32(math.Floor(start.X())), int32(math.Floor(start.Y())), int32(math.Floor(start.Z()))}
-	goalPos := protocol.Position{int32(math.Floor(goal.X())), int32(math.Floor(goal.Y())), int32(math.Floor(goal.Z()))}
+type pathSearchOptions struct {
+	maxNodes        int
+	goalDistance    float64
+	heuristicWeight float64
+}
 
-	// 如果終點本身就不可通行，直接防呆返回
-	if !isWalkable(world, goalPos) {
+type walkabilityCache struct {
+	world  bot.World
+	values map[protocol.Position]bool
+}
+
+func newWalkabilityCache(world bot.World) *walkabilityCache {
+	return &walkabilityCache{world: world, values: make(map[protocol.Position]bool)}
+}
+
+func (cache *walkabilityCache) walkable(pos protocol.Position) bool {
+	if value, ok := cache.values[pos]; ok {
+		return value
+	}
+	value := isWalkable(cache.world, pos)
+	cache.values[pos] = value
+	return value
+}
+
+// AStar keeps the original exact-goal contract while using the optimized
+// Minecraft neighbor model and voxel cache.
+func AStar(world bot.World, start, goal mgl64.Vec3, maxNodeCount int) ([]mgl64.Vec3, error) {
+	return findPath(world, start, goal, pathSearchOptions{
+		maxNodes: maxNodeCount, heuristicWeight: 1,
+	})
+}
+
+// FastAStarWithin uses weighted A* and succeeds at the closest walkable cell
+// within goalDistance. The range is measured from the player's feet to the
+// supplied goal vector.
+func FastAStarWithin(world bot.World, start, goal mgl64.Vec3, maxNodeCount int, goalDistance float64) ([]mgl64.Vec3, error) {
+	return findPath(world, start, goal, pathSearchOptions{
+		maxNodes: maxNodeCount, goalDistance: max(0, goalDistance), heuristicWeight: fastAStarHeuristicWeight,
+	})
+}
+
+func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions) ([]mgl64.Vec3, error) {
+	startPos := vectorCell(start)
+	goalPos := vectorCell(goal)
+	if options.maxNodes <= 0 {
+		options.maxNodes = 1
+	}
+	if options.heuristicWeight < 1 {
+		options.heuristicWeight = 1
+	}
+
+	walkable := newWalkabilityCache(world)
+	if reachedGoal(startPos, goal, options.goalDistance) {
+		return []mgl64.Vec3{cellVector(startPos)}, nil
+	}
+	if options.goalDistance == 0 && !walkable.walkable(goalPos) {
 		return nil, nil
 	}
 
-	openSet := &NodeHeap{}
-	heap.Init(openSet)
-
-	closedSet := make(map[protocol.Position]bool)
-	allNodes := make(map[protocol.Position]*Node)
-
-	// 初始化起點節點
 	startNode := &Node{
 		Position: startPos,
-		G:        0,
-		H:        heuristic(startPos, goalPos),
+		H:        goalHeuristic(startPos, goal, options.goalDistance),
 		Index:    0,
 	}
-	startNode.F = startNode.G + startNode.H
+	startNode.F = startNode.H * options.heuristicWeight
+	open := NodeHeap{startNode}
+	heap.Init(&open)
+	nodes := map[protocol.Position]*Node{startPos: startNode}
+	closed := make(map[protocol.Position]struct{}, min(options.maxNodes, 256))
+	best := startNode
 
-	heap.Push(openSet, startNode)
-	allNodes[startPos] = startNode
-
-	// 追蹤走過的節點數量，以及目前最靠近終點的節點（防禦性設計）
-	nodesExplored := 0
-	bestNode := startNode
-
-	for openSet.Len() > 0 {
-		// 檢查是否超過最大節點搜尋限制
-		if maxNodeCount > 0 && nodesExplored >= maxNodeCount {
-			// 選擇 1：返回目前為止最接近終點的路徑（推薦，機器人不會卡死）
-			return reconstructPath(bestNode), ErrMaxNodesExceeded
+	for open.Len() > 0 {
+		if len(closed) >= options.maxNodes {
+			return reconstructPath(best), ErrMaxNodesExceeded
 		}
-
-		current := heap.Pop(openSet).(*Node)
-		nodesExplored++
-
-		// 更新目前最接近終點的節點（根據啟發式距離 H，越小代表越接近終點）
-		if current.H < bestNode.H {
-			bestNode = current
+		current := heap.Pop(&open).(*Node)
+		if _, alreadyClosed := closed[current.Position]; alreadyClosed {
+			continue
 		}
-
-		// 找到終點，開始回溯路徑
-		if current.Position == goalPos {
+		if current.H < best.H {
+			best = current
+		}
+		if reachedGoal(current.Position, goal, options.goalDistance) {
 			return reconstructPath(current), nil
 		}
+		closed[current.Position] = struct{}{}
 
-		closedSet[current.Position] = true
-
-		// 檢查 6 個方向的相鄰節點
-		for _, neighbor := range getNeighbors(current.Position) {
-			if closedSet[neighbor] {
+		for _, neighbor := range minecraftNeighbors(current.Position, walkable.walkable) {
+			if _, visited := closed[neighbor]; visited {
 				continue
 			}
-
-			// 檢查該位置機器人是否容納得下
-			if !isWalkable(world, neighbor) {
-				continue
-			}
-
-			tentativeG := current.G + distance(current.Position, neighbor)
-
-			neighborNode, exists := allNodes[neighbor]
+			candidateG := current.G + cellDistance(current.Position, neighbor)
+			node, exists := nodes[neighbor]
 			if !exists {
-				neighborNode = &Node{
+				node = &Node{
 					Position: neighbor,
 					G:        math.Inf(1),
-					H:        heuristic(neighbor, goalPos),
+					H:        goalHeuristic(neighbor, goal, options.goalDistance),
 					Index:    -1,
 				}
-				allNodes[neighbor] = neighborNode
+				nodes[neighbor] = node
 			}
-
-			// 如果這條路徑比之前找到的更好，更新節點資訊
-			if tentativeG < neighborNode.G {
-				neighborNode.Parent = current
-				neighborNode.G = tentativeG
-				neighborNode.F = neighborNode.G + neighborNode.H
-
-				if neighborNode.Index == -1 {
-					heap.Push(openSet, neighborNode)
-				} else {
-					heap.Fix(openSet, neighborNode.Index)
-				}
+			if candidateG >= node.G {
+				continue
+			}
+			node.Parent = current
+			node.G = candidateG
+			node.F = candidateG + node.H*options.heuristicWeight
+			if node.Index < 0 {
+				heap.Push(&open, node)
+			} else {
+				heap.Fix(&open, node.Index)
 			}
 		}
 	}
-
-	return nil, nil // 找不到路徑
+	return nil, nil
 }
 
-// heuristic 計算啟發式距離（曼哈頓距離）
-func heuristic(a, b protocol.Position) float64 {
-	return math.Abs(float64(a[0]-b[0])) + math.Abs(float64(a[1]-b[1])) + math.Abs(float64(a[2]-b[2]))
-}
-
-// distance 計算兩點間的實際距離
-func distance(a, b protocol.Position) float64 {
-	dx := float64(a[0] - b[0])
-	dy := float64(a[1] - b[1])
-	dz := float64(a[2] - b[2])
-	return math.Sqrt(dx*dx + dy*dy + dz*dz)
-}
-
-// getNeighbors 獲取相鄰節點
-func getNeighbors(pos protocol.Position) []protocol.Position {
-	neighbors := []protocol.Position{
-		{pos[0] + 1, pos[1], pos[2]}, // 東
-		{pos[0] - 1, pos[1], pos[2]}, // 西
-		{pos[0], pos[1], pos[2] + 1}, // 南
-		{pos[0], pos[1], pos[2] - 1}, // 北
-		{pos[0], pos[1] + 1, pos[2]}, // 上
-		{pos[0], pos[1] - 1, pos[2]}, // 下
+func minecraftNeighbors(pos protocol.Position, walkable func(protocol.Position) bool) []protocol.Position {
+	directions := [...]protocol.Position{
+		{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1},
+		{1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1},
+	}
+	neighbors := make([]protocol.Position, 0, len(directions))
+	for _, direction := range directions {
+		sameLevel := protocol.Position{pos[0] + direction[0], pos[1], pos[2] + direction[2]}
+		diagonal := direction[0] != 0 && direction[2] != 0
+		if walkable(sameLevel) && (!diagonal || diagonalClear(pos, direction, walkable)) {
+			neighbors = append(neighbors, sameLevel)
+			continue
+		}
+		if diagonal {
+			continue
+		}
+		stepUp := protocol.Position{sameLevel[0], sameLevel[1] + 1, sameLevel[2]}
+		if walkable(stepUp) {
+			neighbors = append(neighbors, stepUp)
+			continue
+		}
+		stepDown := protocol.Position{sameLevel[0], sameLevel[1] - 1, sameLevel[2]}
+		if walkable(stepDown) {
+			neighbors = append(neighbors, stepDown)
+		}
 	}
 	return neighbors
 }
 
-// isWalkable 檢查位置是否可通行
+func diagonalClear(pos, direction protocol.Position, walkable func(protocol.Position) bool) bool {
+	return walkable(protocol.Position{pos[0] + direction[0], pos[1], pos[2]}) &&
+		walkable(protocol.Position{pos[0], pos[1], pos[2] + direction[2]})
+}
+
+func vectorCell(value mgl64.Vec3) protocol.Position {
+	return protocol.Position{
+		int32(math.Floor(value.X())),
+		int32(math.Floor(value.Y())),
+		int32(math.Floor(value.Z())),
+	}
+}
+
+func cellVector(pos protocol.Position) mgl64.Vec3 {
+	return mgl64.Vec3{float64(pos[0]), float64(pos[1]), float64(pos[2])}
+}
+
+func cellCenter(pos protocol.Position) mgl64.Vec3 {
+	return mgl64.Vec3{float64(pos[0]) + 0.5, float64(pos[1]), float64(pos[2]) + 0.5}
+}
+
+func reachedGoal(pos protocol.Position, goal mgl64.Vec3, goalDistance float64) bool {
+	if goalDistance == 0 {
+		return pos == vectorCell(goal)
+	}
+	return cellCenter(pos).Sub(goal).LenSqr() <= goalDistance*goalDistance
+}
+
+func goalHeuristic(pos protocol.Position, goal mgl64.Vec3, goalDistance float64) float64 {
+	delta := cellCenter(pos).Sub(goal)
+	horizontalMin := min(math.Abs(delta.X()), math.Abs(delta.Z()))
+	horizontalMax := max(math.Abs(delta.X()), math.Abs(delta.Z()))
+	octile := horizontalMax + (math.Sqrt2-1)*horizontalMin
+	estimate := octile + math.Abs(delta.Y())
+	return max(0, estimate-goalDistance)
+}
+
+func cellDistance(left, right protocol.Position) float64 {
+	dx := float64(left[0] - right[0])
+	dy := float64(left[1] - right[1])
+	dz := float64(left[2] - right[2])
+	return math.Sqrt(dx*dx + dy*dy + dz*dz)
+}
+
+func positionLess(left, right protocol.Position) bool {
+	if left[1] != right[1] {
+		return left[1] < right[1]
+	}
+	if left[0] != right[0] {
+		return left[0] < right[0]
+	}
+	return left[2] < right[2]
+}
+
 func isWalkable(world bot.World, pos protocol.Position) bool {
-	// 檢查腳部位置
 	footBlock, err := world.GetBlock(pos)
 	if err != nil {
 		return false
 	}
-
-	// 檢查頭部位置
-	headPos := protocol.Position{pos[0], pos[1] + 1, pos[2]}
-	headBlock, err := world.GetBlock(headPos)
+	headBlock, err := world.GetBlock(protocol.Position{pos[0], pos[1] + 1, pos[2]})
 	if err != nil {
 		return false
 	}
-
-	supportPos := protocol.Position{pos[0], pos[1] - 1, pos[2]}
-	supportBlock, err := world.GetBlock(supportPos)
+	supportBlock, err := world.GetBlock(protocol.Position{pos[0], pos[1] - 1, pos[2]})
 	if err != nil {
 		return false
 	}
-
 	return block.IsAirBlock(footBlock) && block.IsAirBlock(headBlock) && !block.IsAirBlock(supportBlock)
 }
 
-// reconstructPath 重建路徑
-func reconstructPath(node *Node) []mgl64.Vec3 {
-	var path []mgl64.Vec3
-	current := node
-
-	for current != nil {
-		pos := mgl64.Vec3{
-			float64(current.Position[0]),
-			float64(current.Position[1]),
-			float64(current.Position[2]),
-		}
-		path = append([]mgl64.Vec3{pos}, path...)
-		current = current.Parent
+func reconstructPath(last *Node) []mgl64.Vec3 {
+	length := 0
+	for node := last; node != nil; node = node.Parent {
+		length++
 	}
-
+	path := make([]mgl64.Vec3, length)
+	for index, node := length-1, last; node != nil; index, node = index-1, node.Parent {
+		path[index] = cellVector(node.Position)
+	}
 	return path
 }

@@ -164,16 +164,39 @@ func TestManagerLoginAndRespawnClearOpenContainerWithoutClientClose(t *testing.T
 		m := NewManager(c)
 		c.inventory = m
 		c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+		c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+			CarriedItem: slot.Slot{ItemID: 7, Count: 1},
+		})
 		c.handler.HandlePacket(context.Background(), lifecyclePacket)
 
 		title := m.CurrentMenuTitle()
 		if m.CurrentContainerID() != -1 || m.CurrentMenuType() != -1 ||
-			title.ClearString() != "" || m.Container() != nil {
-			t.Fatalf("%T left stale container: id=%d type=%d title=%#v container=%#v",
-				lifecyclePacket, m.CurrentContainerID(), m.CurrentMenuType(), m.CurrentMenuTitle(), m.Container())
+			title.ClearString() != "" || m.Container() != nil || m.Cursor() != nil {
+			t.Fatalf("%T left stale inventory state: id=%d type=%d title=%#v container=%#v cursor=%#v",
+				lifecyclePacket, m.CurrentContainerID(), m.CurrentMenuType(), m.CurrentMenuTitle(), m.Container(), m.Cursor())
 		}
 		if len(c.writes) != 0 {
 			t.Fatalf("%T sent an unnecessary client close packet: %#v", lifecyclePacket, c.writes)
+		}
+	}
+}
+
+func TestManagerLoginAndRespawnClearCursorWithoutOpenContainer(t *testing.T) {
+	for _, lifecyclePacket := range []gameclient.ClientboundPacket{
+		&gameclient.Login{},
+		&gameclient.Respawn{},
+	} {
+		c := newInventoryTestClient()
+		m := NewManager(c)
+		c.inventory = m
+		c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+			CarriedItem: slot.Slot{ItemID: 7, Count: 1},
+		})
+
+		c.handler.HandlePacket(context.Background(), lifecyclePacket)
+
+		if cursor := m.Cursor(); cursor != nil {
+			t.Fatalf("%T left cursor without an open container: %#v", lifecyclePacket, cursor)
 		}
 	}
 }

@@ -173,9 +173,7 @@ func (m *Manager) Close() {
 func (m *Manager) resetCurrentContainerFromLifecycle() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.currentContainerID >= 0 {
-		m.resetCurrentContainerLocked()
-	}
+	m.resetCurrentContainerLocked()
 }
 
 func (m *Manager) resetCurrentContainerLocked() {

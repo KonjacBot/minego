@@ -270,8 +270,20 @@ func vecString(v mgl64.Vec3) string {
 	return fmt.Sprintf("%.2f,%.2f,%.2f", v.X(), v.Y(), v.Z())
 }
 
-// WalkTo 使用 A* 演算法步行到指定位置
+// WalkTo uses fast A* to walk to an exact cell.
 func (p *Player) WalkTo(pos mgl64.Vec3) error {
+	return p.walkTo(pos, 0)
+}
+
+// WalkToWithin walks to the closest reachable cell within maxDistance of pos.
+func (p *Player) WalkToWithin(pos mgl64.Vec3, maxDistance float64) error {
+	if maxDistance < 0 {
+		return fmt.Errorf("walk target distance must not be negative: %f", maxDistance)
+	}
+	return p.walkTo(pos, maxDistance)
+}
+
+func (p *Player) walkTo(pos mgl64.Vec3, maxDistance float64) error {
 	if p.c == nil {
 		return fmt.Errorf("client is not initialized")
 	}
@@ -282,7 +294,7 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 
 	currentPos := p.entity.Position()
 
-	path, err := AStar(p.c.World(), currentPos, pos, 4096)
+	path, err := FastAStarWithin(p.c.World(), currentPos, pos, 4096, maxDistance)
 	if err != nil {
 		return fmt.Errorf("failed to find path: %w", err)
 	}
@@ -293,14 +305,16 @@ func (p *Player) WalkTo(pos mgl64.Vec3) error {
 
 	// 沿著路徑移動
 	for _, waypoint := range path {
+		destination := mgl64.Vec3{waypoint.X() + 0.5, waypoint.Y(), waypoint.Z() + 0.5}
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
-			X:     waypoint.X() + 0.5,
-			FeetY: waypoint.Y(),
-			Z:     waypoint.Z() + 0.5,
+			X:     destination.X(),
+			FeetY: destination.Y(),
+			Z:     destination.Z(),
 			Flags: 0x0,
 		}); err != nil {
 			return fmt.Errorf("failed to move to waypoint: %w", err)
 		}
+		p.entity.SetPosition(destination)
 
 		time.Sleep(10 * time.Millisecond)
 	}

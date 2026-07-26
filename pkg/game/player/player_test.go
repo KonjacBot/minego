@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-gl/mathgl/mgl64"
+
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/entity"
 	"github.com/KonjacBot/go-mc/data/packetid"
@@ -35,6 +37,24 @@ func TestOpenContainerRefusesAirBlock(t *testing.T) {
 	}
 	if c.writes != 0 {
 		t.Fatalf("WritePacket calls = %d, want 0", c.writes)
+	}
+}
+
+func TestWalkToWithinStopsNearGoalAndUpdatesPosition(t *testing.T) {
+	c := &openContainerTestClient{world: openPlanePathWorld{}}
+	p := New(c)
+	p.entity.SetPosition(mgl64.Vec3{0.5, 1, 0.5})
+	goal := mgl64.Vec3{10.5, 1.5, 0.5}
+
+	if err := p.WalkToWithin(goal, 4.5); err != nil {
+		t.Fatal(err)
+	}
+	at := p.entity.Position()
+	if !reachedGoal(vectorCell(at), goal, 4.5) {
+		t.Fatalf("player stopped at %v outside range of %v", at, goal)
+	}
+	if vectorCell(at) == vectorCell(goal) {
+		t.Fatalf("player walked to exact goal instead of stopping within range: %v", at)
 	}
 }
 
