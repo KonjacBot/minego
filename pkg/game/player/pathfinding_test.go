@@ -45,6 +45,22 @@ func BenchmarkFastAStarWithinOpenPlane80(b *testing.B) {
 	}
 }
 
+func BenchmarkFastFlightAStarWithinOpenAir80(b *testing.B) {
+	world := openPlanePathWorld{}
+	start := mgl64.Vec3{0.5, 3, 0.5}
+	goal := mgl64.Vec3{80.5, 3.5, 80.5}
+	b.ResetTimer()
+	for range b.N {
+		path, err := FastFlightAStarWithin(world, start, goal, 4096, 4.5)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if len(path) == 0 {
+			b.Fatal("no path")
+		}
+	}
+}
+
 func TestFastAStarWithinStopsAtInteractionRange(t *testing.T) {
 	world := openPlanePathWorld{}
 	goal := mgl64.Vec3{20.5, 1.5, 0.5}
@@ -75,6 +91,28 @@ func TestFastAStarWithinAllowsBlockedExactGoal(t *testing.T) {
 	}
 	if len(path) == 0 || !reachedGoal(vectorCell(path[len(path)-1]), goal, 4.5) {
 		t.Fatalf("path did not stop near blocked goal: %v", path)
+	}
+}
+
+func TestFastFlightAStarWithinTraversesUnsupportedAir(t *testing.T) {
+	world := openPlanePathWorld{}
+	start := mgl64.Vec3{0.5, 3, 0.5}
+	goal := mgl64.Vec3{10.5, 3.5, 0.5}
+
+	groundPath, err := FastAStarWithin(world, start, goal, 4096, 4.5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groundPath) != 0 {
+		t.Fatalf("ground path unexpectedly crossed unsupported air: %v", groundPath)
+	}
+
+	flightPath, err := FastFlightAStarWithin(world, start, goal, 4096, 4.5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(flightPath) == 0 || !reachedGoal(vectorCell(flightPath[len(flightPath)-1]), goal, 4.5) {
+		t.Fatalf("flight path did not reach target range: %v", flightPath)
 	}
 }
 
@@ -119,7 +157,7 @@ func (world openPlanePathWorld) GetBlock(pos protocol.Position) (block.Block, er
 	switch pos[1] {
 	case 0:
 		return block.Stone{}, nil
-	case 1, 2, 3:
+	case 1, 2, 3, 4:
 		return block.Air{}, nil
 	default:
 		return nil, errors.New("block not loaded")

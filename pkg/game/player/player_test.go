@@ -58,6 +58,22 @@ func TestWalkToWithinStopsNearGoalAndUpdatesPosition(t *testing.T) {
 	}
 }
 
+func TestFlyToWithinUsesUnsupportedAirPath(t *testing.T) {
+	c := &openContainerTestClient{world: openPlanePathWorld{}}
+	p := New(c)
+	p.abilities = 0x04
+	p.entity.SetPosition(mgl64.Vec3{0.5, 3, 0.5})
+	goal := mgl64.Vec3{10.5, 3.5, 0.5}
+
+	if err := p.FlyToWithin(goal, 4.5); err != nil {
+		t.Fatal(err)
+	}
+	at := p.entity.Position()
+	if !reachedGoal(vectorCell(at), goal, 4.5) {
+		t.Fatalf("player stopped at %v outside range of %v", at, goal)
+	}
+}
+
 type openContainerTestClient struct {
 	world     bot.World
 	inventory bot.InventoryHandler

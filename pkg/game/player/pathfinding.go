@@ -62,15 +62,21 @@ type pathSearchOptions struct {
 	maxNodes        int
 	goalDistance    float64
 	heuristicWeight float64
+	flight          bool
 }
 
 type walkabilityCache struct {
 	world  bot.World
+	flight bool
 	values map[protocol.Position]bool
 }
 
-func newWalkabilityCache(world bot.World) *walkabilityCache {
-	return &walkabilityCache{world: world, values: make(map[protocol.Position]bool)}
+func newWalkabilityCache(world bot.World, flight ...bool) *walkabilityCache {
+	cache := &walkabilityCache{world: world, values: make(map[protocol.Position]bool)}
+	if len(flight) > 0 {
+		cache.flight = flight[0]
+	}
+	return cache
 }
 
 func (cache *walkabilityCache) walkable(pos protocol.Position) bool {
@@ -78,6 +84,9 @@ func (cache *walkabilityCache) walkable(pos protocol.Position) bool {
 		return value
 	}
 	value := isWalkable(cache.world, pos)
+	if cache.flight {
+		value = canFlyThrough(cache.world, pos)
+	}
 	cache.values[pos] = value
 	return value
 }
@@ -99,6 +108,15 @@ func FastAStarWithin(world bot.World, start, goal mgl64.Vec3, maxNodeCount int, 
 	})
 }
 
+// FastFlightAStarWithin finds a bounded six-direction path through spaces that
+// fit the player's feet and head. Unlike walking paths, it does not require a
+// supporting block below every waypoint.
+func FastFlightAStarWithin(world bot.World, start, goal mgl64.Vec3, maxNodeCount int, goalDistance float64) ([]mgl64.Vec3, error) {
+	return findPath(world, start, goal, pathSearchOptions{
+		maxNodes: maxNodeCount, goalDistance: max(0, goalDistance), heuristicWeight: fastAStarHeuristicWeight, flight: true,
+	})
+}
+
 func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions) ([]mgl64.Vec3, error) {
 	startPos := vectorCell(start)
 	goalPos := vectorCell(goal)
@@ -109,7 +127,7 @@ func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions
 		options.heuristicWeight = 1
 	}
 
-	walkable := newWalkabilityCache(world)
+	walkable := newWalkabilityCache(world, options.flight)
 	if reachedGoal(startPos, goal, options.goalDistance) {
 		return []mgl64.Vec3{cellVector(startPos)}, nil
 	}
@@ -119,7 +137,7 @@ func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions
 
 	startNode := &Node{
 		Position: startPos,
-		H:        goalHeuristic(startPos, goal, options.goalDistance),
+		H:        goalHeuristic(startPos, goal, options.goalDistance, options.flight),
 		Index:    0,
 	}
 	startNode.F = startNode.H * options.heuristicWeight
@@ -145,7 +163,11 @@ func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions
 		}
 		closed[current.Position] = struct{}{}
 
-		for _, neighbor := range minecraftNeighbors(current.Position, walkable.walkable) {
+		neighbors := minecraftNeighbors(current.Position, walkable.walkable)
+		if options.flight {
+			neighbors = flightNeighbors(current.Position, walkable.walkable)
+		}
+		for _, neighbor := range neighbors {
 			if _, visited := closed[neighbor]; visited {
 				continue
 			}
@@ -155,7 +177,7 @@ func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions
 				node = &Node{
 					Position: neighbor,
 					G:        math.Inf(1),
-					H:        goalHeuristic(neighbor, goal, options.goalDistance),
+					H:        goalHeuristic(neighbor, goal, options.goalDistance, options.flight),
 					Index:    -1,
 				}
 				nodes[neighbor] = node
@@ -174,6 +196,20 @@ func findPath(world bot.World, start, goal mgl64.Vec3, options pathSearchOptions
 		}
 	}
 	return nil, nil
+}
+
+func flightNeighbors(pos protocol.Position, canFit func(protocol.Position) bool) []protocol.Position {
+	directions := [...]protocol.Position{
+		{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0},
+	}
+	neighbors := make([]protocol.Position, 0, len(directions))
+	for _, direction := range directions {
+		candidate := protocol.Position{pos[0] + direction[0], pos[1] + direction[1], pos[2] + direction[2]}
+		if canFit(candidate) {
+			neighbors = append(neighbors, candidate)
+		}
+	}
+	return neighbors
 }
 
 func minecraftNeighbors(pos protocol.Position, walkable func(protocol.Position) bool) []protocol.Position {
@@ -233,8 +269,12 @@ func reachedGoal(pos protocol.Position, goal mgl64.Vec3, goalDistance float64) b
 	return cellCenter(pos).Sub(goal).LenSqr() <= goalDistance*goalDistance
 }
 
-func goalHeuristic(pos protocol.Position, goal mgl64.Vec3, goalDistance float64) float64 {
+func goalHeuristic(pos protocol.Position, goal mgl64.Vec3, goalDistance float64, flight bool) float64 {
 	delta := cellCenter(pos).Sub(goal)
+	if flight {
+		estimate := math.Abs(delta.X()) + math.Abs(delta.Y()) + math.Abs(delta.Z())
+		return max(0, estimate-goalDistance)
+	}
 	horizontalMin := min(math.Abs(delta.X()), math.Abs(delta.Z()))
 	horizontalMax := max(math.Abs(delta.X()), math.Abs(delta.Z()))
 	octile := horizontalMax + (math.Sqrt2-1)*horizontalMin
@@ -273,6 +313,18 @@ func isWalkable(world bot.World, pos protocol.Position) bool {
 		return false
 	}
 	return block.IsAirBlock(footBlock) && block.IsAirBlock(headBlock) && !block.IsAirBlock(supportBlock)
+}
+
+func canFlyThrough(world bot.World, pos protocol.Position) bool {
+	footBlock, err := world.GetBlock(pos)
+	if err != nil {
+		return false
+	}
+	headBlock, err := world.GetBlock(protocol.Position{pos[0], pos[1] + 1, pos[2]})
+	if err != nil {
+		return false
+	}
+	return block.IsAirBlock(footBlock) && block.IsAirBlock(headBlock)
 }
 
 func reconstructPath(last *Node) []mgl64.Vec3 {

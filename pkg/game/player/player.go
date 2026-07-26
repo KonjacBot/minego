@@ -280,10 +280,29 @@ func (p *Player) WalkToWithin(pos mgl64.Vec3, maxDistance float64) error {
 	if maxDistance < 0 {
 		return fmt.Errorf("walk target distance must not be negative: %f", maxDistance)
 	}
-	return p.walkTo(pos, maxDistance)
+	return p.movePathTo(pos, maxDistance, false)
 }
 
 func (p *Player) walkTo(pos mgl64.Vec3, maxDistance float64) error {
+	return p.movePathTo(pos, maxDistance, false)
+}
+
+// FlyToWithin follows a bounded voxel path through two-block-high air and
+// stops within maxDistance of pos.
+func (p *Player) FlyToWithin(pos mgl64.Vec3, maxDistance float64) error {
+	if maxDistance < 0 {
+		return fmt.Errorf("flight target distance must not be negative: %f", maxDistance)
+	}
+	p.mu.RLock()
+	canFly := p.abilities&0x04 != 0
+	p.mu.RUnlock()
+	if !canFly {
+		return fmt.Errorf("player abilities not requirements")
+	}
+	return p.movePathTo(pos, maxDistance, true)
+}
+
+func (p *Player) movePathTo(pos mgl64.Vec3, maxDistance float64, flight bool) error {
 	if p.c == nil {
 		return fmt.Errorf("client is not initialized")
 	}
@@ -294,7 +313,13 @@ func (p *Player) walkTo(pos mgl64.Vec3, maxDistance float64) error {
 
 	currentPos := p.entity.Position()
 
-	path, err := FastAStarWithin(p.c.World(), currentPos, pos, 4096, maxDistance)
+	var path []mgl64.Vec3
+	var err error
+	if flight {
+		path, err = FastFlightAStarWithin(p.c.World(), currentPos, pos, 4096, maxDistance)
+	} else {
+		path, err = FastAStarWithin(p.c.World(), currentPos, pos, 4096, maxDistance)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to find path: %w", err)
 	}
