@@ -166,8 +166,10 @@ type OnlineAuthServer struct {
 }
 
 type OnlineAuth struct {
-	AccessToken string
-	Profile     Profile
+	AccessToken    string
+	Profile        Profile
+	SessionJoinURL string
+	HTTPClient     *http.Client
 }
 
 func (o *OnlineAuth) Authenticate(ctx context.Context, conn *net.Conn, content client.LoginHello) error {
@@ -242,15 +244,27 @@ func (o *OnlineAuth) LoginAuth(ctx context.Context, content client.LoginHello, k
 		return errors.Join(ErrEncrypt, fmt.Errorf("marshal session request fail: %w", err))
 	}
 
-	PostRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://sessionserver.mojang.com/session/minecraft/join",
-		bytes.NewReader(request))
+	sessionJoinURL := o.SessionJoinURL
+	if sessionJoinURL == "" {
+		sessionJoinURL = "https://sessionserver.mojang.com/session/minecraft/join"
+	}
+	PostRequest, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		sessionJoinURL,
+		bytes.NewReader(request),
+	)
 	if err != nil {
 		return errors.Join(ErrEncrypt, fmt.Errorf("make request fail: %w", err))
 	}
 	PostRequest.Header.Set("User-agent", "go-mc")
 	PostRequest.Header.Set("Connection", "keep-alive")
 	PostRequest.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(PostRequest)
+	httpClient := o.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	resp, err := httpClient.Do(PostRequest)
 	if err != nil {
 		return errors.Join(ErrEncrypt, fmt.Errorf("session mojang fail: %w", err))
 	}

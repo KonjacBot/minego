@@ -53,7 +53,7 @@ func (s Slot) String() string {
 	return baseItem
 }
 
-func (s *Slot) WriteTo(w io.Writer) (n int64, err error) {
+func (s Slot) WriteTo(w io.Writer) (n int64, err error) {
 	temp, err := pk.VarInt(s.Count).WriteTo(w)
 	n += temp
 	if err != nil {

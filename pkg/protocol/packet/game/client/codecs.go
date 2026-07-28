@@ -3808,6 +3808,11 @@ func (c *RecipeBookSettings) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookFilterEnabled).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = (*packet.Boolean)(&c.SmokingRecipeBookOpen).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -3844,6 +3849,11 @@ func (c RecipeBookSettings) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookOpen).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.BlastingFurnaceRecipeBookFilterEnabled).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

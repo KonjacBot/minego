@@ -16,6 +16,7 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol"
 	"github.com/KonjacBot/minego/pkg/protocol/packet"
 
 	"github.com/KonjacBot/minego/pkg/auth"
@@ -207,7 +208,7 @@ func (b *botClient) HandleGame(ctx context.Context) error {
 func (b *botClient) handshake(ctx context.Context, host string, port uint64) error {
 	return b.writeRawPacket(ctx, pk.Marshal(
 		0,
-		pk.VarInt(776), // TODO 版本更新時要記得改 current: 26.2
+		pk.VarInt(protocol.ProtocolVersion),
 		pk.String(host),
 		pk.UnsignedShort(port),
 		pk.VarInt(2), // to game state

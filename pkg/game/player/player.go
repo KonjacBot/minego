@@ -47,6 +47,7 @@ func New(c bot.Client) *Player {
 		//	}
 		//}()
 	})
+	var reportLoaded sync.Once
 
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
 		pl.mu.Lock()
@@ -57,6 +58,14 @@ func New(c bot.Client) *Player {
 	bot.AddHandler(c, func(ctx context.Context, p *client.KeepAlive) {
 		_ = c.WritePacket(ctx, &server.KeepAlive{
 			ID: p.ID,
+		})
+	})
+	bot.AddHandler(c, func(ctx context.Context, _ *client.ChunkBatchFinished) {
+		_ = c.WritePacket(ctx, &server.ChunkBatchReceived{
+			ChunksPerTick: 64,
+		})
+		reportLoaded.Do(func() {
+			_ = c.WritePacket(ctx, &server.PlayerLoaded{})
 		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerAbilities) {
@@ -330,6 +339,14 @@ func (p *Player) movePathTo(pos mgl64.Vec3, maxDistance float64, flight bool) er
 
 	// 沿著路徑移動
 	for _, waypoint := range path {
+		if flight {
+			p.mu.RLock()
+			canFly := p.abilities&0x04 != 0
+			p.mu.RUnlock()
+			if !canFly {
+				return fmt.Errorf("player abilities not requirements")
+			}
+		}
 		destination := mgl64.Vec3{waypoint.X() + 0.5, waypoint.Y(), waypoint.Z() + 0.5}
 		if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
 			X:     destination.X(),

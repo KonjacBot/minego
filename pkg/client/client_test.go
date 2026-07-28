@@ -12,6 +12,7 @@ import (
 	mcnet "github.com/KonjacBot/go-mc/net"
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
+	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
@@ -46,6 +47,18 @@ func TestConfigurationReturnsReadError(t *testing.T) {
 	defer cancel()
 	if err := b.configuration(ctx); err == nil {
 		t.Fatal("configuration() returned nil after peer closed")
+	}
+}
+
+func TestSupportedKnownPacksSelectsOnlyMatchingCorePack(t *testing.T) {
+	offered := []configclient.KnownPack{
+		{Namespace: "example", ID: "custom", Version: "1"},
+		{Namespace: "minecraft", ID: "core", Version: "26.1"},
+		{Namespace: "minecraft", ID: "core", Version: "26.2"},
+	}
+	selected := supportedKnownPacks(offered)
+	if len(selected) != 1 || selected[0] != offered[2] {
+		t.Fatalf("selected packs = %+v", selected)
 	}
 }
 
@@ -85,7 +98,7 @@ func TestHandleGameReturnsAfterReadIdleTimeout(t *testing.T) {
 
 	started := time.Now()
 	err := b.HandleGame(context.Background())
-	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+	if !isNetworkTimeout(err) {
 		t.Fatalf("HandleGame() error = %v, want network timeout", err)
 	}
 	if elapsed := time.Since(started); elapsed > 500*time.Millisecond {
@@ -102,7 +115,7 @@ func TestConfigurationReturnsAfterReadIdleTimeout(t *testing.T) {
 	}
 
 	err := b.configuration(context.Background())
-	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+	if !isNetworkTimeout(err) {
 		t.Fatalf("configuration() error = %v, want network timeout", err)
 	}
 }
@@ -120,9 +133,14 @@ func TestLoginReturnsAfterReadIdleTimeout(t *testing.T) {
 	}
 
 	err := b.login(context.Background())
-	if timeoutErr, ok := errors.AsType[net.Error](err); !ok || !timeoutErr.Timeout() {
+	if !isNetworkTimeout(err) {
 		t.Fatalf("login() error = %v, want network timeout", err)
 	}
+}
+
+func isNetworkTimeout(err error) bool {
+	var networkError net.Error
+	return errors.As(err, &networkError) && networkError.Timeout()
 }
 
 func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
