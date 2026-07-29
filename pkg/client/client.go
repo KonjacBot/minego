@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -29,14 +30,17 @@ import (
 )
 
 type botClient struct {
-	conn            *mcnet.Conn
-	connMu          sync.RWMutex
-	writeMu         sync.Mutex
-	packetHandler   *packetHandler
-	eventHandler    bot.EventHandler
-	connected       atomic.Bool
-	authProvider    auth.Provider
-	readIdleTimeout time.Duration
+	conn               *mcnet.Conn
+	connMu             sync.RWMutex
+	writeMu            sync.Mutex
+	packetHandler      *packetHandler
+	eventHandler       bot.EventHandler
+	connected          atomic.Bool
+	authProvider       auth.Provider
+	readIdleTimeout    time.Duration
+	resourcePackPolicy bot.ResourcePackPolicy
+	cookieMu           sync.RWMutex
+	cookies            map[string][]int8
 
 	inventory *inventory.Manager
 	world     *world.World
@@ -286,9 +290,21 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 				case <-ctx.Done():
 					return context.Cause(ctx)
 				}
+				packetID := pktID
+				packetCopy := p
+				handler := h
 				handlers.Go(func() {
 					defer func() { <-semaphore }()
-					h(handlerCtx, p)
+					defer func() {
+						if recovered := recover(); recovered != nil {
+							slog.Error("raw packet handler panic",
+								"packet", packetID,
+								"error", recovered,
+								"stack", string(debug.Stack()),
+							)
+						}
+					}()
+					handler(handlerCtx, packetCopy)
 				})
 			}
 
@@ -321,15 +337,20 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 
 func NewClient(options *bot.ClientOptions) bot.Client {
 	c := &botClient{
-		packetHandler:   newPacketHandler(),
-		eventHandler:    NewEventHandler(),
-		readIdleTimeout: 30 * time.Second,
+		packetHandler:      newPacketHandler(),
+		eventHandler:       NewEventHandler(),
+		readIdleTimeout:    30 * time.Second,
+		resourcePackPolicy: bot.ResourcePackAccept,
+		cookies:            make(map[string][]int8),
 	}
 
 	if options != nil {
 		c.authProvider = options.AuthProvider
 		if options.ReadIdleTimeout > 0 {
 			c.readIdleTimeout = options.ReadIdleTimeout
+		}
+		if options.ResourcePackPolicy != "" {
+			c.resourcePackPolicy = options.ResourcePackPolicy
 		}
 	}
 	if c.authProvider == nil {
@@ -339,6 +360,52 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 	c.world = world.NewWorld(c)
 	c.inventory = inventory.NewManager(c)
 	c.player = player.New(c)
+	bot.AddHandler(c, func(ctx context.Context, packet *client.AddResourcePack) {
+		for _, result := range resourcePackResults(c.resourcePackPolicy) {
+			if err := c.WritePacket(ctx, &server.ResourcePack{UUID: packet.UUID, Result: result}); err != nil {
+				slog.Error("respond to play resource pack", "uuid", packet.UUID, "result", result, "err", err)
+				return
+			}
+		}
+	})
+	bot.AddHandler(c, func(_ context.Context, packet *client.StoreCookie) {
+		c.storeCookie(packet.Key, packet.Payload)
+	})
+	bot.AddHandler(c, func(ctx context.Context, packet *client.CookieRequest) {
+		response := c.cookieResponse(string(packet.Key))
+		if err := c.WritePacket(ctx, &response); err != nil {
+			slog.Error("respond to play cookie request", "key", packet.Key, "err", err)
+		}
+	})
 
 	return c
+}
+
+func resourcePackResults(policy bot.ResourcePackPolicy) []int32 {
+	if policy == bot.ResourcePackDecline {
+		return []int32{1}
+	}
+	// 3 = accepted, 0 = successfully loaded. Minego is headless and does not
+	// render assets, so it can safely acknowledge without downloading them.
+	return []int32{3, 0}
+}
+
+func (b *botClient) storeCookie(key string, payload []int8) {
+	b.cookieMu.Lock()
+	defer b.cookieMu.Unlock()
+	if b.cookies == nil {
+		b.cookies = make(map[string][]int8)
+	}
+	b.cookies[key] = append([]int8(nil), payload...)
+}
+
+func (b *botClient) cookieResponse(key string) server.CookieResponse {
+	b.cookieMu.RLock()
+	payload, ok := b.cookies[key]
+	b.cookieMu.RUnlock()
+	return server.CookieResponse{
+		Key:        key,
+		HasPayload: ok,
+		Payload:    append([]int8(nil), payload...),
+	}
 }

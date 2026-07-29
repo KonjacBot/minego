@@ -567,6 +567,7 @@ func (p *Player) Command(msg string) error {
 
 func (p *Player) Chat(msg string) error {
 	return p.c.WritePacket(context.Background(), &server.Chat{
-		Message: msg,
+		Message:   msg,
+		Timestamp: time.Now().UnixMilli(),
 	})
 }

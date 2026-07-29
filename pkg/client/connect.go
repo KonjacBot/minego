@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/KonjacBot/go-mc/chat"
@@ -14,6 +15,7 @@ import (
 	"github.com/KonjacBot/minego/pkg/protocol"
 	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
 	configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
+	gameserver "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
 
 func (b *botClient) login(ctx context.Context) error {
@@ -37,6 +39,23 @@ func (b *botClient) configuration(ctx context.Context) (err error) {
 }
 
 func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
+	information := configserver.ConfigClientInformation{
+		ClientInformation: gameserver.ClientInformation{
+			Location:            "zh_TW",
+			ViewDistance:        16,
+			ChatMode:            0,
+			ChatColor:           true,
+			DisplayedSkinParts:  127,
+			MainHand:            0,
+			EnableTextFiltering: false,
+			AllowListing:        true,
+			ParticleStatus:      0,
+		},
+	}
+	if err = b.writeRawPacket(ctx, pk.Marshal(information.PacketID(), &information)); err != nil {
+		return fmt.Errorf("write configuration client information: %w", err)
+	}
+
 	var p pk.Packet
 	for {
 		if err = b.setReadDeadline(ctx, conn); err != nil {
@@ -93,6 +112,38 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigSelectKnownPacks, &response))
 			if err != nil {
 				return err
+			}
+		case packetid.ClientboundConfigStoreCookie:
+			var stored configclient.ConfigStoreCookie
+			if err = p.Scan(&stored); err != nil {
+				return err
+			}
+			b.storeCookie(stored.Key, stored.Payload)
+		case packetid.ClientboundConfigCookieRequest:
+			var request configclient.ConfigCookieRequest
+			if err = p.Scan(&request); err != nil {
+				return err
+			}
+			gameResponse := b.cookieResponse(request.Key)
+			response := configserver.ConfigCookieResponse{CookieResponse: gameResponse}
+			if err = b.writeRawPacket(ctx, pk.Marshal(response.PacketID(), &response)); err != nil {
+				return err
+			}
+		case packetid.ClientboundConfigResourcePackPush:
+			var offered configclient.ConfigResourcePackPush
+			if err = p.Scan(&offered); err != nil {
+				return err
+			}
+			for _, result := range resourcePackResults(b.resourcePackPolicy) {
+				response := configserver.ConfigResourcePack{
+					ResourcePack: gameserver.ResourcePack{
+						UUID:   offered.UUID,
+						Result: result,
+					},
+				}
+				if err = b.writeRawPacket(ctx, pk.Marshal(response.PacketID(), &response)); err != nil {
+					return err
+				}
 			}
 		default:
 			continue

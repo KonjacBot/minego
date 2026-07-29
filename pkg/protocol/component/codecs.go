@@ -2475,55 +2475,6 @@ func (c Lock) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
-func (c *LodestoneTracker) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Boolean)(&c.HasGlobalPosition).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.Dimension).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.Position).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.Tracked).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-
-func (c LodestoneTracker) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.Boolean)(&c.HasGlobalPosition).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.Dimension).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.Position).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.Tracked).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
 func (c *Lore) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
 	temp, err = packet.Array(&c.Lines).ReadFrom(r)

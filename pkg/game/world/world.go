@@ -167,6 +167,24 @@ func NewWorld(c bot.Client) *World {
 			e.SetRotation(mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()})
 		}
 	})
+	bot.AddHandler(c, func(ctx context.Context, p *cp.TeleportEntity) {
+		w.entityLock.RLock()
+		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
+		if ok {
+			e.SetPosition(mgl64.Vec3{p.X, p.Y, p.Z})
+			e.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
+		}
+	})
+	bot.AddHandler(c, func(ctx context.Context, p *cp.SynchronizeVehiclePosition) {
+		w.entityLock.RLock()
+		e, ok := w.entities[p.EntityID]
+		w.entityLock.RUnlock()
+		if ok {
+			e.SetPosition(mgl64.Vec3{p.X, p.Y, p.Z})
+			e.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
+		}
+	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockUpdate) {
 		w.chunkLock.Lock()

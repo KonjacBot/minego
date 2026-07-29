@@ -31,6 +31,37 @@ func TestNewClientUsesConfiguredReadIdleTimeout(t *testing.T) {
 	}
 }
 
+func TestResourcePackResults(t *testing.T) {
+	if got := resourcePackResults(bot.ResourcePackDecline); len(got) != 1 || got[0] != 1 {
+		t.Fatalf("decline results = %v, want [1]", got)
+	}
+	if got := resourcePackResults(bot.ResourcePackAccept); len(got) != 2 || got[0] != 3 || got[1] != 0 {
+		t.Fatalf("accept results = %v, want [3 0]", got)
+	}
+	client := NewClient(&bot.ClientOptions{ResourcePackPolicy: bot.ResourcePackDecline}).(*botClient)
+	if client.resourcePackPolicy != bot.ResourcePackDecline {
+		t.Fatalf("resource pack policy = %q, want decline", client.resourcePackPolicy)
+	}
+}
+
+func TestCookieStoreClonesPayloadAndReturnsMissing(t *testing.T) {
+	client := NewClient(nil).(*botClient)
+	payload := []int8{1, 2, 3}
+	client.storeCookie("minecraft:test", payload)
+	payload[0] = 9
+	response := client.cookieResponse("minecraft:test")
+	if !response.HasPayload || len(response.Payload) != 3 || response.Payload[0] != 1 {
+		t.Fatalf("stored cookie response = %#v", response)
+	}
+	response.Payload[0] = 8
+	if got := client.cookieResponse("minecraft:test"); got.Payload[0] != 1 {
+		t.Fatalf("cookie response exposed internal payload: %#v", got)
+	}
+	if missing := client.cookieResponse("minecraft:missing"); missing.HasPayload || missing.Payload != nil {
+		t.Fatalf("missing cookie response = %#v", missing)
+	}
+}
+
 func TestCloseBeforeConnect(t *testing.T) {
 	c := NewClient(nil)
 	if err := c.Close(context.Background()); err != nil {
@@ -109,6 +140,9 @@ func TestHandleGameReturnsAfterReadIdleTimeout(t *testing.T) {
 func TestConfigurationReturnsAfterReadIdleTimeout(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer serverConn.Close()
+	go func() {
+		_, _ = io.Copy(io.Discard, serverConn)
+	}()
 	b := &botClient{
 		conn:            mcnet.WrapConn(clientConn),
 		readIdleTimeout: 25 * time.Millisecond,

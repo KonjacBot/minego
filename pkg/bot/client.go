@@ -27,7 +27,18 @@ type ClientOptions struct {
 	// ReadIdleTimeout is renewed before each login, configuration, and play
 	// packet read. Values at or below zero use the client default.
 	ReadIdleTimeout time.Duration
+	// ResourcePackPolicy controls the headless response to server resource
+	// packs. The accept policy acknowledges successful loading without
+	// downloading visual assets; decline reports that the pack was refused.
+	ResourcePackPolicy ResourcePackPolicy
 }
+
+type ResourcePackPolicy string
+
+const (
+	ResourcePackAccept  ResourcePackPolicy = "accept"
+	ResourcePackDecline ResourcePackPolicy = "decline"
+)
 
 type ProxyConfig struct {
 	Type     string `json:"type" toml:"type"`

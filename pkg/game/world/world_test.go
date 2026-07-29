@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-gl/mathgl/mgl64"
+
 	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
@@ -49,6 +51,39 @@ func TestRespawnClearsEntities(t *testing.T) {
 	c.handler.HandlePacket(context.Background(), &gameclient.Respawn{})
 	if entity := w.GetEntity(1); entity != nil {
 		t.Fatalf("entity survived respawn: %#v", entity)
+	}
+}
+
+func TestAbsoluteEntityAndVehiclePositionUpdates(t *testing.T) {
+	c := newWorldTestClient()
+	w := NewWorld(c)
+	c.world = w
+	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
+	c.handler.HandlePacket(context.Background(), &gameclient.TeleportEntity{
+		EntityID: 1,
+		X:        10,
+		Y:        64,
+		Z:        -4,
+		Yaw:      90,
+		Pitch:    15,
+	})
+	got := w.GetEntity(1)
+	if got == nil || got.Position() != (mgl64.Vec3{10, 64, -4}) ||
+		got.Rotation() != (mgl64.Vec2{90, 15}) {
+		t.Fatalf("teleported entity = %#v", got)
+	}
+
+	c.handler.HandlePacket(context.Background(), &gameclient.SynchronizeVehiclePosition{
+		EntityID: 1,
+		X:        20,
+		Y:        65,
+		Z:        3,
+		Yaw:      180,
+		Pitch:    -5,
+	})
+	if got.Position() != (mgl64.Vec3{20, 65, 3}) ||
+		got.Rotation() != (mgl64.Vec2{180, -5}) {
+		t.Fatalf("synchronized vehicle = position %v rotation %v", got.Position(), got.Rotation())
 	}
 }
 

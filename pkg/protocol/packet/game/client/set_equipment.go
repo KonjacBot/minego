@@ -18,7 +18,7 @@ type Equipment []EquipmentData
 func (e Equipment) WriteTo(w io.Writer) (n int64, err error) {
 	for i, equipment := range e {
 		b := equipment.Slot
-		if len(e)-1 == i {
+		if i != len(e)-1 {
 			b |= -128
 		}
 
@@ -54,7 +54,7 @@ func (e *Equipment) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 
 		*e = append(*e, equipment)
-		if n&-128 == 0 {
+		if b&-128 == 0 {
 			break
 		}
 	}
