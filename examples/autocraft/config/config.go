@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	Address     string              `toml:"address"`
+	Server      string              `toml:"server"`
 	Proxy       *bot.ProxyConfig    `toml:"proxy,omitempty"`
 	UserCode    string              `toml:"user_code"`
 	Owners      []string            `toml:"owners"`
@@ -25,6 +26,7 @@ func ReadConfig() (c Config, err error) {
 		if os.IsNotExist(err) {
 			data, err := toml.Marshal(Config{
 				Address:     "mcfallout.net",
+				Server:      "server71",
 				Proxy:       &bot.ProxyConfig{},
 				UserCode:    "artif",
 				Owners:      []string{},
@@ -47,6 +49,9 @@ func ReadConfig() (c Config, err error) {
 		return Config{}, err
 	}
 
+	// Keep the configured target deterministic for older config files that do
+	// not yet have a top-level server key. A top-level value still overrides it.
+	c.Server = "server71"
 	err = toml.Unmarshal(data, &c)
 	return c, err
 }

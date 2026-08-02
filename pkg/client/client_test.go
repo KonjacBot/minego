@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -9,9 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/pkg/protocol/packet"
 	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
@@ -179,7 +183,8 @@ func isNetworkTimeout(err error) bool {
 
 func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
 	conn := &countingConn{}
-	b := &botClient{conn: mcnet.WrapConn(conn)}
+	b := NewClient(nil).(*botClient)
+	b.conn = mcnet.WrapConn(conn)
 	b.writeMu.Lock()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -197,6 +202,167 @@ func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
 	if writes := conn.writes.Load(); writes != 0 {
 		t.Fatalf("canceled WritePacket performed %d writes", writes)
 	}
+}
+
+func TestWritePacketWaitsWhileConnectionIsConfiguring(t *testing.T) {
+	tests := []struct {
+		name     string
+		outbound server.ServerboundPacket
+	}{
+		{
+			name: "movement packet 30",
+			outbound: &server.MovePlayerPos{
+				X: 1, FeetY: 2, Z: 3,
+			},
+		},
+		{
+			name:     "set carried item packet 53",
+			outbound: &server.SetCarriedItem{Slot: 1},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testWritePacketWaitsWhileConnectionIsConfiguring(t, test.outbound)
+		})
+	}
+}
+
+func testWritePacketWaitsWhileConnectionIsConfiguring(t *testing.T, outbound server.ServerboundPacket) {
+	clientConn, serverConn := net.Pipe()
+	serverSide := mcnet.WrapConn(serverConn)
+	defer serverSide.Close()
+
+	b := NewClient(nil).(*botClient)
+	b.conn = mcnet.WrapConn(clientConn)
+	b.connected.Store(true)
+
+	enteredConfig := make(chan struct{})
+	releaseConfig := make(chan struct{})
+	b.eventHandler.SubscribeEvent(EventConnectionStateChange, func(event any) error {
+		change := event.(ConnectionStateChangeEvent)
+		if change.From == packet.StatePlay && change.To == packet.StateConfig {
+			close(enteredConfig)
+			<-releaseConfig
+		}
+		return nil
+	})
+
+	gameCtx, cancelGame := context.WithCancel(context.Background())
+	defer cancelGame()
+	gameDone := make(chan error, 1)
+	go func() {
+		gameDone <- b.HandleGame(gameCtx)
+	}()
+
+	startConfigDone := make(chan error, 1)
+	go func() {
+		startConfigDone <- writeTestPacket(serverConn, pk.Marshal(packetid.ClientboundStartConfiguration))
+	}()
+	select {
+	case <-enteredConfig:
+	case <-time.After(time.Second):
+		t.Fatal("client did not enter configuration state")
+	}
+
+	moveDone := make(chan error, 1)
+	go func() {
+		moveDone <- b.WritePacket(gameCtx, outbound)
+	}()
+
+	firstPacket := make(chan pk.Packet, 1)
+	firstReadErr := make(chan error, 1)
+	go func() {
+		var p pk.Packet
+		if err := serverSide.ReadPacket(&p); err != nil {
+			firstReadErr <- err
+			return
+		}
+		firstPacket <- p
+	}()
+
+	select {
+	case p := <-firstPacket:
+		t.Fatalf("packet %d was sent while connection was configuring", p.ID)
+	case err := <-firstReadErr:
+		t.Fatalf("read packet while checking configuration gate: %v", err)
+	case <-time.After(75 * time.Millisecond):
+	}
+
+	close(releaseConfig)
+	select {
+	case err := <-startConfigDone:
+		if err != nil {
+			t.Fatalf("write start configuration: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("writing start configuration did not finish")
+	}
+
+	var acknowledged pk.Packet
+	select {
+	case acknowledged = <-firstPacket:
+	case err := <-firstReadErr:
+		t.Fatalf("read configuration acknowledgement: %v", err)
+	case <-time.After(time.Second):
+		t.Fatal("configuration acknowledgement was not sent")
+	}
+	if acknowledged.ID != int32(packetid.ServerboundConfigurationAcknowledged) {
+		t.Fatalf("first configuration packet ID = %d, want acknowledgement %d", acknowledged.ID, packetid.ServerboundConfigurationAcknowledged)
+	}
+
+	var information pk.Packet
+	if err := serverSide.ReadPacket(&information); err != nil {
+		t.Fatalf("read configuration client information: %v", err)
+	}
+	if information.ID != int32(packetid.ServerboundConfigClientInformation) {
+		t.Fatalf("configuration packet ID = %d, want client information %d", information.ID, packetid.ServerboundConfigClientInformation)
+	}
+
+	finishConfigDone := make(chan error, 1)
+	go func() {
+		finishConfigDone <- writeTestPacket(serverConn, pk.Marshal(packetid.ClientboundConfigFinishConfiguration))
+	}()
+
+	var finished pk.Packet
+	if err := serverSide.ReadPacket(&finished); err != nil {
+		t.Fatalf("read finish configuration: %v", err)
+	}
+	if finished.ID != int32(packetid.ServerboundConfigFinishConfiguration) {
+		t.Fatalf("finish configuration packet ID = %d, want %d", finished.ID, packetid.ServerboundConfigFinishConfiguration)
+	}
+	if err := <-finishConfigDone; err != nil {
+		t.Fatalf("write finish configuration: %v", err)
+	}
+
+	var resumedPacket pk.Packet
+	if err := serverSide.ReadPacket(&resumedPacket); err != nil {
+		t.Fatalf("read Play packet after configuration: %v", err)
+	}
+	if resumedPacket.ID != int32(outbound.PacketID()) {
+		t.Fatalf("packet ID after configuration = %d, want %d", resumedPacket.ID, outbound.PacketID())
+	}
+	if err := <-moveDone; err != nil {
+		t.Fatalf("WritePacket() after configuration error = %v", err)
+	}
+
+	cancelGame()
+	select {
+	case err := <-gameDone:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("HandleGame() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("HandleGame did not stop after cancellation")
+	}
+}
+
+func writeTestPacket(conn net.Conn, packet pk.Packet) error {
+	var frame bytes.Buffer
+	if err := packet.Pack(&frame, -1); err != nil {
+		return err
+	}
+	_, err := conn.Write(frame.Bytes())
+	return err
 }
 
 type countingConn struct {

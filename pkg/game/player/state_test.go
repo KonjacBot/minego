@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"errors"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -63,6 +64,83 @@ func TestInteractionsUseIncreasingSequences(t *testing.T) {
 	}
 }
 
+func TestFlyToUsesAirborneMovementState(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+	p.abilities = 0x04
+
+	start := mgl64.Vec3{-474.5, 185, 5625.5}
+	target := mgl64.Vec3{-478, 184, 5622}
+	p.entity.SetPosition(start)
+	var groundedMovement bool
+	c.writeHook = func(packet server.ServerboundPacket) {
+		move, ok := packet.(*server.MovePlayerPos)
+		if !ok {
+			return
+		}
+		if move.Flags&0x01 != 0 {
+			groundedMovement = true
+		}
+	}
+
+	if err := p.FlyTo(target); err != nil {
+		t.Fatal(err)
+	}
+	if groundedMovement {
+		t.Fatal("FlyTo marked airborne movement as on-ground")
+	}
+}
+
+func TestFlyToPreservesWorkingFiveBlockWarehouseCadence(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+	p.abilities = 0x04
+
+	start := mgl64.Vec3{-474.5, 185, 5625.5}
+	target := mgl64.Vec3{-478, 184, 5622}
+	p.entity.SetPosition(start)
+
+	if err := p.FlyTo(target); err != nil {
+		t.Fatal(err)
+	}
+
+	var moves []mgl64.Vec3
+	for _, packet := range c.writes {
+		if move, ok := packet.(*server.MovePlayerPos); ok {
+			moves = append(moves, mgl64.Vec3{move.X, move.FeetY, move.Z})
+		}
+	}
+	if len(moves) != 1 {
+		t.Fatalf("warehouse flight packets = %d; want 1 using the working five-block cadence", len(moves))
+	}
+	if got := moves[0].Sub(start).Len(); math.Abs(got-5) > 0.001 {
+		t.Fatalf("first warehouse flight segment = %.3f blocks; want 5", got)
+	}
+}
+
+func TestFlyToRejectsImmediateServerCorrectionAtLargeCoordinates(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+	p.abilities = 0x04
+
+	start := mgl64.Vec3{-474.5, 185, 5625.5}
+	target := mgl64.Vec3{-478, 184, 5622}
+	p.entity.SetPosition(start)
+	var correction sync.Once
+	c.writeHook = func(packet server.ServerboundPacket) {
+		if _, ok := packet.(*server.MovePlayerPos); ok {
+			correction.Do(func() { p.entity.SetPosition(start) })
+		}
+	}
+
+	if err := p.FlyTo(target); err == nil {
+		t.Fatal("FlyTo accepted a server correction because large coordinates hid the movement delta")
+	}
+}
+
 func TestWaitForContainerReturnsNewInitializedWindow(t *testing.T) {
 	c := newStateTestClient()
 	inventory := &waitInventory{id: -1}
@@ -114,6 +192,7 @@ type stateTestClient struct {
 	player    bot.Player
 	inventory bot.InventoryHandler
 	writes    []server.ServerboundPacket
+	writeHook func(server.ServerboundPacket)
 }
 
 func newStateTestClient() *stateTestClient {
@@ -126,6 +205,9 @@ func (c *stateTestClient) Close(context.Context) error                          
 func (c *stateTestClient) IsConnected() bool                                          { return true }
 func (c *stateTestClient) WritePacket(_ context.Context, packet server.ServerboundPacket) error {
 	c.writes = append(c.writes, packet)
+	if c.writeHook != nil {
+		c.writeHook(packet)
+	}
 	return nil
 }
 func (c *stateTestClient) PacketHandler() bot.PacketHandler { return c.handler }

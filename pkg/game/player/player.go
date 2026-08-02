@@ -269,7 +269,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		if !canFly {
 			return fmt.Errorf("player abilities not requirements")
 		}
-		if !p.entity.Position().ApproxEqualThreshold(target, 0.5) {
+		if p.entity.Position().Sub(target).LenSqr() > 0.25 {
 			return fmt.Errorf("failed to move player: position updated by server")
 		}
 	}
@@ -540,7 +540,7 @@ func (p *Player) OpenMenu(command string) (bot.Container, error) {
 }
 
 func (p *Player) waitForContainer(previousID int32) (bot.Container, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()

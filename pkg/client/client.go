@@ -33,6 +33,9 @@ type botClient struct {
 	conn               *mcnet.Conn
 	connMu             sync.RWMutex
 	writeMu            sync.Mutex
+	stateMu            sync.Mutex
+	state              packet.State
+	stateChanged       chan struct{}
 	packetHandler      *packetHandler
 	eventHandler       bot.EventHandler
 	connected          atomic.Bool
@@ -60,6 +63,7 @@ func (b *botClient) Close(ctx context.Context) error {
 	b.conn = nil
 	b.connected.Store(false)
 	b.connMu.Unlock()
+	b.setConnectionStateLocked(packet.StateLogin)
 
 	if conn == nil {
 		return ctx.Err()
@@ -74,8 +78,26 @@ func (b *botClient) IsConnected() bool {
 	return b.connected.Load()
 }
 
-func (b *botClient) WritePacket(ctx context.Context, packet server.ServerboundPacket) error {
-	return b.writeRawPacket(ctx, pk.Marshal(packet.PacketID(), packet))
+func (b *botClient) WritePacket(ctx context.Context, outbound server.ServerboundPacket) error {
+	raw := pk.Marshal(outbound.PacketID(), outbound)
+	for {
+		if err := b.waitForPlayState(ctx); err != nil {
+			return err
+		}
+
+		b.writeMu.Lock()
+		if err := ctx.Err(); err != nil {
+			b.writeMu.Unlock()
+			return err
+		}
+		if b.connectionState() != packet.StatePlay {
+			b.writeMu.Unlock()
+			continue
+		}
+		err := b.writeRawPacketLocked(ctx, raw)
+		b.writeMu.Unlock()
+		return err
+	}
 }
 
 func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error {
@@ -89,6 +111,10 @@ func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error 
 		return err
 	}
 
+	return b.writeRawPacketLocked(ctx, packet)
+}
+
+func (b *botClient) writeRawPacketLocked(ctx context.Context, packet pk.Packet) error {
 	b.connMu.RLock()
 	conn := b.conn
 	b.connMu.RUnlock()
@@ -104,6 +130,63 @@ func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error 
 	}
 
 	return conn.WritePacket(packet)
+}
+
+func (b *botClient) waitForPlayState(ctx context.Context) error {
+	for {
+		b.connMu.RLock()
+		conn := b.conn
+		b.connMu.RUnlock()
+		if conn == nil {
+			return errors.New("client is not connected")
+		}
+
+		b.stateMu.Lock()
+		if b.state == packet.StatePlay {
+			b.stateMu.Unlock()
+			return nil
+		}
+		if b.stateChanged == nil {
+			b.stateChanged = make(chan struct{})
+		}
+		changed := b.stateChanged
+		b.stateMu.Unlock()
+
+		b.connMu.RLock()
+		conn = b.conn
+		b.connMu.RUnlock()
+		if conn == nil {
+			return errors.New("client is not connected")
+		}
+
+		select {
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		case <-changed:
+		}
+	}
+}
+
+func (b *botClient) connectionState() packet.State {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	return b.state
+}
+
+func (b *botClient) setConnectionState(state packet.State) {
+	b.writeMu.Lock()
+	defer b.writeMu.Unlock()
+	b.setConnectionStateLocked(state)
+}
+
+func (b *botClient) setConnectionStateLocked(state packet.State) {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	b.state = state
+	if b.stateChanged != nil {
+		close(b.stateChanged)
+	}
+	b.stateChanged = make(chan struct{})
 }
 
 func (b *botClient) PacketHandler() bot.PacketHandler {
@@ -129,6 +212,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	if hasConnection {
 		return errors.New("client already has an open connection")
 	}
+	b.setConnectionState(packet.StateLogin)
 
 	host, portStr, err := net.SplitHostPort(addr)
 	var port uint64
@@ -183,6 +267,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
+	b.setConnectionState(packet.StateConfig)
 	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateLogin, To: packet.StateConfig})
 	if err != nil {
 		return err
@@ -193,6 +278,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 		return err
 	}
 
+	b.setConnectionState(packet.StatePlay)
 	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
 	if err != nil {
 		return err
@@ -261,6 +347,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			}
 			pktID := packetid.ClientboundPacketID(p.ID)
 			if pktID == packetid.ClientboundStartConfiguration {
+				b.setConnectionState(packet.StateConfig)
 				err := b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StatePlay, To: packet.StateConfig})
 				if err != nil {
 					return err
@@ -276,6 +363,7 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 					return err
 				}
 
+				b.setConnectionState(packet.StatePlay)
 				err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
 				if err != nil {
 					return err
@@ -342,6 +430,8 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 		readIdleTimeout:    30 * time.Second,
 		resourcePackPolicy: bot.ResourcePackAccept,
 		cookies:            make(map[string][]int8),
+		state:              packet.StatePlay,
+		stateChanged:       make(chan struct{}),
 	}
 
 	if options != nil {

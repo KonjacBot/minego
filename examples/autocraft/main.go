@@ -9,10 +9,10 @@ import (
 
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/level/item"
+	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/client"
 	"github.com/KonjacBot/minego/pkg/game/player"
-	"github.com/KonjacBot/minego/pkg/msa"
 	"github.com/KonjacBot/minego/pkg/protocol"
 	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -24,23 +24,25 @@ import (
 var c bot.Client
 var cfg config.Config
 var glassRID int32
+var inventoryInteraction sync.Mutex
+var selectConfiguredServer sync.Once
+
+const (
+	normalCraftRetryDelay  = 5 * time.Millisecond
+	blockedCraftRetryDelay = 10 * time.Millisecond
+)
+
 var startCraftLoop = sync.OnceFunc(func() {
 	time.Sleep(500 * time.Millisecond)
+	reporter := craftLoopErrorReporter{}
 	for {
-		craft()
+		err := craft()
+		if reporter.shouldLog(err) {
+			fmt.Println(err)
+		}
+		time.Sleep(craftRetryDelay(err))
 	}
 })
-
-type Store struct {
-}
-
-func (s *Store) LoadToken(ctx context.Context) (*msa.TokenState, error) {
-	return nil, nil
-}
-
-func (s *Store) SaveToken(ctx context.Context, state *msa.TokenState) error {
-	return nil
-}
 
 func main() {
 	var err error
@@ -49,8 +51,9 @@ func main() {
 		return
 	}
 
-	auth := msa.NewAuth("", &Store{})
-	c = client.NewClient(&bot.ClientOptions{AuthProvider: auth})
+	c = client.NewClient(&bot.ClientOptions{AuthProvider: &auth.KonjacAuth{
+		UserCode: cfg.UserCode,
+	}})
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -100,6 +103,19 @@ func main() {
 			Action: 0,
 		})
 	})
+	bot.AddHandler(c, func(context.Context, *cp.Login) {
+		selectConfiguredServer.Do(func() {
+			command, err := sendConfiguredServer(c, cfg.Server)
+			if command == "" {
+				fmt.Println("select configured server: server is empty")
+				return
+			}
+			fmt.Printf("select configured server: %s\n", command)
+			if err != nil {
+				fmt.Printf("select configured server: %v\n", err)
+			}
+		})
+	})
 	bot.AddHandler(c, func(ctx context.Context, p *cp.SetTabListHeaderAndFooter) {
 		message := p.Header.ClearString() + "\n" + p.Footer.ClearString()
 		if balance, ok := parseEmeraldBalance(message); ok {
@@ -121,26 +137,44 @@ func main() {
 	}
 }
 
-func craft() {
+func craft() error {
+	inventoryInteraction.Lock()
+	defer inventoryInteraction.Unlock()
 
-	glassCount, glassPaneCount := craftGlass()
+	runCraftWorkflow(craftWorkflow{
+		craftGlass:   craftGlass,
+		putGlassPane: putGlassPane,
+		takeGlass:    takeGlass,
+		discardJunk:  discardJunk,
+	})
+
+	return nil
+}
+
+type craftWorkflow struct {
+	craftGlass   func() (int32, int32)
+	putGlassPane func()
+	takeGlass    func()
+	discardJunk  func()
+}
+
+func runCraftWorkflow(workflow craftWorkflow) {
+	glassCount, glassPaneCount := workflow.craftGlass()
 
 	if glassPaneCount > 0 {
-		putGlassPane()
+		workflow.putGlassPane()
 	}
 
 	if glassCount < 64 {
-		takeGlass()
+		workflow.takeGlass()
 	}
 
-	fmt.Println(glassCount, glassPaneCount)
-	time.Sleep(50 * time.Millisecond)
+	workflow.discardJunk()
 }
 
 func putGlassPane() {
 	for _, pos := range cfg.PlacePos {
-		c.Inventory().Close()
-		container, err := c.Player().OpenContainer(pos, 0)
+		container, err := openContainerWithoutPlacing(pos)
 		if err != nil || container == nil {
 			fmt.Println(err)
 			continue
@@ -150,20 +184,19 @@ func putGlassPane() {
 		for i, s := range container.Slots() {
 			if i >= 27 && s.ItemID == (item.GlassPane{}.ID()) {
 				_ = container.Click(int16(i), 1, 0)
-				time.Sleep(15 * time.Millisecond)
+				time.Sleep(5 * time.Millisecond)
 			}
 			if i < 27 && (s.ItemID != 0 && s.ItemID != (item.GlassPane{}.ID())) {
 				_ = container.Click(int16(i), 1, 0)
-				time.Sleep(15 * time.Millisecond)
+				time.Sleep(5 * time.Millisecond)
 			}
 		}
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(15 * time.Millisecond)
 	}
 }
 
 func takeGlass() {
-	c.Inventory().Close()
-	container, err := c.Player().OpenContainer(cfg.TakePos, 0)
+	container, err := openContainerWithoutPlacing(cfg.TakePos)
 	if err != nil || container == nil {
 		return
 	}
@@ -204,8 +237,6 @@ func takeGlass() {
 }
 
 func craftGlass() (int32, int32) {
-	c.Inventory().Close()
-
 	playerPos := c.Player().Entity().Position()
 	pos := protocol.Position{int32(playerPos[0]), int32(playerPos[1]), int32(playerPos[2])}
 
@@ -214,7 +245,7 @@ func craftGlass() (int32, int32) {
 		fmt.Println(err)
 		return 0, 0
 	}
-	con, err := c.Player().OpenContainer(craftingTablePos, 0)
+	con, err := openContainerWithoutPlacing(craftingTablePos)
 	if err != nil {
 		fmt.Println(err)
 		return 0, 0
@@ -222,12 +253,7 @@ func craftGlass() (int32, int32) {
 
 	c.Player().CheckServer()
 
-	for range 6 {
-		_ = c.WritePacket(context.Background(), &server.PlaceRecipe{WindowID: c.Inventory().CurrentContainerID(), RecipeID: glassRID, MakeAll: true})
-
-		_ = con.Click(0, 1, 0)
-		time.Sleep(25 * time.Millisecond)
-	}
+	craftAllGlassPanes(con)
 	glassCount := 0
 	glassPaneCount := 0
 	ff := false
@@ -252,7 +278,7 @@ func craftGlass() (int32, int32) {
 			ff = true
 
 			_ = con.Click(int16(i), 4, 1)
-			time.Sleep(15 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 		}
 	}
 	if ff {
@@ -260,4 +286,41 @@ func craftGlass() (int32, int32) {
 		c.Player().UpdateLocation()
 	}
 	return int32(glassCount), int32(glassPaneCount)
+}
+
+func craftAllGlassPanes(container bot.Container) {
+	_ = c.WritePacket(context.Background(), &server.PlaceRecipe{WindowID: c.Inventory().CurrentContainerID(), RecipeID: glassRID, MakeAll: true})
+
+	_ = container.Click(0, 1, 0)
+	time.Sleep(5 * time.Millisecond)
+}
+
+func openContainerWithoutPlacing(pos protocol.Position) (bot.Container, error) {
+	c.Inventory().Close()
+	return c.Player().OpenContainer(pos, 0)
+}
+
+type craftLoopErrorReporter struct {
+	lastError string
+}
+
+func (r *craftLoopErrorReporter) shouldLog(err error) bool {
+	if err == nil {
+		r.lastError = ""
+		return false
+	}
+
+	message := err.Error()
+	if message == r.lastError {
+		return false
+	}
+	r.lastError = message
+	return true
+}
+
+func craftRetryDelay(err error) time.Duration {
+	if err != nil {
+		return blockedCraftRetryDelay
+	}
+	return normalCraftRetryDelay
 }
