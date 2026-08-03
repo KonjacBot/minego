@@ -21,16 +21,29 @@ func TestManagerIgnoresContentForStaleWindowAndTracksCursor(t *testing.T) {
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
+	initial := make([]slot.Slot, 46)
+	initial[9] = slot.Slot{ItemID: 12, Count: 1}
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+		WindowID: 0, Slots: initial,
+	})
 
 	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	stalePlayer := make([]slot.Slot, 46)
+	stalePlayer[9] = slot.Slot{ItemID: 13, Count: 2}
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+		WindowID: 0, Slots: stalePlayer,
+	})
 	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 4, StateID: 3, Slots: []slot.Slot{{Count: 1}}, CarriedItem: slot.Slot{Count: 9},
 	})
 	if got := m.Container().SlotCount(); got != 0 {
 		t.Fatalf("stale window changed slot count to %d", got)
 	}
-	if cursor := m.Cursor(); cursor != nil {
+	if cursor := m.Cursor(); cursor != nil && cursor.Count > 0 {
 		t.Fatalf("stale window changed cursor to %#v", cursor)
+	}
+	if got := m.Inventory().GetSlot(9); got.ItemID != 12 || got.Count != 1 {
+		t.Fatalf("inactive window-0 content changed inventory to %#v", got)
 	}
 
 	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
@@ -93,6 +106,85 @@ func TestManagerTracksDedicatedCursorAndPlayerInventoryPackets(t *testing.T) {
 	}
 	if got := m.Inventory().GetSlot(36); got.ItemID != 8 || got.Count != 2 {
 		t.Fatalf("standalone hotbar slot = %#v", got)
+	}
+}
+
+func TestManagerPreservesExternalMenuPlayerUpdatesAfterCursorLifecycleCloses(t *testing.T) {
+	c := newInventoryTestClient()
+	m := NewManager(c)
+	c.inventory = m
+
+	const playerStart = 27
+	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	slots := make([]slot.Slot, playerStart+36)
+	slots[playerStart] = slot.Slot{ItemID: 7, Count: 1}
+	slots[playerStart+35] = slot.Slot{ItemID: 8, Count: 2}
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+		WindowID: 5,
+		StateID:  4,
+		Slots:    slots,
+		// Reproduce a server that publishes the destination but omits the
+		// corresponding cursor-clear update until the menu lifecycle ends.
+		CarriedItem: slot.Slot{ItemID: 7, Count: 1},
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+		ContainerID: 5,
+		StateID:     5,
+		Slot:        playerStart + 1,
+		ItemStack:   slot.Slot{ItemID: 9, Count: 3},
+	})
+
+	m.Close()
+
+	if cursor := m.Cursor(); cursor != nil {
+		t.Fatalf("closed cursor lifecycle retained %#v", cursor)
+	}
+	for inventorySlot, want := range map[int]slot.Slot{
+		9:  {ItemID: 7, Count: 1},
+		10: {ItemID: 9, Count: 3},
+		44: {ItemID: 8, Count: 2},
+	} {
+		if got := m.Inventory().GetSlot(inventorySlot); got.ItemID != want.ItemID || got.Count != want.Count {
+			t.Fatalf("inventory slot %d after close = %#v, want %#v", inventorySlot, got, want)
+		}
+	}
+}
+
+func TestManagerMirrorsStandalonePlayerUpdatesIntoOpenMenu(t *testing.T) {
+	c := newInventoryTestClient()
+	m := NewManager(c)
+	c.inventory = m
+
+	const playerStart = 27
+	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+		WindowID: 5,
+		Slots:    make([]slot.Slot, playerStart+36),
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+		Slot: 0,
+		Data: slot.Slot{ItemID: 8, Count: 2},
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+		Slot: 9,
+		Data: slot.Slot{ItemID: 9, Count: 3},
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+		ContainerID: 0,
+		Slot:        36,
+		ItemStack:   slot.Slot{ItemID: 10, Count: 4},
+	})
+	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+		ContainerID: 0,
+		Slot:        9,
+		ItemStack:   slot.Slot{ItemID: 11, Count: 5},
+	})
+
+	if got := m.Container().GetSlot(playerStart + 27); got.ItemID != 10 || got.Count != 4 {
+		t.Fatalf("open-menu hotbar slot = %#v, want item 10 count 4", got)
+	}
+	if got := m.Container().GetSlot(playerStart); got.ItemID != 9 || got.Count != 3 {
+		t.Fatalf("open-menu main slot = %#v, want item 9 count 3", got)
 	}
 }
 

@@ -34,13 +34,14 @@ func NewManager(c bot.Client) *Manager {
 	bot.AddHandler(c, func(ctx context.Context, p *client.SetContainerContent) {
 		m.mu.Lock()
 		matched := false
-		if p.WindowID == 0 {
+		if p.WindowID == 0 && m.currentContainerID < 0 {
 			m.inventory.SetSlots(p.Slots)
 			m.inventory.setStateID(p.StateID)
 			matched = true
 		} else if p.WindowID == m.currentContainerID && m.container != nil {
 			m.container.SetSlots(p.Slots)
 			m.container.setStateID(p.StateID)
+			m.mirrorExternalPlayerContentLocked(p.Slots)
 			matched = true
 		}
 		cursor := p.CarriedItem
@@ -63,12 +64,19 @@ func NewManager(c bot.Client) *Manager {
 			m.cursor = &cursor
 			matched = true
 		} else if p.ContainerID == 0 {
-			m.inventory.SetSlot(int(p.Slot), p.ItemStack)
-			m.inventory.setStateID(p.StateID)
-			matched = true
+			// With another menu open, vanilla only applies window-0 hotbar and
+			// offhand updates (slots 36..45). Other window-0 updates target an
+			// inactive menu and must not replace the active player projection.
+			if m.currentContainerID < 0 || p.Slot >= 36 && p.Slot <= 45 {
+				m.inventory.SetSlot(int(p.Slot), p.ItemStack)
+				m.inventory.setStateID(p.StateID)
+				m.mirrorWindowZeroHotbarToCurrentMenuLocked(int(p.Slot), p.ItemStack)
+				matched = true
+			}
 		} else if p.ContainerID == m.currentContainerID && m.container != nil {
 			m.container.SetSlot(int(p.Slot), p.ItemStack)
 			m.container.setStateID(p.StateID)
+			m.mirrorExternalPlayerSlotLocked(int(p.Slot), p.ItemStack)
 			matched = true
 		}
 		m.mu.Unlock()
@@ -86,6 +94,7 @@ func NewManager(c bot.Client) *Manager {
 		m.mu.Lock()
 		if index, ok := playerInventoryMenuSlot(p.Slot); ok {
 			m.inventory.SetSlot(index, p.Data)
+			m.mirrorInventorySlotToCurrentMenuLocked(index, p.Data)
 		}
 		m.mu.Unlock()
 	})
@@ -182,6 +191,53 @@ func (m *Manager) resetCurrentContainerLocked() {
 	m.currentMenuTitle = chat.Message{}
 	m.container = nil
 	m.cursor = nil
+}
+
+// Every non-player menu ends with the same 36 player inventory slots as the
+// window-0 inventory slots 9 through 44. While such a menu is open, vanilla
+// servers update only that active window and do not resend those player slots
+// for window 0 when it closes. Keep both views of the same physical inventory
+// synchronized so closing a menu cannot reveal an older player inventory.
+func (m *Manager) mirrorExternalPlayerContentLocked(slots []slot.Slot) {
+	if len(slots) < 36 {
+		return
+	}
+	playerStart := len(slots) - 36
+	for offset := 0; offset < 36; offset++ {
+		m.inventory.SetSlot(9+offset, slots[playerStart+offset])
+	}
+}
+
+func (m *Manager) mirrorExternalPlayerSlotLocked(menuSlot int, value slot.Slot) {
+	if m.container == nil {
+		return
+	}
+	playerStart := m.container.SlotCount() - 36
+	if playerStart < 0 || menuSlot < playerStart || menuSlot >= playerStart+36 {
+		return
+	}
+	m.inventory.SetSlot(9+menuSlot-playerStart, value)
+}
+
+func (m *Manager) mirrorInventorySlotToCurrentMenuLocked(inventorySlot int, value slot.Slot) {
+	if m.container == nil || inventorySlot < 9 || inventorySlot >= 45 {
+		return
+	}
+	playerStart := m.container.SlotCount() - 36
+	if playerStart < 0 {
+		return
+	}
+	m.container.SetSlot(playerStart+inventorySlot-9, value)
+}
+
+func (m *Manager) mirrorWindowZeroHotbarToCurrentMenuLocked(inventorySlot int, value slot.Slot) {
+	// While another menu is open, the protocol only applies window-0 updates
+	// for hotbar and offhand slots. The 36-slot menu projection contains the
+	// hotbar (36..44), but not the offhand slot (45).
+	if inventorySlot < 36 || inventorySlot >= 45 {
+		return
+	}
+	m.mirrorInventorySlotToCurrentMenuLocked(inventorySlot, value)
 }
 
 // Click 點擊容器slot
