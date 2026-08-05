@@ -17,7 +17,7 @@ import (
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
-func TestManagerIgnoresContentForStaleWindowAndTracksCursor(t *testing.T) {
+func TestManagerIgnoresStaleWindowSlotsButTracksCursorAndState(t *testing.T) {
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
@@ -39,11 +39,14 @@ func TestManagerIgnoresContentForStaleWindowAndTracksCursor(t *testing.T) {
 	if got := m.Container().SlotCount(); got != 0 {
 		t.Fatalf("stale window changed slot count to %d", got)
 	}
-	if cursor := m.Cursor(); cursor != nil && cursor.Count > 0 {
-		t.Fatalf("stale window changed cursor to %#v", cursor)
+	if cursor := m.Cursor(); cursor == nil || cursor.Count != 9 {
+		t.Fatalf("latest content cursor = %#v, want count 9", cursor)
 	}
 	if got := m.Inventory().GetSlot(9); got.ItemID != 12 || got.Count != 1 {
 		t.Fatalf("inactive window-0 content changed inventory to %#v", got)
+	}
+	if state := c.player.StateID(); state != 3 {
+		t.Fatalf("latest content state ID = %d, want 3", state)
 	}
 
 	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
@@ -195,7 +198,7 @@ func TestManagerInventoryIncludesCraftingResultSlot(t *testing.T) {
 	}
 }
 
-func TestContainerClickUsesItsOwnStateIDWithoutValidationData(t *testing.T) {
+func TestContainerClickUsesItsOwnStateIDAndForcesServerCorrection(t *testing.T) {
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
@@ -217,15 +220,16 @@ func TestContainerClickUsesItsOwnStateIDWithoutValidationData(t *testing.T) {
 	if click.StateID != 4 {
 		t.Fatalf("container click state ID = %d, want 4", click.StateID)
 	}
-	if len(click.ChangedSlots) != 0 || click.CarriedSlot.HasItem {
-		t.Fatalf("container click contains validation data: %#v", click)
+	if len(click.ChangedSlots) != 0 || !click.CarriedSlot.HasItem ||
+		click.CarriedSlot.ItemID != 0 || click.CarriedSlot.ItemCount != 1 {
+		t.Fatalf("container click correction trigger = %#v, want invalid carried item 0 x1 and no changed slots", click)
 	}
 	if got := m.Container().GetSlot(0); got.Count != 1 {
 		t.Fatalf("click predicted local slot state: %#v", got)
 	}
 }
 
-func TestManagerClickDoesNotSendHashedValidationOrPredict(t *testing.T) {
+func TestManagerClickForcesServerCorrectionWithoutPredicting(t *testing.T) {
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
@@ -239,8 +243,9 @@ func TestManagerClickDoesNotSendHashedValidationOrPredict(t *testing.T) {
 		t.Fatal(err)
 	}
 	click := c.writes[0].(*server.ContainerClick)
-	if click.StateID != 12 || len(click.ChangedSlots) != 0 || click.CarriedSlot.HasItem {
-		t.Fatalf("manager click contains validation data: %#v", click)
+	if click.StateID != 12 || len(click.ChangedSlots) != 0 || !click.CarriedSlot.HasItem ||
+		click.CarriedSlot.ItemID != 0 || click.CarriedSlot.ItemCount != 1 {
+		t.Fatalf("manager click correction trigger = %#v, want state 12, invalid carried item 0 x1, and no changed slots", click)
 	}
 	if got := m.Inventory().GetSlot(9); got.Count != 2 {
 		t.Fatalf("manager click predicted local state: %#v", got)

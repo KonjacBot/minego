@@ -127,11 +127,12 @@ func (c *Container) StateID() int32 {
 
 func (c *Container) Click(idx int16, mode int32, button int32) error {
 	clickPacket := &server.ContainerClick{
-		WindowID: c.containerID,
-		StateID:  c.StateID(),
-		Slot:     idx,
-		Button:   int8(button),
-		Mode:     mode,
+		WindowID:    c.containerID,
+		StateID:     c.StateID(),
+		Slot:        idx,
+		Button:      int8(button),
+		Mode:        mode,
+		CarriedSlot: slot.HashedSlot{HasItem: true, ItemID: 0, ItemCount: 1},
 	}
 	return c.c.WritePacket(context.Background(), clickPacket)
 }
