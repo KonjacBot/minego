@@ -64,6 +64,74 @@ func TestInteractionsUseIncreasingSequences(t *testing.T) {
 	}
 }
 
+func TestBreakBlockCompletionWaitsForServerAcknowledgement(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+
+	if err := p.BreakBlock(protocol.Position{1, 2, 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(c.writes) != 2 {
+		t.Fatalf("break packet writes = %d, want start and finish", len(c.writes))
+	}
+	finish, ok := c.writes[1].(*server.PlayerAction)
+	if !ok || finish.Status != 2 {
+		t.Fatalf("finish packet = %#v, want status 2 PlayerAction", c.writes[1])
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	acknowledged := make(chan error, 1)
+	go func() {
+		acknowledged <- p.WaitForSequence(ctx, finish.Sequence)
+	}()
+	c.handler.HandlePacket(context.Background(), &gameclient.BlockChangedAck{Sequence: finish.Sequence})
+
+	if err := <-acknowledged; err != nil {
+		t.Fatalf("wait for finish acknowledgement: %v", err)
+	}
+	if got := p.AcknowledgedSequence(); got != finish.Sequence {
+		t.Fatalf("acknowledged sequence = %d, want %d", got, finish.Sequence)
+	}
+}
+
+func TestBlockActionMethodsReturnTheExactPacketSequence(t *testing.T) {
+	c := newStateTestClient()
+	p := New(c)
+	c.player = p
+	position := protocol.Position{1, 2, 3}
+
+	start, err := p.StartBreakingBlock(context.Background(), position, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finish, err := p.FinishBreakingBlock(context.Background(), position, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	placed, err := p.PlaceBlockWithArgsContext(context.Background(), position, 5, mgl64.Vec3{0.25, 0.5, 0.75})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if start <= 0 || finish <= start || placed <= finish {
+		t.Fatalf("returned sequences = start %d, finish %d, place %d; want strictly increasing", start, finish, placed)
+	}
+	startPacket := c.writes[0].(*server.PlayerAction)
+	finishPacket := c.writes[1].(*server.PlayerAction)
+	placePacket := c.writes[2].(*server.UseItemOn)
+	if startPacket.Status != 0 || startPacket.Face != 4 || startPacket.Sequence != start {
+		t.Fatalf("start packet = %#v", startPacket)
+	}
+	if finishPacket.Status != 2 || finishPacket.Face != 4 || finishPacket.Sequence != finish {
+		t.Fatalf("finish packet = %#v", finishPacket)
+	}
+	if placePacket.Face != 5 || placePacket.Sequence != placed {
+		t.Fatalf("place packet = %#v", placePacket)
+	}
+}
+
 func TestFlyToUsesAirborneMovementState(t *testing.T) {
 	c := newStateTestClient()
 	p := New(c)

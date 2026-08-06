@@ -24,9 +24,10 @@ type Player struct {
 	c  bot.Client
 	mu sync.RWMutex
 
-	abilities         int8
-	entity            *world.Entity
-	stateID, sequence int32
+	abilities                               int8
+	entity                                  *world.Entity
+	stateID, sequence, acknowledgedSequence int32
+	sequenceChanged                         chan struct{}
 
 	lastReceivedPacketTime time.Time
 }
@@ -34,9 +35,10 @@ type Player struct {
 // New 創建新的 Player 實例
 func New(c bot.Client) *Player {
 	pl := &Player{
-		c:       c,
-		entity:  &world.Entity{},
-		stateID: 1,
+		c:               c,
+		entity:          &world.Entity{},
+		stateID:         1,
+		sequenceChanged: make(chan struct{}),
 	}
 
 	startup := sync.OnceFunc(func() {
@@ -72,6 +74,9 @@ func New(c bot.Client) *Player {
 		pl.mu.Lock()
 		pl.abilities = p.Flags
 		pl.mu.Unlock()
+	})
+	bot.AddHandler(c, func(ctx context.Context, p *client.BlockChangedAck) {
+		pl.UpdateSequence(p.Sequence)
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
@@ -183,12 +188,46 @@ func (p *Player) Sequence() int32 {
 	return p.sequence
 }
 
+// AcknowledgedSequence returns the highest block-action sequence processed by
+// the server. It is deliberately distinct from Sequence, which is the highest
+// sequence allocated locally for an outgoing interaction.
+func (p *Player) AcknowledgedSequence() int32 {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.acknowledgedSequence
+}
+
 // UpdateSequence 更新互動狀態 ID
 func (p *Player) UpdateSequence(id int32) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if id > p.acknowledgedSequence {
+		p.acknowledgedSequence = id
+		close(p.sequenceChanged)
+		p.sequenceChanged = make(chan struct{})
+	}
 	if id > p.sequence {
 		p.sequence = id
+	}
+}
+
+// WaitForSequence waits until the server acknowledges the given block-action
+// sequence or the caller's context ends.
+func (p *Player) WaitForSequence(ctx context.Context, id int32) error {
+	for {
+		p.mu.RLock()
+		if p.acknowledgedSequence >= id {
+			p.mu.RUnlock()
+			return nil
+		}
+		changed := p.sequenceChanged
+		p.mu.RUnlock()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-changed:
+		}
 	}
 }
 
@@ -404,59 +443,68 @@ func (p *Player) LookAt(target mgl64.Vec3) error {
 
 // BreakBlock 破壞指定位置的方塊
 func (p *Player) BreakBlock(pos protocol.Position) error {
+	if _, err := p.StartBreakingBlock(context.Background(), pos, 1); err != nil {
+		return err
+	}
+	_, err := p.FinishBreakingBlock(context.Background(), pos, 1)
+	return err
+}
+
+// StartBreakingBlock sends START_DESTROY_BLOCK and returns its acknowledgement
+// sequence. Survival callers must wait for the correct mining duration before
+// sending FinishBreakingBlock.
+func (p *Player) StartBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error) {
+	return p.writeBlockAction(ctx, 0, pos, face, "start destroy")
+}
+
+// FinishBreakingBlock sends STOP_DESTROY_BLOCK and returns its acknowledgement
+// sequence.
+func (p *Player) FinishBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error) {
+	return p.writeBlockAction(ctx, 2, pos, face, "finish destroy")
+}
+
+// CancelBreakingBlock sends ABORT_DESTROY_BLOCK and returns its acknowledgement
+// sequence.
+func (p *Player) CancelBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error) {
+	return p.writeBlockAction(ctx, 1, pos, face, "cancel destroy")
+}
+
+func (p *Player) writeBlockAction(ctx context.Context, status int32, pos protocol.Position, face int8, action string) (int32, error) {
 	if p.c == nil {
-		return fmt.Errorf("client is not initialized")
+		return 0, fmt.Errorf("client is not initialized")
 	}
-
-	// 發送開始挖掘封包
-	startPacket := &server.PlayerAction{
-		Status:   0,
-		Sequence: p.nextSequence(),
+	sequence := p.nextSequence()
+	packet := &server.PlayerAction{
+		Status:   status,
+		Sequence: sequence,
 		Location: pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
-		Face:     1,
+		Face:     face,
 	}
-
-	if err := p.c.WritePacket(context.Background(), startPacket); err != nil {
-		return fmt.Errorf("failed to send start destroy packet: %w", err)
+	if err := p.c.WritePacket(ctx, packet); err != nil {
+		return sequence, fmt.Errorf("failed to send %s packet: %w", action, err)
 	}
-
-	// 發送完成挖掘封包
-	finishPacket := &server.PlayerAction{
-		Status:   2,
-		Sequence: p.nextSequence(),
-		Location: pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
-		Face:     1,
-	}
-
-	return p.c.WritePacket(context.Background(), finishPacket)
+	return sequence, nil
 }
 
 // PlaceBlock 在指定位置放置方塊
 func (p *Player) PlaceBlock(pos protocol.Position) error {
-	if p.c == nil {
-		return fmt.Errorf("client is not initialized")
-	}
-
-	packet := &server.UseItemOn{
-		Hand:        0,
-		Location:    pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
-		Face:        1,
-		CursorX:     0.5,
-		CursorY:     0.5,
-		CursorZ:     0.5,
-		InsideBlock: false,
-		Sequence:    p.nextSequence(),
-	}
-
-	return p.c.WritePacket(context.Background(), packet)
+	_, err := p.PlaceBlockWithArgsContext(context.Background(), pos, 1, mgl64.Vec3{0.5, 0.5, 0.5})
+	return err
 }
 
 // PlaceBlock 在指定位置放置方塊
 func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mgl64.Vec3) error {
-	if p.c == nil {
-		return fmt.Errorf("client is not initialized")
-	}
+	_, err := p.PlaceBlockWithArgsContext(context.Background(), pos, face, cursor)
+	return err
+}
 
+// PlaceBlockWithArgsContext sends UseItemOn and returns the exact sequence that
+// the server will acknowledge.
+func (p *Player) PlaceBlockWithArgsContext(ctx context.Context, pos protocol.Position, face int32, cursor mgl64.Vec3) (int32, error) {
+	if p.c == nil {
+		return 0, fmt.Errorf("client is not initialized")
+	}
+	sequence := p.nextSequence()
 	packet := &server.UseItemOn{
 		Hand:        0,
 		Location:    pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
@@ -465,10 +513,12 @@ func (p *Player) PlaceBlockWithArgs(pos protocol.Position, face int32, cursor mg
 		CursorY:     float32(cursor[1]),
 		CursorZ:     float32(cursor[2]),
 		InsideBlock: false,
-		Sequence:    p.nextSequence(),
+		Sequence:    sequence,
 	}
-
-	return p.c.WritePacket(context.Background(), packet)
+	if err := p.c.WritePacket(ctx, packet); err != nil {
+		return sequence, err
+	}
+	return sequence, nil
 }
 
 // OpenContainer 打開指定位置的容器

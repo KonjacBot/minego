@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"context"
+
 	"github.com/go-gl/mathgl/mgl64"
 
 	"github.com/KonjacBot/minego/pkg/protocol"
@@ -29,4 +31,16 @@ type Player interface {
 	Command(command string) error
 	Chat(message string) error
 	CheckServer()
+}
+
+// BlockActionPlayer exposes context-aware, sequenced block actions. The
+// returned sequence is the exact value the server will acknowledge with a
+// clientbound BlockChangedAck packet.
+type BlockActionPlayer interface {
+	AcknowledgedSequence() int32
+	WaitForSequence(ctx context.Context, id int32) error
+	StartBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error)
+	FinishBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error)
+	CancelBreakingBlock(ctx context.Context, pos protocol.Position, face int8) (int32, error)
+	PlaceBlockWithArgsContext(ctx context.Context, pos protocol.Position, face int32, cursor mgl64.Vec3) (int32, error)
 }

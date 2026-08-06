@@ -217,7 +217,6 @@ func takeGlass() {
 	f := sync.OnceFunc(func() {
 		c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 0})
 		c.Player().UpdateLocation()
-		time.Sleep(500 * time.Millisecond)
 		c.Player().CheckServer()
 	})
 
@@ -231,9 +230,6 @@ func takeGlass() {
 
 	c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 90})
 	c.Player().UpdateLocation()
-	if count >= 0 {
-		time.Sleep(500 * time.Millisecond)
-	}
 }
 
 func craftGlass() (int32, int32) {
@@ -253,14 +249,15 @@ func craftGlass() (int32, int32) {
 
 	c.Player().CheckServer()
 
-	craftAllGlassPanes(con)
+	for range 3 {
+		craftAllGlassPanes(con)
+	}
 	glassCount := 0
 	glassPaneCount := 0
 	ff := false
 	f := sync.OnceFunc(func() {
 		c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 0})
 		c.Player().UpdateLocation()
-		time.Sleep(500 * time.Millisecond)
 		c.Player().CheckServer()
 	})
 
