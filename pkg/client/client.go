@@ -44,6 +44,8 @@ type botClient struct {
 	resourcePackPolicy bot.ResourcePackPolicy
 	cookieMu           sync.RWMutex
 	cookies            map[string][]int8
+	registryMu         sync.RWMutex
+	registryEntries    map[string]map[int32]string
 
 	inventory *inventory.Manager
 	world     *world.World
@@ -63,6 +65,9 @@ func (b *botClient) Close(ctx context.Context) error {
 	b.conn = nil
 	b.connected.Store(false)
 	b.connMu.Unlock()
+	b.registryMu.Lock()
+	b.registryEntries = nil
+	b.registryMu.Unlock()
 	b.setConnectionStateLocked(packet.StateLogin)
 
 	if conn == nil {
@@ -76,6 +81,20 @@ func (b *botClient) Close(ctx context.Context) error {
 
 func (b *botClient) IsConnected() bool {
 	return b.connected.Load()
+}
+
+// ResolveRegistryEntry returns the name for a numeric registry entry from the
+// most recently completed server configuration. The snapshot is immutable to
+// callers and is replaced atomically on the next configuration completion.
+func (b *botClient) ResolveRegistryEntry(registryID string, entryID int32) (string, bool) {
+	if b == nil || entryID < 0 {
+		return "", false
+	}
+	b.registryMu.RLock()
+	entries := b.registryEntries[registryID]
+	name, ok := entries[entryID]
+	b.registryMu.RUnlock()
+	return name, ok
 }
 
 func (b *botClient) WritePacket(ctx context.Context, outbound server.ServerboundPacket) error {
@@ -212,6 +231,9 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	if hasConnection {
 		return errors.New("client already has an open connection")
 	}
+	b.registryMu.Lock()
+	b.registryEntries = nil
+	b.registryMu.Unlock()
 	b.setConnectionState(packet.StateLogin)
 
 	host, portStr, err := net.SplitHostPort(addr)
@@ -291,7 +313,12 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 }
 
 func (b *botClient) HandleGame(ctx context.Context) error {
-	defer b.connected.Store(false)
+	defer func() {
+		b.connected.Store(false)
+		b.registryMu.Lock()
+		b.registryEntries = nil
+		b.registryMu.Unlock()
+	}()
 	return b.handlePackets(ctx)
 }
 
@@ -348,6 +375,9 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 			pktID := packetid.ClientboundPacketID(p.ID)
 			if pktID == packetid.ClientboundStartConfiguration {
 				b.setConnectionState(packet.StateConfig)
+				b.registryMu.Lock()
+				b.registryEntries = nil
+				b.registryMu.Unlock()
 				err := b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StatePlay, To: packet.StateConfig})
 				if err != nil {
 					return err

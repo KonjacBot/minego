@@ -40,6 +40,22 @@ func TestOpenContainerRefusesAirBlock(t *testing.T) {
 	}
 }
 
+func TestChatInitializesTwentyBitAcknowledgment(t *testing.T) {
+	c := &openContainerTestClient{}
+	p := &Player{c: c}
+
+	if err := p.Chat("~chess ready"); err != nil {
+		t.Fatal(err)
+	}
+	chatPacket, ok := c.packet.(*server.Chat)
+	if !ok {
+		t.Fatalf("written packet = %T, want *server.Chat", c.packet)
+	}
+	if len(chatPacket.Acknowledged) != 3 {
+		t.Fatalf("acknowledgment bytes = %d, want 3 for 20 bits", len(chatPacket.Acknowledged))
+	}
+}
+
 func TestWalkToWithinStopsNearGoalAndUpdatesPosition(t *testing.T) {
 	c := &openContainerTestClient{world: openPlanePathWorld{}}
 	p := New(c)
@@ -78,6 +94,7 @@ type openContainerTestClient struct {
 	world     bot.World
 	inventory bot.InventoryHandler
 	writes    int
+	packet    server.ServerboundPacket
 }
 
 func (c *openContainerTestClient) Connect(context.Context, string, *bot.ConnectOptions) error {
@@ -86,8 +103,9 @@ func (c *openContainerTestClient) Connect(context.Context, string, *bot.ConnectO
 func (c *openContainerTestClient) HandleGame(context.Context) error { return nil }
 func (c *openContainerTestClient) Close(context.Context) error      { return nil }
 func (c *openContainerTestClient) IsConnected() bool                { return true }
-func (c *openContainerTestClient) WritePacket(context.Context, server.ServerboundPacket) error {
+func (c *openContainerTestClient) WritePacket(_ context.Context, packet server.ServerboundPacket) error {
 	c.writes++
+	c.packet = packet
 	return nil
 }
 func (c *openContainerTestClient) PacketHandler() bot.PacketHandler {

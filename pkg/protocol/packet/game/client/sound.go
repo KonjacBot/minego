@@ -1,12 +1,14 @@
 package client
 
-import "github.com/KonjacBot/minego/pkg/protocol/component"
+import (
+	pk "github.com/KonjacBot/go-mc/net/packet"
+	"github.com/KonjacBot/minego/pkg/protocol/component"
+)
 
 //codec:gen
 type SoundEffect struct {
-	SoundID int32 `mc:"VarInt"`
-	//opt:id:SoundID
-	SoundEvent                                        *component.SoundEvent
+	Sound                                             pk.OptID[component.SoundEvent, *component.SoundEvent]
+	SoundCategory                                     int32 `mc:"VarInt"`
 	EffectPositionX, EffectPositionY, EffectPositionZ int32
 	Volume, Pitch                                     float32
 	Seed                                              int64

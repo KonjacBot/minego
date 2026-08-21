@@ -33,12 +33,19 @@ func (b *botClient) login(ctx context.Context) error {
 }
 
 func (b *botClient) configuration(ctx context.Context) (err error) {
+	b.registryMu.Lock()
+	b.registryEntries = nil
+	b.registryMu.Unlock()
 	return b.withReadContext(ctx, func(conn *mcnet.Conn) error {
 		return b.readConfiguration(ctx, conn)
 	})
 }
 
 func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
+	b.registryMu.Lock()
+	b.registryEntries = nil
+	b.registryMu.Unlock()
+	registryEntries := make(map[string]map[int32]string)
 	information := configserver.ConfigClientInformation{
 		ClientInformation: gameserver.ClientInformation{
 			Location:            "zh_TW",
@@ -78,6 +85,24 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 			err = b.writeRawPacket(ctx, pk.Marshal(
 				packetid.ServerboundConfigFinishConfiguration,
 			))
+			if err != nil {
+				return err
+			}
+			snapshot := make(map[string]map[int32]string, len(registryEntries))
+			for registryID, values := range registryEntries {
+				if len(values) == 0 {
+					snapshot[registryID] = nil
+					continue
+				}
+				copyValues := make(map[int32]string, len(values))
+				for entryID, name := range values {
+					copyValues[entryID] = name
+				}
+				snapshot[registryID] = copyValues
+			}
+			b.registryMu.Lock()
+			b.registryEntries = snapshot
+			b.registryMu.Unlock()
 			return err
 		case packetid.ClientboundConfigKeepAlive:
 			var keepAliveID pk.Long
@@ -145,6 +170,16 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 					return err
 				}
 			}
+		case packetid.ClientboundConfigRegistryData:
+			var registry configclient.ConfigRegistryData
+			if err = p.Scan(&registry); err != nil {
+				return err
+			}
+			entries := make(map[int32]string, len(registry.Data))
+			for entryID, entry := range registry.Data {
+				entries[int32(entryID)] = entry.Entry
+			}
+			registryEntries[registry.RegistryID] = entries
 		default:
 			continue
 		}

@@ -278,6 +278,14 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 		distance = direction.Len()
 
 		if distance < 0.05 {
+			if err := p.c.WritePacket(context.Background(), &server.MovePlayerPos{
+				X:     pos.X(),
+				FeetY: pos.Y(),
+				Z:     pos.Z(),
+				Flags: 0x02,
+			}); err != nil {
+				return fmt.Errorf("failed to move player: %w", err)
+			}
 			slog.Info("flyto done", "at", vecString(currentPos))
 			return nil
 		}
@@ -296,7 +304,7 @@ func (p *Player) FlyTo(pos mgl64.Vec3) error {
 			X:     target.X(),
 			FeetY: target.Y(),
 			Z:     target.Z(),
-			Flags: 0x00,
+			Flags: 0x02,
 		}); err != nil {
 			return fmt.Errorf("failed to move player: %w", err)
 		}
@@ -590,9 +598,9 @@ func (p *Player) OpenMenu(command string) (bot.Container, error) {
 }
 
 func (p *Player) waitForContainer(previousID int32) (bot.Container, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	ticker := time.NewTicker(50 * time.Millisecond)
+	ticker := time.NewTicker(15 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -617,6 +625,7 @@ func (p *Player) Command(msg string) error {
 
 func (p *Player) Chat(msg string) error {
 	return p.c.WritePacket(context.Background(), &server.Chat{
-		Message: msg,
+		Message:      msg,
+		Acknowledged: pk.NewFixedBitSet(20),
 	})
 }
