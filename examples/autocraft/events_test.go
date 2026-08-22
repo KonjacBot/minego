@@ -65,16 +65,7 @@ func TestOpenContainerWithoutPlacingWhenHotbarIsFull(t *testing.T) {
 func TestRunCraftWorkflowDiscardsJunk(t *testing.T) {
 	garbageDiscarded := false
 
-	runCraftWorkflow(craftWorkflow{
-		craftGlass: func() (int32, int32) { return 64, 0 },
-		putGlassPane: func() {
-			t.Fatal("did not expect glass panes to be stored")
-		},
-		takeGlass: func() {
-			t.Fatal("did not expect glass to be taken")
-		},
-		discardJunk: func() { garbageDiscarded = true },
-	})
+	runCraftWorkflow()
 
 	if !garbageDiscarded {
 		t.Fatal("expected every craft workflow to discard backpack junk")

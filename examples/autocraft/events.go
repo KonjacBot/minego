@@ -20,7 +20,7 @@ var (
 	emeraldBalance atomic.Int64
 
 	tabBalancePattern     = regexp.MustCompile(`綠寶石 *＄([\d,]+)元`)
-	privateMessagePattern = regexp.MustCompile(`^\[(\w+) -> 您]\s(.*)`)
+	privateMessagePattern = regexp.MustCompile(`^\[(\w+) -> 你]\s(.*)`)
 	teleportPattern       = regexp.MustCompile(`^\[系統] ([\w]+) 想要傳送到 你 的位置`)
 	teleportToPattern     = regexp.MustCompile(`^\[系統] ([\w]+) 想要你傳送到 該玩家 的位置`)
 )
@@ -127,7 +127,6 @@ func discardJunk() {
 	}
 
 	c.Inventory().Close()
-	time.Sleep(50 * time.Millisecond)
 
 	inventory := c.Inventory().Inventory()
 	for _, i := range junkInventorySlots(inventory) {

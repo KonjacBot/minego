@@ -9,6 +9,7 @@ import (
 
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/level/item"
+	pk "github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/minego/pkg/auth"
 	"github.com/KonjacBot/minego/pkg/bot"
 	"github.com/KonjacBot/minego/pkg/client"
@@ -32,10 +33,13 @@ const (
 	blockedCraftRetryDelay = 10 * time.Millisecond
 )
 
+var currentPayload int64
+
 var startCraftLoop = sync.OnceFunc(func() {
 	time.Sleep(500 * time.Millisecond)
 	reporter := craftLoopErrorReporter{}
 	for {
+		time.Sleep(10 * time.Millisecond)
 		err := craft()
 		if reporter.shouldLog(err) {
 			fmt.Println(err)
@@ -48,6 +52,7 @@ func main() {
 	var err error
 	cfg, err = config.ReadConfig()
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
@@ -123,6 +128,10 @@ func main() {
 		}
 	})
 
+	bot.AddHandler(c, func(ctx context.Context, p *cp.PingResponse) {
+		currentPayload = p.Payload
+	})
+
 	err = c.Connect(ctx, cfg.Address, &bot.ConnectOptions{
 		FakeHost: "mcfallout.net",
 		Proxy:    cfg.Proxy,
@@ -179,7 +188,6 @@ func putGlassPane() {
 			fmt.Println(err)
 			continue
 		}
-		c.Player().CheckServer()
 
 		for i, s := range container.Slots() {
 			if i >= 27 && s.ItemID == (item.GlassPane{}.ID()) {
@@ -196,40 +204,45 @@ func putGlassPane() {
 }
 
 func takeGlass() {
-	container, err := openContainerWithoutPlacing(cfg.TakePos)
-	if err != nil || container == nil {
-		return
-	}
-	c.Player().CheckServer()
-	count := 0
-
-	for i, s := range container.Slots() {
-		if i < 27 && s.ItemID == (item.Glass{}.ID()) {
-			_ = container.Click(int16(i), 1, 0)
-			time.Sleep(15 * time.Millisecond)
-			count++
-		}
-		if count > 14 {
-			break
-		}
-	}
+	ff := false
 
 	f := sync.OnceFunc(func() {
 		c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 0})
 		c.Player().UpdateLocation()
 		c.Player().CheckServer()
+		ff = true
 	})
 
-	for i, s := range container.Slots() {
-		if i < 27 && (s.ItemID != (item.Glass{}.ID()) && s.ItemID != 0) {
-			f()
-			_ = container.Click(int16(i), 4, 1)
-			time.Sleep(5 * time.Millisecond)
+	for _, pos := range cfg.TakePos {
+		container, err := openContainerWithoutPlacing(pos)
+		if err != nil || container == nil {
+			return
+		}
+		count := 0
+
+		for i, s := range container.Slots() {
+			if i < 27 && s.ItemID == (item.Glass{}.ID()) {
+				_ = container.Click(int16(i), 1, 0)
+				count++
+			}
+			if count > 14 {
+				return
+			}
+		}
+
+		for i, s := range container.Slots() {
+			if i < 27 && (s.ItemID != (item.Glass{}.ID()) && s.ItemID != (item.GlassPane{}.ID()) && s.ItemID != 0) {
+				f()
+				_ = container.Click(int16(i), 4, 1)
+				time.Sleep(5 * time.Millisecond)
+			}
 		}
 	}
 
-	c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 90})
-	c.Player().UpdateLocation()
+	if ff {
+		c.Player().Entity().SetRotation(mgl64.Vec2{c.Player().Entity().Rotation()[0], 90})
+		c.Player().UpdateLocation()
+	}
 }
 
 func craftGlass() (int32, int32) {
@@ -293,8 +306,60 @@ func craftAllGlassPanes(container bot.Container) {
 }
 
 func openContainerWithoutPlacing(pos protocol.Position) (bot.Container, error) {
-	c.Inventory().Close()
-	return c.Player().OpenContainer(pos, 0)
+	id := c.Inventory().CurrentContainerID()
+
+	packet := &server.UseItemOn{
+		Hand:           0,
+		Location:       pk.Position{X: int(pos[0]), Y: int(pos[1]), Z: int(pos[2])},
+		Face:           1,
+		CursorX:        0.5,
+		CursorY:        0.5,
+		CursorZ:        0.5,
+		InsideBlock:    false,
+		WorldBorderHit: false,
+		Sequence:       c.Player().Sequence() + 1,
+	}
+
+	if err := c.WritePacket(context.Background(), packet); err != nil {
+		return nil, fmt.Errorf("failed to open container: %w", err)
+	}
+
+	return waitForContainer(id)
+}
+
+func waitForContainer(previousID int32) (bot.Container, error) {
+	milli := time.Now().UnixMilli()
+	c.WritePacket(context.Background(), &server.PingRequest{Payload: milli})
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	ticker := time.NewTicker(15 * time.Millisecond)
+	defer ticker.Stop()
+
+	var cCancel context.CancelFunc
+	defer func() {
+		if cCancel != nil {
+			cCancel()
+		}
+	}()
+
+	for {
+		currentID := c.Inventory().CurrentContainerID()
+		container := c.Inventory().Container()
+
+		if currentPayload >= milli && cCancel == nil {
+			ctx, cCancel = context.WithTimeout(context.Background(), 150*time.Millisecond)
+		}
+
+		if currentID > 0 && currentID != previousID && container != nil && container.SlotCount() > 0 {
+			return container, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("failed to open container: %w", ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 type craftLoopErrorReporter struct {
