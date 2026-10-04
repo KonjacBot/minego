@@ -83,20 +83,6 @@ func (b *botClient) IsConnected() bool {
 	return b.connected.Load()
 }
 
-// ResolveRegistryEntry returns the name for a numeric registry entry from the
-// most recently completed server configuration. The snapshot is immutable to
-// callers and is replaced atomically on the next configuration completion.
-func (b *botClient) ResolveRegistryEntry(registryID string, entryID int32) (string, bool) {
-	if b == nil || entryID < 0 {
-		return "", false
-	}
-	b.registryMu.RLock()
-	entries := b.registryEntries[registryID]
-	name, ok := entries[entryID]
-	b.registryMu.RUnlock()
-	return name, ok
-}
-
 func (b *botClient) WritePacket(ctx context.Context, outbound server.ServerboundPacket) error {
 	raw := pk.Marshal(outbound.PacketID(), outbound)
 	for {

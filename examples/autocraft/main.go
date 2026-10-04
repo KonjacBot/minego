@@ -231,7 +231,7 @@ func takeGlass() {
 		}
 
 		for i, s := range container.Slots() {
-			if i < 27 && (s.ItemID != (item.Glass{}.ID()) && s.ItemID != (item.GlassPane{}.ID()) && s.ItemID != 0) {
+			if i < 27 && (s.ItemID != (item.Glass{}.ID()) && s.ItemID != 0) {
 				f()
 				_ = container.Click(int16(i), 4, 1)
 				time.Sleep(5 * time.Millisecond)

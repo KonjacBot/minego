@@ -468,7 +468,11 @@ func (k *KonjacAuth) FetchProfile(ctx context.Context) *Profile {
 	}
 
 	var profile struct {
-		SelectedProfile Profile `json:"selectedProfile"`
+		SelectedProfile *struct {
+			Name string    `json:"name"`
+			ID   uuid.UUID `json:"id"`
+			UUID uuid.UUID `json:"uuid"`
+		} `json:"selectedProfile"`
 	}
 
 	err = json.Unmarshal(data, &profile)
@@ -476,5 +480,20 @@ func (k *KonjacAuth) FetchProfile(ctx context.Context) *Profile {
 		return nil
 	}
 
-	return &profile.SelectedProfile
+	selected := profile.SelectedProfile
+	if selected == nil || selected.Name == "" {
+		return nil
+	}
+	// KonjacAuth uses the Yggdrasil profile field "id", which can be an
+	// unhyphenated UUID. Keep "uuid" compatibility with older local services.
+	id := selected.ID
+	if id == uuid.Nil {
+		id = selected.UUID
+	} else if selected.UUID != uuid.Nil && selected.UUID != id {
+		return nil
+	}
+	if id == uuid.Nil {
+		return nil
+	}
+	return &Profile{Name: selected.Name, UUID: id}
 }
