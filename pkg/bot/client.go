@@ -31,6 +31,9 @@ type ClientOptions struct {
 	// packs. The accept policy acknowledges successful loading without
 	// downloading visual assets; decline reports that the pack was refused.
 	ResourcePackPolicy ResourcePackPolicy
+	// NoChunks stops the built-in World from storing chunks, for callers that
+	// keep terrain in their own structure via packet handlers.
+	NoChunks bool
 }
 
 type ResourcePackPolicy string

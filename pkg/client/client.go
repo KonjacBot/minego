@@ -463,7 +463,11 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 		c.authProvider = &auth.OfflineAuth{Username: "Steve"}
 	}
 
-	c.world = world.NewWorld(c)
+	var worldOpts []world.Option
+	if options != nil && options.NoChunks {
+		worldOpts = append(worldOpts, world.WithoutChunks())
+	}
+	c.world = world.NewWorld(c, worldOpts...)
 	c.inventory = inventory.NewManager(c)
 	c.player = player.New(c)
 	bot.AddHandler(c, func(ctx context.Context, packet *client.AddResourcePack) {

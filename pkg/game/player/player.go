@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-gl/mathgl/mgl64"
@@ -49,7 +50,10 @@ func New(c bot.Client) *Player {
 		//	}
 		//}()
 	})
-	var reportLoaded sync.Once
+	// loadedPending 表示進入新世界(Login、Respawn,包含 proxy 換分流)後還沒回報 PlayerLoaded。
+	// 伺服器在收到之前會忽略玩家的移動、也不送校正,所以每次換世界都要再回報一次,不能只在連線時回報。
+	var loadedPending atomic.Bool
+	loadedPending.Store(true)
 
 	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
 		pl.mu.Lock()
@@ -66,9 +70,6 @@ func New(c bot.Client) *Player {
 		_ = c.WritePacket(ctx, &server.ChunkBatchReceived{
 			ChunksPerTick: 64,
 		})
-		reportLoaded.Do(func() {
-			_ = c.WritePacket(ctx, &server.PlayerLoaded{})
-		})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerAbilities) {
 		pl.mu.Lock()
@@ -79,7 +80,11 @@ func New(c bot.Client) *Player {
 		pl.UpdateSequence(p.Sequence)
 	})
 
+	bot.AddHandler(c, func(_ context.Context, _ *client.Respawn) {
+		loadedPending.Store(true)
+	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
+		loadedPending.Store(true)
 		startup()
 		c.WritePacket(ctx, &server.ClientInformation{
 			Location:            "zh_TW",
@@ -92,6 +97,9 @@ func New(c bot.Client) *Player {
 			AllowListing:        true,
 			ParticleStatus:      0,
 		})
+
+		_ = c.WritePacket(ctx, &server.PlayerLoaded{})
+		_ = c.WritePacket(ctx, &server.ClientTickEnd{})
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
 		_ = c.WritePacket(ctx, &server.Pong{ID: p.ID})

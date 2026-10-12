@@ -22,6 +22,7 @@ import (
 type World struct {
 	c bot.Client
 
+	noChunks    bool
 	chunkHeight uint32
 	columns     map[level.ChunkPos]*level.Chunk
 	entities    map[int32]*Entity
@@ -30,14 +31,27 @@ type World struct {
 	chunkLock  sync.RWMutex
 }
 
-func NewWorld(c bot.Client) *World {
+// Option 調整 World 的行為。
+type Option func(*World)
+
+// WithoutChunks 讓 World 不保存區塊(方塊讀寫都回傳 chunk not loaded),只管實體;
+// 區塊由使用者自己的實作保存時用,避免同一份地形存兩次。
+func WithoutChunks() Option { return func(w *World) { w.noChunks = true } }
+
+func NewWorld(c bot.Client, opts ...Option) *World {
 	w := &World{
 		c:        c,
 		columns:  make(map[level.ChunkPos]*level.Chunk),
 		entities: make(map[int32]*Entity),
 	}
+	for _, opt := range opts {
+		opt(w)
+	}
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.LevelChunkWithLight) {
+		if w.noChunks {
+			return
+		}
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
@@ -187,6 +201,9 @@ func NewWorld(c bot.Client) *World {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockUpdate) {
+		if w.noChunks {
+			return
+		}
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
@@ -219,6 +236,9 @@ func NewWorld(c bot.Client) *World {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateSectionsBlocks) {
+		if w.noChunks {
+			return
+		}
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
