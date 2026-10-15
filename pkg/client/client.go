@@ -469,7 +469,11 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 	}
 	c.world = world.NewWorld(c, worldOpts...)
 	c.inventory = inventory.NewManager(c)
-	c.player = player.New(c)
+	var playerOpts []player.Option
+	if options != nil && options.NoTeleport {
+		playerOpts = append(playerOpts, player.WithoutTeleport())
+	}
+	c.player = player.New(c, playerOpts...)
 	bot.AddHandler(c, func(ctx context.Context, packet *client.AddResourcePack) {
 		for _, result := range resourcePackResults(c.resourcePackPolicy) {
 			if err := c.WritePacket(ctx, &server.ResourcePack{UUID: packet.UUID, Result: result}); err != nil {

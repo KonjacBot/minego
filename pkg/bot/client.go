@@ -34,6 +34,11 @@ type ClientOptions struct {
 	// NoChunks stops the built-in World from storing chunks, for callers that
 	// keep terrain in their own structure via packet handlers.
 	NoChunks bool
+	// NoTeleport stops the built-in Player from answering ClientboundPlayerPosition
+	// (updating the entity, sending AcceptTeleportation and the follow-up move), for
+	// callers that confirm teleports themselves and need control over what is sent
+	// right after a server correction.
+	NoTeleport bool
 }
 
 type ResourcePackPolicy string

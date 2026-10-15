@@ -29,17 +29,28 @@ type Player struct {
 	entity                                  *world.Entity
 	stateID, sequence, acknowledgedSequence int32
 	sequenceChanged                         chan struct{}
+	noTeleport                              bool
 
 	lastReceivedPacketTime time.Time
 }
 
 // New 創建新的 Player 實例
-func New(c bot.Client) *Player {
+// Option configures a Player.
+type Option func(*Player)
+
+// WithoutTeleport leaves ClientboundPlayerPosition to the caller: the Player no longer
+// updates its entity, confirms the teleport or sends the follow-up move packet.
+func WithoutTeleport() Option { return func(p *Player) { p.noTeleport = true } }
+
+func New(c bot.Client, opts ...Option) *Player {
 	pl := &Player{
 		c:               c,
 		entity:          &world.Entity{},
 		stateID:         1,
 		sequenceChanged: make(chan struct{}),
+	}
+	for _, opt := range opts {
+		opt(pl)
 	}
 
 	startup := sync.OnceFunc(func() {
@@ -110,6 +121,9 @@ func New(c bot.Client) *Player {
 		}
 	})
 	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerPosition) {
+		if pl.noTeleport {
+			return
+		}
 		position := pl.entity.Position()
 		if p.Flags&0x01 != 0 {
 			position[0] += p.X
