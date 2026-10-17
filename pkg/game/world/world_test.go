@@ -1,6 +1,7 @@
 package world
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -154,5 +155,35 @@ func TestAddEntityKeepsData(t *testing.T) {
 	}
 	if got := entity.Data(); got != 2 {
 		t.Fatalf("data = %d, want 2", got)
+	}
+}
+
+func TestSetEquipmentAppliesToEntity(t *testing.T) {
+	c := newWorldTestClient()
+	w := NewWorld(c)
+	c.world = w
+	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 300})
+
+	// EntityID 300;主手 item 5、頭盔 item 1112,各 1 個(實機線路格式)。
+	wire := []byte{0xac, 0x02, 0x80, 0x01, 0x05, 0x00, 0x00, 0x05, 0x01, 0xd8, 0x08, 0x00, 0x00}
+	var p gameclient.SetEquipment
+	if _, err := p.ReadFrom(bytes.NewReader(wire)); err != nil {
+		t.Fatalf("ReadFrom(): %v", err)
+	}
+	c.handler.HandlePacket(context.Background(), &p)
+
+	entity := w.GetEntity(300)
+	if entity == nil {
+		t.Fatal("entity was not added")
+	}
+	equipment := entity.Equipment()
+	if len(equipment) != 2 {
+		t.Fatalf("Equipment() = %#v, want 2 slots", equipment)
+	}
+	if got := equipment[0]; got.ItemID != 5 || got.Count != 1 {
+		t.Fatalf("main hand = %#v, want item 5 x1", got)
+	}
+	if got := equipment[5]; got.ItemID != 1112 || got.Count != 1 {
+		t.Fatalf("head = %#v, want item 1112 x1", got)
 	}
 }

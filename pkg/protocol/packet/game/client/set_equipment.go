@@ -64,6 +64,6 @@ func (e *Equipment) ReadFrom(r io.Reader) (n int64, err error) {
 
 //codec:gen
 type SetEquipment struct {
-	EntityID int32 `mc:"VarInt"`
-	Equipment
+	EntityID  int32 `mc:"VarInt"`
+	Equipment Equipment
 }
