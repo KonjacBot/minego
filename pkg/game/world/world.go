@@ -111,6 +111,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			rot:        mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()},
 			metadata:   nil,
 			equipment:  nil,
+			data:       p.Data,
 		}
 		w.entityLock.Lock()
 		w.entities[p.ID] = entity

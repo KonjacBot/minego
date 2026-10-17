@@ -21,6 +21,7 @@ type Entity struct {
 	rot        mgl64.Vec2
 	metadata   map[uint8]metadata.Metadata
 	equipment  map[int8]slot.Slot
+	data       int32
 }
 
 func (e *Entity) ID() int32 {
@@ -112,4 +113,18 @@ func (e *Entity) updateMetadata(values map[uint8]metadata.Metadata) {
 	for index, value := range values {
 		e.metadata[index] = value
 	}
+}
+
+// Data returns the extra value sent with AddEntity (the facing direction for item frames and paintings).
+func (e *Entity) Data() int32 {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.data
+}
+
+// SetData sets the extra value sent with AddEntity.
+func (e *Entity) SetData(data int32) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.data = data
 }

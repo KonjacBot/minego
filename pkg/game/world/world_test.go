@@ -141,3 +141,18 @@ func (h *worldEventHandler) PublishEvent(event string, _ any) error {
 	return nil
 }
 func (*worldEventHandler) SubscribeEvent(string, func(any) error) {}
+
+func TestAddEntityKeepsData(t *testing.T) {
+	c := newWorldTestClient()
+	w := NewWorld(c)
+	c.world = w
+	// Item frames send their facing direction as the AddEntity data (2 = north).
+	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1, Data: 2})
+	entity := w.GetEntity(1)
+	if entity == nil {
+		t.Fatal("entity was not added")
+	}
+	if got := entity.Data(); got != 2 {
+		t.Fatalf("data = %d, want 2", got)
+	}
+}

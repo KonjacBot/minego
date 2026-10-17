@@ -34,6 +34,8 @@ type Entity interface {
 
 	Metadata() map[uint8]metadata.Metadata
 	Equipment() map[int8]slot.Slot
+	// Data is the extra value sent with AddEntity: the facing direction (0 down, 1 up, 2 north, 3 south, 4 west, 5 east) for item frames and paintings.
+	Data() int32
 
 	SetPosition(pos mgl64.Vec3)
 	SetRotation(rot mgl64.Vec2)
