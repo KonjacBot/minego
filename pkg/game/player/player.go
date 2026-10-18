@@ -589,17 +589,19 @@ func (p *Player) OpenContainer(pos protocol.Position, hand int32) (bot.Container
 	return p.waitForContainer(previousContainerID)
 }
 
-// UseItem 使用指定手中的物品
+// UseItem 使用指定手中的物品,帶著目前的視角:伺服器處理前會把玩家轉到封包的視角
+// (ServerGamePacketListenerImpl.handleUseItem),水桶撈水、丟東西都照這個方向。
 func (p *Player) UseItem(hand int8) error {
 	if p.c == nil {
 		return fmt.Errorf("client is not initialized")
 	}
 
+	rot := p.entity.Rotation()
 	return p.c.WritePacket(context.Background(), &server.UseItem{
 		Hand:     int32(hand),
 		Sequence: p.nextSequence(),
-		Yaw:      0,
-		Pitch:    0,
+		Yaw:      float32(rot.X()),
+		Pitch:    float32(rot.Y()),
 	})
 }
 
