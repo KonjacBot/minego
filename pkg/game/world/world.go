@@ -273,6 +273,8 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		}
 	})
 
+	w.handleBlockEntities(c)
+
 	return w
 }
 
