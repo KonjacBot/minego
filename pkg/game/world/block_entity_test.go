@@ -94,7 +94,7 @@ func TestBlockEntities(t *testing.T) {
 		t.Fatal("沒載入的區塊不該有方塊實體")
 	}
 
-	c.handler.HandlePacket(ctx, &gameclient.ForgetLevelChunk{Pos: level.ChunkPos{-1, 2}})
+	c.handler.HandlePacket(ctx, &gameclient.ForgetLevelChunk{Pos: gameclient.PackedChunkPos{-1, 2}})
 	if _, _, ok := w.BlockEntity(pos); ok {
 		t.Fatal("卸載區塊後方塊實體還在")
 	}

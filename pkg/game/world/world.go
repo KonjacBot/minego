@@ -80,7 +80,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
-		delete(w.columns, p.Pos)
+		delete(w.columns, level.ChunkPos(p.Pos))
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
