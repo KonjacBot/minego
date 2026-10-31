@@ -180,11 +180,16 @@ func TestFlyToPreservesWorkingFiveBlockWarehouseCadence(t *testing.T) {
 			moves = append(moves, mgl64.Vec3{move.X, move.FeetY, move.Z})
 		}
 	}
-	if len(moves) != 1 {
-		t.Fatalf("warehouse flight packets = %d; want 1 using the working five-block cadence", len(moves))
+	// The 5.05-block trip is one five-block step, then (under 0.05 blocks left) a final packet at the exact
+	// target so the server ends at the requested position.
+	if len(moves) != 2 {
+		t.Fatalf("warehouse flight packets = %d; want a five-block step and the final snap to the target", len(moves))
 	}
 	if got := moves[0].Sub(start).Len(); math.Abs(got-5) > 0.001 {
 		t.Fatalf("first warehouse flight segment = %.3f blocks; want 5", got)
+	}
+	if moves[1] != target {
+		t.Fatalf("final warehouse flight packet = %v; want the target %v", moves[1], target)
 	}
 }
 
