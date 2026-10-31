@@ -26,10 +26,9 @@ type TrimOverride struct {
 
 //codec:gen
 type TrimPattern struct {
-	AssetName    string
-	TemplateItem int32 `mc:"VarInt"`
-	Description  chat.Message
-	Decal        bool
+	AssetName   string
+	Description chat.Message
+	Decal       bool
 }
 
 func (*Trim) ID() string {

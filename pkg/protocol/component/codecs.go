@@ -372,6 +372,11 @@ func (c Bees) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *Bee) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.EntityData).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -392,6 +397,11 @@ func (c *Bee) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c Bee) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.EntityType).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.EntityData).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -411,6 +421,11 @@ func (c Bee) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *BlockEntityData) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.Type).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.Data).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -421,6 +436,11 @@ func (c *BlockEntityData) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c BlockEntityData) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.Type).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.Data).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -856,96 +876,13 @@ func (c BlockPredicate) WriteTo(w io.Writer) (n int64, err error) {
 	}
 	return n, err
 }
-func (c *Property) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.String)(&c.Name).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.IsExactMatch).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.ExactValue).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.MinValue).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.MaxValue).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-
-func (c Property) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.String)(&c.Name).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.IsExactMatch).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.ExactValue).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.MinValue).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (&c.MaxValue).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-func (c *ExactDataComponentMatcher) ReadFrom(r io.Reader) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.VarInt)(&c.Type).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = packet.NBT(&c.Value).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
-
-func (c ExactDataComponentMatcher) WriteTo(w io.Writer) (n int64, err error) {
-	var temp int64
-	temp, err = (*packet.VarInt)(&c.Type).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = packet.NBT(&c.Value).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	return n, err
-}
 func (c *PartialDataComponentMatcher) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.Boolean)(&c.IsPredicateType).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = (*packet.VarInt)(&c.Type).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -961,6 +898,11 @@ func (c *PartialDataComponentMatcher) ReadFrom(r io.Reader) (n int64, err error)
 
 func (c PartialDataComponentMatcher) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.Boolean)(&c.IsPredicateType).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = (*packet.VarInt)(&c.Type).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -1043,6 +985,25 @@ func (c *ChargedProjectiles) ReadFrom(r io.Reader) (n int64, err error) {
 func (c ChargedProjectiles) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = packet.Array(&c.Projectiles).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *ChickenVariant) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Variant).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func (c ChickenVariant) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Variant).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1393,7 +1354,7 @@ func (c *CustomModelData) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*Int32VarIntVarIntArray)(&c.Colors).ReadFrom(r)
+	temp, err = (*Int32VarIntArray)(&c.Colors).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1418,7 +1379,7 @@ func (c CustomModelData) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*Int32VarIntVarIntArray)(&c.Colors).WriteTo(w)
+	temp, err = (*Int32VarIntArray)(&c.Colors).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -1543,48 +1504,20 @@ func (c DamageTypeData) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *DamageType) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Boolean)(&c.IsHolder).ReadFrom(r)
+	temp, err = (*packet.VarInt)(&c.Type).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
-	}
-	if c.IsHolder == true {
-		temp, err = (*packet.VarInt)(&c.HolderID).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.IsHolder == false {
-		temp, err = (*packet.Identifier)(&c.HolderType).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
 	}
 	return n, err
 }
 
 func (c DamageType) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Boolean)(&c.IsHolder).WriteTo(w)
+	temp, err = (*packet.VarInt)(&c.Type).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
-	}
-	if c.IsHolder == true {
-		temp, err = (*packet.VarInt)(&c.HolderID).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	if c.IsHolder == false {
-		temp, err = (*packet.Identifier)(&c.HolderType).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
 	}
 	return n, err
 }
@@ -1752,6 +1685,11 @@ func (c Enchantment) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *EntityData) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.Type).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.Data).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -1762,6 +1700,11 @@ func (c *EntityData) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c EntityData) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
+	temp, err = (*packet.VarInt)(&c.Type).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	temp, err = packet.NBT(&c.Data).WriteTo(w)
 	n += temp
 	if err != nil {
@@ -1776,54 +1719,25 @@ func (c *Equippable) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.VarInt)(&c.EquipSoundID).ReadFrom(r)
+	temp, err = (&c.EquipSound).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.EquipSoundID == 0 {
-		c.EquipSoundEvent = new(SoundEvent)
-		temp, err = (*SoundEvent)(c.EquipSoundEvent).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasModel).ReadFrom(r)
+	temp, err = (&c.Model).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasModel {
-		temp, err = (*packet.Identifier)(&c.Model).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasCameraOverlay).ReadFrom(r)
+	temp, err = (&c.CameraOverlay).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasCameraOverlay {
-		temp, err = (*packet.Identifier)(&c.CameraOverlay).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasAllowedEntities).ReadFrom(r)
+	temp, err = (&c.AllowedEntities).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
-	}
-	if c.HasAllowedEntities {
-		temp, err = (&c.AllowedEntitiesID).ReadFrom(r)
-		n += temp
-		if err != nil {
-			return n, err
-		}
 	}
 	temp, err = (*packet.Boolean)(&c.Dispensable).ReadFrom(r)
 	n += temp
@@ -1840,6 +1754,21 @@ func (c *Equippable) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.EquipOnInteract).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.CanBeSheared).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.ShearingSound).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	return n, err
 }
 
@@ -1850,53 +1779,25 @@ func (c Equippable) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.VarInt)(&c.EquipSoundID).WriteTo(w)
+	temp, err = (&c.EquipSound).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.EquipSoundID == 0 {
-		temp, err = (*SoundEvent)(c.EquipSoundEvent).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasModel).WriteTo(w)
+	temp, err = (&c.Model).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasModel {
-		temp, err = (*packet.Identifier)(&c.Model).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasCameraOverlay).WriteTo(w)
+	temp, err = (&c.CameraOverlay).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	if c.HasCameraOverlay {
-		temp, err = (*packet.Identifier)(&c.CameraOverlay).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
-	}
-	temp, err = (*packet.Boolean)(&c.HasAllowedEntities).WriteTo(w)
+	temp, err = (&c.AllowedEntities).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
-	}
-	if c.HasAllowedEntities {
-		temp, err = (&c.AllowedEntitiesID).WriteTo(w)
-		n += temp
-		if err != nil {
-			return n, err
-		}
 	}
 	temp, err = (*packet.Boolean)(&c.Dispensable).WriteTo(w)
 	n += temp
@@ -1909,6 +1810,21 @@ func (c Equippable) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	temp, err = (*packet.Boolean)(&c.DamageOnHurt).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.EquipOnInteract).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.Boolean)(&c.CanBeSheared).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (&c.ShearingSound).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -2686,12 +2602,31 @@ func (c OminousBottleAmplifier) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *PaintingVariant) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Int)(&c.Width).ReadFrom(r)
+	temp, err = (&c.Variant).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Int)(&c.Height).ReadFrom(r)
+	return n, err
+}
+
+func (c PaintingVariant) WriteTo(w io.Writer) (n int64, err error) {
+	var temp int64
+	temp, err = (&c.Variant).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (c *PaintingVariantData) ReadFrom(r io.Reader) (n int64, err error) {
+	var temp int64
+	temp, err = (*packet.VarInt)(&c.Width).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
+	temp, err = (*packet.VarInt)(&c.Height).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -2714,14 +2649,14 @@ func (c *PaintingVariant) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, err
 }
 
-func (c PaintingVariant) WriteTo(w io.Writer) (n int64, err error) {
+func (c PaintingVariantData) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (*packet.Int)(&c.Width).WriteTo(w)
+	temp, err = (*packet.VarInt)(&c.Width).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Int)(&c.Height).WriteTo(w)
+	temp, err = (*packet.VarInt)(&c.Height).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3021,8 +2956,8 @@ func (c *PotionEffectDetails) ReadFrom(r io.Reader) (n int64, err error) {
 		return n, err
 	}
 	if c.HasHiddenEffect {
-		c.HiddenEffect = new(PotionEffect)
-		temp, err = (*PotionEffect)(c.HiddenEffect).ReadFrom(r)
+		c.HiddenEffect = new(PotionEffectDetails)
+		temp, err = (*PotionEffectDetails)(c.HiddenEffect).ReadFrom(r)
 		n += temp
 		if err != nil {
 			return n, err
@@ -3064,7 +2999,7 @@ func (c PotionEffectDetails) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 	if c.HasHiddenEffect {
-		temp, err = (*PotionEffect)(c.HiddenEffect).WriteTo(w)
+		temp, err = (*PotionEffectDetails)(c.HiddenEffect).WriteTo(w)
 		n += temp
 		if err != nil {
 			return n, err
@@ -3112,7 +3047,7 @@ func (c Profile) WriteTo(w io.Writer) (n int64, err error) {
 }
 func (c *ProvidesBannerPatterns) ReadFrom(r io.Reader) (n int64, err error) {
 	var temp int64
-	temp, err = (&c.Key).ReadFrom(r)
+	temp, err = (&c.Patterns).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3122,7 +3057,7 @@ func (c *ProvidesBannerPatterns) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (c ProvidesBannerPatterns) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
-	temp, err = (&c.Key).WriteTo(w)
+	temp, err = (&c.Patterns).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3432,6 +3367,11 @@ func (c *Tool) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.CanDestroyBlocksInCreative).ReadFrom(r)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	return n, err
 }
 
@@ -3452,6 +3392,11 @@ func (c Tool) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
+	temp, err = (*packet.Boolean)(&c.CanDestroyBlocksInCreative).WriteTo(w)
+	n += temp
+	if err != nil {
+		return n, err
+	}
 	return n, err
 }
 func (c *ToolRule) ReadFrom(r io.Reader) (n int64, err error) {
@@ -3461,17 +3406,7 @@ func (c *ToolRule) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasSpeed).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	temp, err = (&c.Speed).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasCorrectDropForBlocks).ReadFrom(r)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3491,17 +3426,7 @@ func (c ToolRule) WriteTo(w io.Writer) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.Boolean)(&c.HasSpeed).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	temp, err = (&c.Speed).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.Boolean)(&c.HasCorrectDropForBlocks).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err
@@ -3665,11 +3590,6 @@ func (c *TrimPattern) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return n, err
 	}
-	temp, err = (*packet.VarInt)(&c.TemplateItem).ReadFrom(r)
-	n += temp
-	if err != nil {
-		return n, err
-	}
 	temp, err = (&c.Description).ReadFrom(r)
 	n += temp
 	if err != nil {
@@ -3686,11 +3606,6 @@ func (c *TrimPattern) ReadFrom(r io.Reader) (n int64, err error) {
 func (c TrimPattern) WriteTo(w io.Writer) (n int64, err error) {
 	var temp int64
 	temp, err = (*packet.String)(&c.AssetName).WriteTo(w)
-	n += temp
-	if err != nil {
-		return n, err
-	}
-	temp, err = (*packet.VarInt)(&c.TemplateItem).WriteTo(w)
 	n += temp
 	if err != nil {
 		return n, err

@@ -2,10 +2,12 @@ package client
 
 import (
 	"bytes"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/KonjacBot/go-mc/level/item"
+	"github.com/KonjacBot/minego/pkg/protocol/component"
 	"github.com/KonjacBot/minego/pkg/protocol/slot"
 )
 
@@ -105,5 +107,38 @@ func TestSetEquipmentReadFromWire(t *testing.T) {
 	}
 	if !bytes.Equal(encoded.Bytes(), setEquipmentWire) {
 		t.Fatalf("re-encoded = % x, want % x", encoded.Bytes(), setEquipmentWire)
+	}
+}
+
+// 實際封包:殭屍拿著有兩隻蜜蜂的蜂巢。26.2 的蜜蜂資料前面多一個實體種類編號,
+// 以前只讀 NBT,整包少讀到最後就 unexpected EOF 斷線。
+func TestSetEquipmentWithBees(t *testing.T) {
+	data, err := os.ReadFile("testdata/set_equipment_bees.bin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := bytes.NewReader(data)
+	var p SetEquipment
+	if _, err := p.ReadFrom(r); err != nil {
+		t.Fatalf("ReadFrom(): %v", err)
+	}
+	if r.Len() != 0 {
+		t.Fatalf("還剩 %d bytes 沒讀", r.Len())
+	}
+	var bees *component.Bees
+	for _, e := range p.Equipment {
+		for _, c := range e.Item.AddComponent {
+			if b, ok := c.(*component.Bees); ok {
+				bees = b
+			}
+		}
+	}
+	if bees == nil || len(bees.Bees) != 2 {
+		t.Fatalf("蜜蜂 = %+v,要 2 隻", bees)
+	}
+	for _, b := range bees.Bees {
+		if b.EntityType != 11 {
+			t.Errorf("實體種類 = %d,要 11(bee)", b.EntityType)
+		}
 	}
 }

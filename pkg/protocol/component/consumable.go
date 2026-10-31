@@ -35,7 +35,7 @@ type ConsumeEffect struct {
 	//opt:enum:Type:3
 	TeleportRandomlyDiameter float32
 	//opt:enum:Type:4
-	PlaySound SoundEvent
+	PlaySound packet.OptID[SoundEvent, *SoundEvent]
 }
 
 func (*Consumable) ID() string {

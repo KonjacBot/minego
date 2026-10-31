@@ -13,4 +13,4 @@ require (
 	golang.org/x/net v0.56.0
 )
 
-require github.com/KonjacBot/go-mc v0.0.0-20260702073504-475cb683b71f
+require github.com/KonjacBot/go-mc v0.0.0-20261019114820-7edf5eb18ea4

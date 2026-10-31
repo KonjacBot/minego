@@ -5,7 +5,7 @@ type CustomModelData struct {
 	Floats  []float32
 	Flags   []bool
 	Strings []string
-	Colors  []int32 `mc:"VarInt"`
+	Colors  []int32
 }
 
 func (*CustomModelData) ID() string {

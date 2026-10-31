@@ -7,46 +7,18 @@ import (
 	"github.com/KonjacBot/go-mc/net/packet"
 )
 
+// JukeboxPlayable 是唱片能放的歌:26.2 只有 Holder<JukeboxSong>,
+// VarInt 大於 0 是登錄表編號加 1,0 接內嵌的 JukeboxSongData(舊版開頭還有一個 mode byte,已經拿掉)。
 type JukeboxPlayable struct {
-	Mode     int8
-	Name     packet.Identifier
 	SongData packet.OptID[JukeboxSongData, *JukeboxSongData]
 }
 
-func (p *JukeboxPlayable) ReadFrom(r io.Reader) (n int64, err error) {
-	n1, err := (*packet.Byte)(&p.Mode).ReadFrom(r)
-	if err != nil {
-		return n1, err
-	}
-	if p.Mode == 0 {
-		n2, err := p.Name.ReadFrom(r)
-		return n1 + n2, err
-	}
-
-	if p.Mode == 1 {
-		n2, err := p.SongData.ReadFrom(r)
-		return n1 + n2, err
-	}
-
-	return n1, err
+func (p *JukeboxPlayable) ReadFrom(r io.Reader) (int64, error) {
+	return p.SongData.ReadFrom(r)
 }
 
 func (p JukeboxPlayable) WriteTo(w io.Writer) (int64, error) {
-	n1, err := (*packet.Byte)(&p.Mode).WriteTo(w)
-	if err != nil {
-		return n1, err
-	}
-
-	if p.Mode == 0 {
-		n2, err := p.Name.WriteTo(w)
-		return n1 + n2, err
-	}
-
-	if p.Mode == 1 {
-		n2, err := p.SongData.WriteTo(w)
-		return n1 + n2, err
-	}
-	return n1, err
+	return p.SongData.WriteTo(w)
 }
 
 //codec:gen

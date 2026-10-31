@@ -297,7 +297,7 @@ func (OptGlobalPosition) EntityMetadataType() MetadataType {
 }
 
 type PaintingVariant struct {
-	pk.OptID[component.PaintingVariant, *component.PaintingVariant]
+	pk.OptID[component.PaintingVariantData, *component.PaintingVariantData]
 }
 
 func (PaintingVariant) EntityMetadataType() MetadataType {

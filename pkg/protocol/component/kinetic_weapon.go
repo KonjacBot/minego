@@ -11,8 +11,8 @@ type KineticWeapon struct {
 	DamageConditions     pk.Option[KineticWeaponCondition, *KineticWeaponCondition]
 	ForwardMovement      float32
 	DamageMultiplier     float32
-	Sound                pk.Option[SoundEvent, *SoundEvent]
-	HitSound             pk.Option[SoundEvent, *SoundEvent]
+	Sound                pk.Option[pk.OptID[SoundEvent, *SoundEvent], *pk.OptID[SoundEvent, *SoundEvent]]
+	HitSound             pk.Option[pk.OptID[SoundEvent, *SoundEvent], *pk.OptID[SoundEvent, *SoundEvent]]
 }
 
 //codec:gen

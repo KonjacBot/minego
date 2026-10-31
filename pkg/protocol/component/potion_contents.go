@@ -30,7 +30,7 @@ type PotionEffectDetails struct {
 	ShowIcon        bool
 	HasHiddenEffect bool
 	//opt:optional:HasHiddenEffect
-	HiddenEffect *PotionEffect
+	HiddenEffect *PotionEffectDetails
 }
 
 func (*PotionContents) ID() string {
