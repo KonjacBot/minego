@@ -26,6 +26,8 @@ type World struct {
 	chunkHeight uint32
 	columns     map[level.ChunkPos]*level.Chunk
 	entities    map[int32]*Entity
+	// dimension 是目前所在的維度(Login、Respawn 帶的 Dimension),由 entityLock 保護。
+	dimension string
 
 	entityLock sync.RWMutex
 	chunkLock  sync.RWMutex
@@ -73,6 +75,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 
 		w.entityLock.Lock()
 		w.entities = make(map[int32]*Entity)
+		w.dimension = p.CommonPlayerSpawnInfo.Dimension
 		w.entityLock.Unlock()
 	})
 
@@ -84,6 +87,17 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 	})
 
 	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
+		// 原版客戶端只在換維度時換掉整個世界;同一個維度的重生(伺服器的傳送外掛、跨區傳送也會送)
+		// 留著原本的區塊與實體,伺服器也不會重送還在追蹤的實體。這裡照樣清掉的話,展示框這種不會動的實體
+		// 要等人離開追蹤距離再回來才會有。
+		dimension := p.CommonPlayerSpawnInfo.Dimension
+		w.entityLock.Lock()
+		same := w.dimension != "" && w.dimension == dimension
+		w.dimension = dimension
+		w.entityLock.Unlock()
+		if same {
+			return
+		}
 		w.chunkLock.Lock()
 		switch p.CommonPlayerSpawnInfo.DimensionType {
 		case 0:

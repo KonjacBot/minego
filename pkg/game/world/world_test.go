@@ -44,14 +44,42 @@ func TestEntityCombinedMoveUpdatesPositionAndRotation(t *testing.T) {
 	}
 }
 
-func TestRespawnClearsEntities(t *testing.T) {
+// 原版只在換維度時清掉實體;同一個維度的重生留著,伺服器不會重送還在追蹤的展示框。
+func TestRespawnClearsEntitiesOnlyOnDimensionChange(t *testing.T) {
+	spawn := func(dim string) gameclient.CommonPlayerSpawnInfo {
+		return gameclient.CommonPlayerSpawnInfo{Dimension: dim}
+	}
+	tests := []struct {
+		name    string
+		respawn string
+		kept    bool
+	}{
+		{"same dimension", "minecraft:overworld", true},
+		{"other dimension", "minecraft:the_nether", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newWorldTestClient()
+			w := NewWorld(c)
+			c.world = w
+			c.handler.HandlePacket(context.Background(), &gameclient.Login{CommonPlayerSpawnInfo: spawn("minecraft:overworld")})
+			c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
+			c.handler.HandlePacket(context.Background(), &gameclient.Respawn{CommonPlayerSpawnInfo: spawn(tt.respawn)})
+			if kept := w.GetEntity(1) != nil; kept != tt.kept {
+				t.Fatalf("entity kept = %v, want %v", kept, tt.kept)
+			}
+		})
+	}
+}
+
+func TestLoginClearsEntities(t *testing.T) {
 	c := newWorldTestClient()
 	w := NewWorld(c)
 	c.world = w
 	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
-	c.handler.HandlePacket(context.Background(), &gameclient.Respawn{})
+	c.handler.HandlePacket(context.Background(), &gameclient.Login{})
 	if entity := w.GetEntity(1); entity != nil {
-		t.Fatalf("entity survived respawn: %#v", entity)
+		t.Fatalf("entity survived login: %#v", entity)
 	}
 }
 
