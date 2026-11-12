@@ -17,16 +17,16 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	"github.com/KonjacBot/minego/pkg/protocol/packet"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/game/inventory"
-	"github.com/KonjacBot/minego/pkg/game/player"
-	"github.com/KonjacBot/minego/pkg/game/world"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/game/inventory"
+	"github.com/KonjacBot/minego/v2/pkg/game/player"
+	"github.com/KonjacBot/minego/v2/pkg/game/world"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 type botClient struct {

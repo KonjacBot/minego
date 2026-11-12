@@ -8,10 +8,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/client"
-	"github.com/KonjacBot/minego/pkg/game/player"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/client"
+	"github.com/KonjacBot/minego/v2/pkg/game/player"
 )
 
 func main() {

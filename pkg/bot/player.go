@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
-	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
 )
 
 type Player interface {

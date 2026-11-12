@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
 )
 
 func (c *Rotation) ReadFrom(r io.Reader) (n int64, err error) {

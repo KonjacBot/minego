@@ -27,8 +27,8 @@ import (
 	"github.com/KonjacBot/go-mc/net/CFB8"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/protocol/packet/login/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/login/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/login/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/login/server"
 )
 
 var (

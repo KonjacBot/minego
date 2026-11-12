@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 type Client interface {

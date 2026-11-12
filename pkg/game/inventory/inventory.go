@@ -6,9 +6,9 @@ import (
 
 	"github.com/KonjacBot/go-mc/level/item"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 // Container 代表一個容器

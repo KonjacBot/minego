@@ -5,12 +5,12 @@ import (
 	"github.com/KonjacBot/go-mc/nbt"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 	"github.com/KonjacBot/go-mc/yggdrasil/user"
-	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
 	"github.com/google/uuid"
 
-	"github.com/KonjacBot/minego/pkg/protocol/component"
-	"github.com/KonjacBot/minego/pkg/protocol/particle"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/component"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/particle"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 type Byte struct {

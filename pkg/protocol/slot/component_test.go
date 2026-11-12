@@ -3,8 +3,8 @@ package slot_test
 import (
 	"testing"
 
-	_ "github.com/KonjacBot/minego/pkg/protocol/component"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	_ "github.com/KonjacBot/minego/v2/pkg/protocol/component"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 func TestComponentIDMatchesRegistryOrder(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"github.com/KonjacBot/go-mc/nbt"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/protocol"
-	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	gameclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
 )
 
 func rawNBT(t *testing.T, v any) nbt.RawMessage {

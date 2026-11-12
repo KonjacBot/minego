@@ -1,6 +1,6 @@
-module github.com/KonjacBot/minego
+module github.com/KonjacBot/minego/v2
 
-go 1.25.0
+go 1.27
 
 require (
 	github.com/google/uuid v1.6.0
@@ -13,4 +13,4 @@ require (
 	golang.org/x/net v0.56.0
 )
 
-require github.com/KonjacBot/go-mc v0.0.0-20261019114820-7edf5eb18ea4
+require github.com/KonjacBot/go-mc v0.0.0-20261112110516-153e022d2566

@@ -8,7 +8,7 @@ import (
 
 	mcnet "github.com/KonjacBot/go-mc/net"
 
-	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
 )
 
 // createSOCKS5Dialer 建立 SOCKS5 dialer

@@ -1,7 +1,7 @@
 package component
 
 import (
-	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
 )
 
 //codec:gen

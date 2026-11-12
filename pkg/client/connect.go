@@ -11,11 +11,11 @@ import (
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
-	configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
-	gameserver "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	configclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/client"
+	configserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/server"
+	gameserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 func (b *botClient) login(ctx context.Context) error {

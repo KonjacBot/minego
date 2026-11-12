@@ -8,7 +8,7 @@ argument-hint: "Describe the Minecraft bot behavior you want to build"
 
 ## When to Use
 
-- Creating a new Minecraft bot in Go using `github.com/KonjacBot/minego`
+- Creating a new Minecraft bot in Go using `github.com/KonjacBot/minego/v2`
 - Connecting to a Minecraft Java server, handling game events, or automating tasks
 - Working with inventory, player movement, world blocks, entities, or crafting
 - Extending an existing minego bot with new features
@@ -16,7 +16,7 @@ argument-hint: "Describe the Minecraft bot behavior you want to build"
 ## Module
 
 ```
-github.com/KonjacBot/minego
+github.com/KonjacBot/minego/v2
 ```
 
 ## Core Architecture
@@ -44,9 +44,9 @@ import (
     "context"
     "os"
 
-    "github.com/KonjacBot/minego/pkg/auth"
-    "github.com/KonjacBot/minego/pkg/bot"
-    "github.com/KonjacBot/minego/pkg/client"
+    "github.com/KonjacBot/minego/v2/pkg/auth"
+    "github.com/KonjacBot/minego/v2/pkg/bot"
+    "github.com/KonjacBot/minego/v2/pkg/client"
 )
 ```
 
@@ -223,7 +223,7 @@ bot.SubscribeEvent(c, func(e player.MessageEvent) error {
 Handle specific clientbound packets with `bot.AddHandler`:
 
 ```go
-import cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+import cp "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
 
 bot.AddHandler(c, func(ctx context.Context, p *cp.RecipeBookAdd) {
     // process recipes
@@ -233,7 +233,7 @@ bot.AddHandler(c, func(ctx context.Context, p *cp.RecipeBookAdd) {
 Send serverbound packets with `WritePacket`:
 
 ```go
-import "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+import "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 
 c.WritePacket(ctx, &server.ClientCommand{Action: 0})
 c.WritePacket(ctx, &server.PlaceRecipe{
@@ -283,7 +283,7 @@ c.Player().UpdateLocation()
 ### Pathfinding
 
 ```go
-import "github.com/KonjacBot/minego/pkg/game/player"
+import "github.com/KonjacBot/minego/v2/pkg/game/player"
 
 path, err := player.AStar(c.World(), startPos, goalPos, 4096)
 ```

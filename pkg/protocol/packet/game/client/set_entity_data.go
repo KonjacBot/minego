@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/KonjacBot/minego/pkg/protocol/metadata"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/metadata"
 )
 
 //codec:gen

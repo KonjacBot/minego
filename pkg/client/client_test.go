@@ -13,11 +13,11 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol/packet"
-	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet"
+	configclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 func TestNewClientAllowsNilOptions(t *testing.T) {

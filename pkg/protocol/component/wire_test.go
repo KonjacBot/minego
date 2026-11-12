@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 // 26.2 的格式(對照伺服器 jar 的 StreamCodec):雞的種類只有一個 VarInt;畫、唱片、武器音效是 holder(大於 0 是編號加 1,0 接內嵌);

@@ -14,11 +14,11 @@ import (
 	"github.com/KonjacBot/go-mc/level/block"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/game/world"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/game/world"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 type Player struct {

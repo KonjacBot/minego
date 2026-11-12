@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 type ConfigResourcePack struct {

@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	mcnet "github.com/KonjacBot/go-mc/net"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/login/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/login/client"
 	"github.com/google/uuid"
 )
 

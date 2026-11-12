@@ -1,6 +1,6 @@
 package client
 
-import "github.com/KonjacBot/minego/pkg/protocol/packet"
+import "github.com/KonjacBot/minego/v2/pkg/protocol/packet"
 
 const EventConnectionStateChange = "client:connection_state_change"
 
