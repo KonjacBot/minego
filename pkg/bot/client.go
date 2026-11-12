@@ -37,6 +37,11 @@ type ClientOptions struct {
 	// NoChunks stops the built-in World from storing chunks, for callers that
 	// keep terrain in their own structure via packet handlers.
 	NoChunks bool
+	// ChunkLight keeps the light data of loaded chunks. Off by default: it is
+	// about half of each chunk's memory and minego does not use it.
+	ChunkLight bool
+	// ChunkHeightmaps keeps the heightmaps of loaded chunks. Off by default.
+	ChunkHeightmaps bool
 	// NoTeleport stops the built-in Player from answering ClientboundPlayerPosition
 	// (updating the entity, sending AcceptTeleportation and the follow-up move), for
 	// callers that confirm teleports themselves and need control over what is sent

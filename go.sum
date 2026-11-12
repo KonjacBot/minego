@@ -1,5 +1,5 @@
-github.com/KonjacBot/go-mc v0.1.0 h1:Akx7k2VRocM9d9j/yI7DqgJgtKLFin6w8kALvDt3eU0=
-github.com/KonjacBot/go-mc v0.1.0/go.mod h1:6TgZdySNi1YvZabhnTnR5099phwY2p3o4nNeYgtG0B0=
+github.com/KonjacBot/go-mc v0.2.0 h1:Yd2wi0z9pRjDUzQBqnUj05r8gtnDe/MUIKmDkrvqW2U=
+github.com/KonjacBot/go-mc v0.2.0/go.mod h1:6TgZdySNi1YvZabhnTnR5099phwY2p3o4nNeYgtG0B0=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
