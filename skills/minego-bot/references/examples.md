@@ -42,9 +42,8 @@ func main() {
 	}
 	defer c.Close(context.Background())
 
-	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
+	c.On(func(_ context.Context, e player.MessageEvent) {
 		fmt.Println(e.Message.String())
-		return nil
 	})
 
 	if err := c.HandleGame(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -56,7 +55,7 @@ func main() {
 **Key points:**
 - `client.NewClient()` creates the client with auth options
 - `Connect()` establishes the connection (pass `nil` for default options)
-- `bot.SubscribeEvent()` subscribes to typed events before entering the game loop
+- `c.On()` subscribes to an event or packet type, taken from the handler parameter, before entering the game loop
 - `HandleGame()` is the blocking main loop — call it last
 - Always close the client and treat `context.Canceled` as a normal shutdown
 - Read credentials and server addresses from configuration or environment variables
@@ -89,7 +88,7 @@ c = client.NewClient(&bot.ClientOptions{AuthProvider: &auth.KonjacAuth{
 }})
 
 // Subscribe to chat messages to detect login
-bot.SubscribeEvent(c, func(e player.MessageEvent) error {
+c.On(func(_ context.Context, e player.MessageEvent) {
 	message := e.Message.ClearString()
 	if message == "[系統] 讀取人物成功。" {
 		// Trigger actions after login
@@ -97,18 +96,17 @@ bot.SubscribeEvent(c, func(e player.MessageEvent) error {
 		go startCrafting()
 	}
 	fmt.Println(e.Message.String())
-	return nil
 })
 
 // Handle recipe discovery
-bot.AddHandler(c, func(ctx context.Context, p *cp.RecipeBookAdd) {
+c.On(func(ctx context.Context, p *cp.RecipeBookAdd) {
 	for _, r := range p.Recipes {
 		// Find specific recipe IDs at runtime
 	}
 })
 
 // Auto-respawn on death
-bot.AddHandler(c, func(ctx context.Context, p *cp.SetHealth) {
+c.On(func(ctx context.Context, p *cp.SetHealth) {
 	_ = c.WritePacket(ctx, &server.ClientCommand{Action: 0})
 })
 
