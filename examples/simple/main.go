@@ -36,9 +36,8 @@ func main() {
 	}
 	defer c.Close(context.Background())
 
-	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
+	c.On(func(_ context.Context, e player.MessageEvent) {
 		fmt.Println(e.Message.String())
-		return nil
 	})
 
 	if err := c.HandleGame(ctx); err != nil && !errors.Is(err, context.Canceled) {

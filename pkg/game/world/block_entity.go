@@ -17,7 +17,7 @@ import (
 
 // handleBlockEntities 註冊 BlockEntityData 的處理。
 func (w *World) handleBlockEntities(c bot.Client) {
-	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockEntityData) {
+	c.Bus().On(func(ctx context.Context, p *cp.BlockEntityData) {
 		if w.noChunks {
 			return
 		}

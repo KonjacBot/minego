@@ -7,10 +7,10 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
-	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
 	gameclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
@@ -20,10 +20,10 @@ func TestEntityCombinedMoveUpdatesPositionAndRotation(t *testing.T) {
 	w := NewWorld(c)
 	c.world = w
 
-	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{
+	c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{
 		ID: 1, X: 1, Y: 2, Z: 3, Yaw: pk.Angle(64), Pitch: pk.Angle(32),
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.UpdateEntityPositionAndRotation{
+	c.handler.DispatchPacket(context.Background(), &gameclient.UpdateEntityPositionAndRotation{
 		EntityID: 1, DeltaX: 4096, DeltaY: -4096, DeltaZ: 2048, Yaw: pk.Angle(-128), Pitch: pk.Angle(64),
 	})
 
@@ -62,9 +62,9 @@ func TestRespawnClearsEntitiesOnlyOnDimensionChange(t *testing.T) {
 			c := newWorldTestClient()
 			w := NewWorld(c)
 			c.world = w
-			c.handler.HandlePacket(context.Background(), &gameclient.Login{CommonPlayerSpawnInfo: spawn("minecraft:overworld")})
-			c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
-			c.handler.HandlePacket(context.Background(), &gameclient.Respawn{CommonPlayerSpawnInfo: spawn(tt.respawn)})
+			c.handler.DispatchPacket(context.Background(), &gameclient.Login{CommonPlayerSpawnInfo: spawn("minecraft:overworld")})
+			c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{ID: 1})
+			c.handler.DispatchPacket(context.Background(), &gameclient.Respawn{CommonPlayerSpawnInfo: spawn(tt.respawn)})
 			if kept := w.GetEntity(1) != nil; kept != tt.kept {
 				t.Fatalf("entity kept = %v, want %v", kept, tt.kept)
 			}
@@ -76,8 +76,8 @@ func TestLoginClearsEntities(t *testing.T) {
 	c := newWorldTestClient()
 	w := NewWorld(c)
 	c.world = w
-	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
-	c.handler.HandlePacket(context.Background(), &gameclient.Login{})
+	c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{ID: 1})
+	c.handler.DispatchPacket(context.Background(), &gameclient.Login{})
 	if entity := w.GetEntity(1); entity != nil {
 		t.Fatalf("entity survived login: %#v", entity)
 	}
@@ -87,8 +87,8 @@ func TestAbsoluteEntityAndVehiclePositionUpdates(t *testing.T) {
 	c := newWorldTestClient()
 	w := NewWorld(c)
 	c.world = w
-	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1})
-	c.handler.HandlePacket(context.Background(), &gameclient.TeleportEntity{
+	c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{ID: 1})
+	c.handler.DispatchPacket(context.Background(), &gameclient.TeleportEntity{
 		EntityID: 1,
 		X:        10,
 		Y:        64,
@@ -102,7 +102,7 @@ func TestAbsoluteEntityAndVehiclePositionUpdates(t *testing.T) {
 		t.Fatalf("teleported entity = %#v", got)
 	}
 
-	c.handler.HandlePacket(context.Background(), &gameclient.SynchronizeVehiclePosition{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SynchronizeVehiclePosition{
 		EntityID: 1,
 		X:        20,
 		Y:        65,
@@ -117,16 +117,15 @@ func TestAbsoluteEntityAndVehiclePositionUpdates(t *testing.T) {
 }
 
 type worldTestClient struct {
-	handler *worldPacketHandler
+	handler *bus.Bus
 	events  *worldEventHandler
 	world   bot.World
 }
 
 func newWorldTestClient() *worldTestClient {
-	return &worldTestClient{
-		handler: &worldPacketHandler{handlers: make(map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket))},
-		events:  &worldEventHandler{},
-	}
+	c := &worldTestClient{handler: bus.New(), events: &worldEventHandler{}}
+	c.handler.On(func(context.Context, EntityAddEvent) { c.events.added++ })
+	return c
 }
 
 func (c *worldTestClient) Connect(context.Context, string, *bot.ConnectOptions) error { return nil }
@@ -136,47 +135,21 @@ func (c *worldTestClient) IsConnected() bool                                    
 func (c *worldTestClient) WritePacket(context.Context, server.ServerboundPacket) error {
 	return nil
 }
-func (c *worldTestClient) PacketHandler() bot.PacketHandler { return c.handler }
-func (c *worldTestClient) EventHandler() bot.EventHandler   { return c.events }
-func (c *worldTestClient) World() bot.World                 { return c.world }
-func (c *worldTestClient) Inventory() bot.InventoryHandler  { return nil }
-func (c *worldTestClient) Player() bot.Player               { return nil }
-
-type worldPacketHandler struct {
-	handlers map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket)
-}
-
-func (h *worldPacketHandler) AddPacketHandler(id packetid.ClientboundPacketID, handler func(context.Context, gameclient.ClientboundPacket)) {
-	h.handlers[id] = append(h.handlers[id], handler)
-}
-func (*worldPacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, pk.Packet)) {
-}
-func (*worldPacketHandler) AddGenericPacketHandler(func(context.Context, gameclient.ClientboundPacket)) {
-}
-func (h *worldPacketHandler) HandlePacket(ctx context.Context, packet gameclient.ClientboundPacket) {
-	for _, handler := range h.handlers[packet.PacketID()] {
-		handler(ctx, packet)
-	}
-}
+func (c *worldTestClient) Bus() *bus.Bus                   { return c.handler }
+func (c *worldTestClient) World() bot.World                { return c.world }
+func (c *worldTestClient) Inventory() bot.InventoryHandler { return nil }
+func (c *worldTestClient) Player() bot.Player              { return nil }
 
 type worldEventHandler struct {
 	added int
 }
-
-func (h *worldEventHandler) PublishEvent(event string, _ any) error {
-	if event == (EntityAddEvent{}).EventID() {
-		h.added++
-	}
-	return nil
-}
-func (*worldEventHandler) SubscribeEvent(string, func(any) error) {}
 
 func TestAddEntityKeepsData(t *testing.T) {
 	c := newWorldTestClient()
 	w := NewWorld(c)
 	c.world = w
 	// Item frames send their facing direction as the AddEntity data (2 = north).
-	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 1, Data: 2})
+	c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{ID: 1, Data: 2})
 	entity := w.GetEntity(1)
 	if entity == nil {
 		t.Fatal("entity was not added")
@@ -190,7 +163,7 @@ func TestSetEquipmentAppliesToEntity(t *testing.T) {
 	c := newWorldTestClient()
 	w := NewWorld(c)
 	c.world = w
-	c.handler.HandlePacket(context.Background(), &gameclient.AddEntity{ID: 300})
+	c.handler.DispatchPacket(context.Background(), &gameclient.AddEntity{ID: 300})
 
 	// EntityID 300;主手 item 5、頭盔 item 1112,各 1 個(實機線路格式)。
 	wire := []byte{0xac, 0x02, 0x80, 0x01, 0x05, 0x00, 0x00, 0x05, 0x01, 0xd8, 0x08, 0x00, 0x00}
@@ -198,7 +171,7 @@ func TestSetEquipmentAppliesToEntity(t *testing.T) {
 	if _, err := p.ReadFrom(bytes.NewReader(wire)); err != nil {
 		t.Fatalf("ReadFrom(): %v", err)
 	}
-	c.handler.HandlePacket(context.Background(), &p)
+	c.handler.DispatchPacket(context.Background(), &p)
 
 	entity := w.GetEntity(300)
 	if entity == nil {

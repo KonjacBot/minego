@@ -7,7 +7,3 @@ type ContainerOpenEvent struct {
 	Type     int32
 	Title    chat.Message
 }
-
-func (c ContainerOpenEvent) EventID() string {
-	return "inventory:container_open"
-}

@@ -5,10 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"log/slog"
 	"net"
 	"os"
-	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -22,6 +22,7 @@ import (
 
 	"github.com/KonjacBot/minego/v2/pkg/auth"
 	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
 	"github.com/KonjacBot/minego/v2/pkg/game/inventory"
 	"github.com/KonjacBot/minego/v2/pkg/game/player"
 	"github.com/KonjacBot/minego/v2/pkg/game/world"
@@ -29,15 +30,14 @@ import (
 	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
-type botClient struct {
+type Client struct {
 	conn               *mcnet.Conn
 	connMu             sync.RWMutex
 	writeMu            sync.Mutex
 	stateMu            sync.Mutex
 	state              packet.State
 	stateChanged       chan struct{}
-	packetHandler      *packetHandler
-	eventHandler       bot.EventHandler
+	bus                *bus.Bus
 	connected          atomic.Bool
 	authProvider       auth.Provider
 	readIdleTimeout    time.Duration
@@ -52,11 +52,11 @@ type botClient struct {
 	player    *player.Player
 }
 
-func (b *botClient) Player() bot.Player {
+func (b *Client) Player() bot.Player {
 	return b.player
 }
 
-func (b *botClient) Close(ctx context.Context) error {
+func (b *Client) Close(ctx context.Context) error {
 	b.writeMu.Lock()
 	defer b.writeMu.Unlock()
 
@@ -79,11 +79,11 @@ func (b *botClient) Close(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (b *botClient) IsConnected() bool {
+func (b *Client) IsConnected() bool {
 	return b.connected.Load()
 }
 
-func (b *botClient) WritePacket(ctx context.Context, outbound server.ServerboundPacket) error {
+func (b *Client) WritePacket(ctx context.Context, outbound server.ServerboundPacket) error {
 	raw := pk.Marshal(outbound.PacketID(), outbound)
 	for {
 		if err := b.waitForPlayState(ctx); err != nil {
@@ -105,7 +105,7 @@ func (b *botClient) WritePacket(ctx context.Context, outbound server.Serverbound
 	}
 }
 
-func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error {
+func (b *Client) writeRawPacket(ctx context.Context, packet pk.Packet) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (b *botClient) writeRawPacket(ctx context.Context, packet pk.Packet) error 
 	return b.writeRawPacketLocked(ctx, packet)
 }
 
-func (b *botClient) writeRawPacketLocked(ctx context.Context, packet pk.Packet) error {
+func (b *Client) writeRawPacketLocked(ctx context.Context, packet pk.Packet) error {
 	b.connMu.RLock()
 	conn := b.conn
 	b.connMu.RUnlock()
@@ -137,7 +137,7 @@ func (b *botClient) writeRawPacketLocked(ctx context.Context, packet pk.Packet) 
 	return conn.WritePacket(packet)
 }
 
-func (b *botClient) waitForPlayState(ctx context.Context) error {
+func (b *Client) waitForPlayState(ctx context.Context) error {
 	for {
 		b.connMu.RLock()
 		conn := b.conn
@@ -172,19 +172,19 @@ func (b *botClient) waitForPlayState(ctx context.Context) error {
 	}
 }
 
-func (b *botClient) connectionState() packet.State {
+func (b *Client) connectionState() packet.State {
 	b.stateMu.Lock()
 	defer b.stateMu.Unlock()
 	return b.state
 }
 
-func (b *botClient) setConnectionState(state packet.State) {
+func (b *Client) setConnectionState(state packet.State) {
 	b.writeMu.Lock()
 	defer b.writeMu.Unlock()
 	b.setConnectionStateLocked(state)
 }
 
-func (b *botClient) setConnectionStateLocked(state packet.State) {
+func (b *Client) setConnectionStateLocked(state packet.State) {
 	b.stateMu.Lock()
 	defer b.stateMu.Unlock()
 	b.state = state
@@ -194,23 +194,63 @@ func (b *botClient) setConnectionStateLocked(state packet.State) {
 	b.stateChanged = make(chan struct{})
 }
 
-func (b *botClient) PacketHandler() bot.PacketHandler {
-	return b.packetHandler
+// Bus returns the bus that delivers this client's packets and events. The
+// methods below forward to it, so most code can call them on the Client.
+func (b *Client) Bus() *bus.Bus {
+	return b.bus
 }
 
-func (b *botClient) EventHandler() bot.EventHandler {
-	return b.eventHandler
+// On subscribes f to a packet type (e.g. *client.KeepAlive) or an event type
+// (e.g. player.MessageEvent) and returns a function that removes it.
+func (b *Client) On[T any](f func(ctx context.Context, v T)) (off func()) {
+	return b.bus.On[T](f)
 }
 
-func (b *botClient) World() bot.World {
+// OnCtx is On, removed automatically when ctx is done.
+func (b *Client) OnCtx[T any](ctx context.Context, f func(ctx context.Context, v T)) (off func()) {
+	return b.bus.OnCtx[T](ctx, f)
+}
+
+// Once is On for a single delivery.
+func (b *Client) Once[T any](f func(ctx context.Context, v T)) (off func()) {
+	return b.bus.Once[T](f)
+}
+
+// WaitFor blocks until a packet or event of type T matches, or ctx is done.
+func (b *Client) WaitFor[T any](ctx context.Context, match func(v T) bool) (T, error) {
+	return b.bus.WaitFor[T](ctx, match)
+}
+
+// Stream yields packets or events of type T until ctx is done or the loop stops.
+func (b *Client) Stream[T any](ctx context.Context) iter.Seq[T] {
+	return b.bus.Stream[T](ctx)
+}
+
+// Emit publishes an event to its subscribers.
+func (b *Client) Emit[T any](ctx context.Context, v T) {
+	b.bus.Emit[T](ctx, v)
+}
+
+// OnFrame observes every incoming packet before decoding.
+func (b *Client) OnFrame(f bus.FrameFunc) (off func()) {
+	return b.bus.OnFrame(f)
+}
+
+// OnRaw subscribes to the undecoded payload of one packet ID. p.Data is only
+// valid until f returns.
+func (b *Client) OnRaw(id packetid.ClientboundPacketID, f func(ctx context.Context, p pk.Packet)) (off func()) {
+	return b.bus.OnRaw(id, f)
+}
+
+func (b *Client) World() bot.World {
 	return b.world
 }
 
-func (b *botClient) Inventory() bot.InventoryHandler {
+func (b *Client) Inventory() bot.InventoryHandler {
 	return b.inventory
 }
 
-func (b *botClient) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
+func (b *Client) Connect(ctx context.Context, addr string, options *bot.ConnectOptions) error {
 	b.connMu.RLock()
 	hasConnection := b.conn != nil
 	b.connMu.RUnlock()
@@ -276,10 +316,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	}
 
 	b.setConnectionState(packet.StateConfig)
-	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateLogin, To: packet.StateConfig})
-	if err != nil {
-		return err
-	}
+	b.bus.Emit(ctx, ConnectionStateChangeEvent{From: packet.StateLogin, To: packet.StateConfig})
 
 	err = b.configuration(ctx)
 	if err != nil {
@@ -287,10 +324,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	}
 
 	b.setConnectionState(packet.StatePlay)
-	err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
-	if err != nil {
-		return err
-	}
+	b.bus.Emit(ctx, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
 
 	b.connected.Store(true)
 	connected = true
@@ -298,7 +332,7 @@ func (b *botClient) Connect(ctx context.Context, addr string, options *bot.Conne
 	return nil
 }
 
-func (b *botClient) HandleGame(ctx context.Context) error {
+func (b *Client) HandleGame(ctx context.Context) error {
 	defer func() {
 		b.connected.Store(false)
 		b.registryMu.Lock()
@@ -308,7 +342,7 @@ func (b *botClient) HandleGame(ctx context.Context) error {
 	return b.handlePackets(ctx)
 }
 
-func (b *botClient) handshake(ctx context.Context, host string, port uint64) error {
+func (b *Client) handshake(ctx context.Context, host string, port uint64) error {
 	return b.writeRawPacket(ctx, pk.Marshal(
 		0,
 		pk.VarInt(protocol.ProtocolVersion),
@@ -318,7 +352,7 @@ func (b *botClient) handshake(ctx context.Context, host string, port uint64) err
 	))
 }
 
-func (b *botClient) handlePackets(ctx context.Context) error {
+func (b *Client) handlePackets(ctx context.Context) error {
 	b.connMu.RLock()
 	conn := b.conn
 	b.connMu.RUnlock()
@@ -326,13 +360,6 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 		return errors.New("client is not connected")
 	}
 
-	handlerCtx, cancelHandlers := context.WithCancel(ctx)
-	var handlers sync.WaitGroup
-	semaphore := make(chan struct{}, 15)
-	defer func() {
-		cancelHandlers()
-		handlers.Wait()
-	}()
 	stopRead := context.AfterFunc(ctx, func() {
 		_ = conn.Socket.SetReadDeadline(time.Now())
 	})
@@ -341,108 +368,112 @@ func (b *botClient) handlePackets(ctx context.Context) error {
 		_ = conn.Socket.SetReadDeadline(time.Time{})
 	}()
 
+	// p is reused for every packet: handlers run synchronously and decoded
+	// packets copy what they keep, so nothing refers to p.Data after dispatch.
+	var p pk.Packet
+	var reader bytes.Reader
 	for {
 		select {
 		case <-ctx.Done():
 			return context.Cause(ctx)
 		default:
-			var p pk.Packet
+		}
 
+		// Refresh the idle deadline only when the next read may block on the
+		// socket; while packets are buffered it costs a clock read and a
+		// timer reset per packet for nothing.
+		if conn.Buffered() == 0 {
 			if err := b.setReadDeadline(ctx, conn); err != nil {
 				return err
 			}
-
-			if err := conn.ReadPacket(&p); err != nil {
-				if ctx.Err() != nil {
-					return context.Cause(ctx)
-				}
+		}
+		if err := conn.ReadPacket(&p); err != nil {
+			if ctx.Err() != nil {
+				return context.Cause(ctx)
+			}
+			return err
+		}
+		pktID := packetid.ClientboundPacketID(p.ID)
+		if pktID == packetid.ClientboundStartConfiguration {
+			if err := b.reconfigure(ctx); err != nil {
 				return err
 			}
-			pktID := packetid.ClientboundPacketID(p.ID)
-			if pktID == packetid.ClientboundStartConfiguration {
-				b.setConnectionState(packet.StateConfig)
-				b.registryMu.Lock()
-				b.registryEntries = nil
-				b.registryMu.Unlock()
-				err := b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StatePlay, To: packet.StateConfig})
-				if err != nil {
-					return err
-				}
-
-				err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigurationAcknowledged))
-				if err != nil {
-					return err
-				}
-
-				err = b.configuration(ctx)
-				if err != nil {
-					return err
-				}
-
-				b.setConnectionState(packet.StatePlay)
-				err = b.eventHandler.PublishEvent(EventConnectionStateChange, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
-				if err != nil {
-					return err
-				}
-				continue
-			}
-
-			hs := b.packetHandler.rawHandlers(pktID)
-			for _, h := range hs {
-				select {
-				case semaphore <- struct{}{}:
-				case <-ctx.Done():
-					return context.Cause(ctx)
-				}
-				packetID := pktID
-				packetCopy := p
-				handler := h
-				handlers.Go(func() {
-					defer func() { <-semaphore }()
-					defer func() {
-						if recovered := recover(); recovered != nil {
-							slog.Error("raw packet handler panic",
-								"packet", packetID,
-								"error", recovered,
-								"stack", string(debug.Stack()),
-							)
-						}
-					}()
-					handler(handlerCtx, packetCopy)
-				})
-			}
-
-			creator, ok := client.ClientboundPackets[pktID]
-			if !ok {
-				continue
-			}
-			pkt := creator()
-			reader := bytes.NewReader(p.Data)
-			_, err := pkt.ReadFrom(reader)
-			if err != nil {
-				temp, dumpErr := os.CreateTemp("", "packet")
-				filename := ""
-				if dumpErr == nil {
-					filename = temp.Name()
-					_, dumpErr = temp.Write(p.Data)
-					if closeErr := temp.Close(); dumpErr == nil {
-						dumpErr = closeErr
-					}
-				}
-				slog.Error("decode clientbound packet", "packet", pktID, "dataLen", len(p.Data), "err", err, "filename", filename, "dumpErr", dumpErr)
-				return fmt.Errorf("decode clientbound packet %d at byte %d/%d: %w TEMPPACKET: %s", pktID, len(p.Data)-reader.Len(), len(p.Data), err, filename)
-			}
-			b.packetHandler.HandlePacket(ctx, pkt)
-
-			_ = conn.Socket.SetReadDeadline(time.Time{})
+			continue
 		}
+
+		b.bus.DispatchFrame(pktID, len(p.Data))
+		b.bus.DispatchRaw(ctx, pktID, p)
+
+		// Decode only what someone subscribed to.
+		if !b.bus.WantsPacket(pktID) {
+			continue
+		}
+		creator, ok := client.ClientboundPackets[pktID]
+		if !ok {
+			continue
+		}
+		pkt := creator()
+		reader.Reset(p.Data)
+		if err := decodePacket(pkt, &reader); err != nil {
+			return b.decodeError(pktID, p.Data, len(p.Data)-reader.Len(), err)
+		}
+		b.bus.DispatchPacket(ctx, pkt)
 	}
 }
 
-func NewClient(options *bot.ClientOptions) bot.Client {
-	c := &botClient{
-		packetHandler:      newPacketHandler(),
-		eventHandler:       NewEventHandler(),
+// reconfigure handles the server sending the client back to configuration.
+func (b *Client) reconfigure(ctx context.Context) error {
+	b.setConnectionState(packet.StateConfig)
+	b.registryMu.Lock()
+	b.registryEntries = nil
+	b.registryMu.Unlock()
+	b.bus.Emit(ctx, ConnectionStateChangeEvent{From: packet.StatePlay, To: packet.StateConfig})
+
+	if err := b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigurationAcknowledged)); err != nil {
+		return err
+	}
+	if err := b.configuration(ctx); err != nil {
+		return err
+	}
+
+	b.setConnectionState(packet.StatePlay)
+	b.bus.Emit(ctx, ConnectionStateChangeEvent{From: packet.StateConfig, To: packet.StatePlay})
+	return nil
+}
+
+// decodePacket decodes one packet, turning a decoder panic into an error so
+// one malformed packet cannot take the whole process down.
+func decodePacket(pkt client.ClientboundPacket, r *bytes.Reader) (err error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			err = fmt.Errorf("decoder panicked: %v", rec)
+		}
+	}()
+	_, err = pkt.ReadFrom(r)
+	return err
+}
+
+// decodeError dumps the packet that failed to decode to a temp file for
+// debugging and returns the error that ends the connection.
+func (b *Client) decodeError(pktID packetid.ClientboundPacketID, data []byte, at int, err error) error {
+	temp, dumpErr := os.CreateTemp("", "packet")
+	filename := ""
+	if dumpErr == nil {
+		filename = temp.Name()
+		_, dumpErr = temp.Write(data)
+		if closeErr := temp.Close(); dumpErr == nil {
+			dumpErr = closeErr
+		}
+	}
+	slog.Error("decode clientbound packet", "packet", pktID, "dataLen", len(data), "err", err, "filename", filename, "dumpErr", dumpErr)
+	return fmt.Errorf("decode clientbound packet %d at byte %d/%d: %w TEMPPACKET: %s", pktID, at, len(data), err, filename)
+}
+
+// NewClient returns a client that is not connected yet. The returned
+// *Client is also a bot.Client.
+func NewClient(options *bot.ClientOptions) *Client {
+	c := &Client{
+		bus:                bus.New(),
 		readIdleTimeout:    30 * time.Second,
 		resourcePackPolicy: bot.ResourcePackAccept,
 		cookies:            make(map[string][]int8),
@@ -474,7 +505,7 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 		playerOpts = append(playerOpts, player.WithoutTeleport())
 	}
 	c.player = player.New(c, playerOpts...)
-	bot.AddHandler(c, func(ctx context.Context, packet *client.AddResourcePack) {
+	c.On(func(ctx context.Context, packet *client.AddResourcePack) {
 		for _, result := range resourcePackResults(c.resourcePackPolicy) {
 			if err := c.WritePacket(ctx, &server.ResourcePack{UUID: packet.UUID, Result: result}); err != nil {
 				slog.Error("respond to play resource pack", "uuid", packet.UUID, "result", result, "err", err)
@@ -482,10 +513,10 @@ func NewClient(options *bot.ClientOptions) bot.Client {
 			}
 		}
 	})
-	bot.AddHandler(c, func(_ context.Context, packet *client.StoreCookie) {
+	c.On(func(_ context.Context, packet *client.StoreCookie) {
 		c.storeCookie(packet.Key, packet.Payload)
 	})
-	bot.AddHandler(c, func(ctx context.Context, packet *client.CookieRequest) {
+	c.On(func(ctx context.Context, packet *client.CookieRequest) {
 		response := c.cookieResponse(string(packet.Key))
 		if err := c.WritePacket(ctx, &response); err != nil {
 			slog.Error("respond to play cookie request", "key", packet.Key, "err", err)
@@ -504,7 +535,7 @@ func resourcePackResults(policy bot.ResourcePackPolicy) []int32 {
 	return []int32{3, 0}
 }
 
-func (b *botClient) storeCookie(key string, payload []int8) {
+func (b *Client) storeCookie(key string, payload []int8) {
 	b.cookieMu.Lock()
 	defer b.cookieMu.Unlock()
 	if b.cookies == nil {
@@ -513,7 +544,7 @@ func (b *botClient) storeCookie(key string, payload []int8) {
 	b.cookies[key] = append([]int8(nil), payload...)
 }
 
-func (b *botClient) cookieResponse(key string) server.CookieResponse {
+func (b *Client) cookieResponse(key string) server.CookieResponse {
 	b.cookieMu.RLock()
 	payload, ok := b.cookies[key]
 	b.cookieMu.RUnlock()

@@ -3,7 +3,7 @@ package client
 import "testing"
 
 func TestRegistryEntry(t *testing.T) {
-	b := &botClient{registryEntries: map[string]map[int32]string{
+	b := &Client{registryEntries: map[string]map[int32]string{
 		"minecraft:damage_type": {0: "minecraft:arrow", 26: "minecraft:mace_smash"},
 	}}
 	tests := []struct {
@@ -22,7 +22,7 @@ func TestRegistryEntry(t *testing.T) {
 			t.Errorf("RegistryEntry(%q, %d) = %q, %v; want %q, %v", tt.registry, tt.id, name, ok, tt.name, tt.ok)
 		}
 	}
-	if _, ok := (&botClient{}).RegistryEntry("minecraft:damage_type", 0); ok {
+	if _, ok := (&Client{}).RegistryEntry("minecraft:damage_type", 0); ok {
 		t.Error("RegistryEntry before configuration should report false")
 	}
 }

@@ -1,0 +1,12 @@
+goos: linux
+goarch: amd64
+pkg: github.com/KonjacBot/minego/v2/pkg/client
+cpu: Intel(R) Xeon(R) Processor @ 2.30GHz
+BenchmarkHandleGame-4   	    2136	    162016 ns/op	  61.72 MB/s	       176.1 ns/packet	   26895 B/op	    1772 allocs/op
+BenchmarkHandleGame-4   	    2311	    158792 ns/op	  62.98 MB/s	       172.6 ns/packet	   26895 B/op	    1772 allocs/op
+BenchmarkHandleGame-4   	    2265	    169491 ns/op	  59.00 MB/s	       184.2 ns/packet	   26894 B/op	    1772 allocs/op
+BenchmarkHandleGame-4   	    2224	    163673 ns/op	  61.10 MB/s	       177.9 ns/packet	   26895 B/op	    1772 allocs/op
+BenchmarkHandleGame-4   	    2254	    166406 ns/op	  60.09 MB/s	       180.9 ns/packet	   26895 B/op	    1772 allocs/op
+BenchmarkHandleGame-4   	    2202	    171848 ns/op	  58.19 MB/s	       186.8 ns/packet	   26895 B/op	    1772 allocs/op
+PASS
+ok  	github.com/KonjacBot/minego/v2/pkg/client	3.178s

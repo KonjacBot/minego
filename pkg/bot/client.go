@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
 	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
@@ -15,8 +16,10 @@ type Client interface {
 	IsConnected() bool
 	WritePacket(ctx context.Context, packet server.ServerboundPacket) error
 
-	PacketHandler() PacketHandler
-	EventHandler() EventHandler
+	// Bus delivers packets and events. Interfaces cannot have generic
+	// methods, so code holding a bot.Client subscribes through it:
+	// c.Bus().On(func(ctx context.Context, p *client.KeepAlive) { ... }).
+	Bus() *bus.Bus
 	World() World
 	Inventory() InventoryHandler
 	Player() Player

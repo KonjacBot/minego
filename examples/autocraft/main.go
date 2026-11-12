@@ -22,7 +22,7 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 )
 
-var c bot.Client
+var c *client.Client
 var cfg config.Config
 var glassRID int32
 var inventoryInteraction sync.Mutex
@@ -63,7 +63,7 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
+	c.On(func(_ context.Context, e player.MessageEvent) {
 		message := e.Message.ClearString()
 		if message == loadedMessage {
 			c.WritePacket(ctx, &server.ClientCommand{
@@ -80,10 +80,9 @@ func main() {
 		handleTeleportRequest(message)
 
 		fmt.Println(e.Message.String())
-		return nil
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.RecipeBookAdd) {
+	c.On(func(ctx context.Context, p *cp.RecipeBookAdd) {
 		for _, r := range p.Recipes {
 			rID := r.RecipeID
 			if r.Display.Display.RecipeType() == recipe.DisplayCraftingShaped {
@@ -103,12 +102,12 @@ func main() {
 			}
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.SetHealth) {
+	c.On(func(ctx context.Context, p *cp.SetHealth) {
 		c.WritePacket(ctx, &server.ClientCommand{
 			Action: 0,
 		})
 	})
-	bot.AddHandler(c, func(context.Context, *cp.Login) {
+	c.On(func(context.Context, *cp.Login) {
 		selectConfiguredServer.Do(func() {
 			command, err := sendConfiguredServer(c, cfg.Server)
 			if command == "" {
@@ -121,14 +120,14 @@ func main() {
 			}
 		})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.SetTabListHeaderAndFooter) {
+	c.On(func(ctx context.Context, p *cp.SetTabListHeaderAndFooter) {
 		message := p.Header.ClearString() + "\n" + p.Footer.ClearString()
 		if balance, ok := parseEmeraldBalance(message); ok {
 			emeraldBalance.Store(balance)
 		}
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.PingResponse) {
+	c.On(func(ctx context.Context, p *cp.PingResponse) {
 		currentPayload = p.Payload
 	})
 
