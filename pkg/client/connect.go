@@ -11,14 +11,14 @@ import (
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
-	configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
-	gameserver "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	configclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/client"
+	configserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/server"
+	gameserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
-func (b *botClient) login(ctx context.Context) error {
+func (b *Client) login(ctx context.Context) error {
 	ctx, cancelFunc := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFunc()
 
@@ -32,7 +32,7 @@ func (b *botClient) login(ctx context.Context) error {
 	})
 }
 
-func (b *botClient) configuration(ctx context.Context) (err error) {
+func (b *Client) configuration(ctx context.Context) (err error) {
 	b.registryMu.Lock()
 	b.registryEntries = nil
 	b.registryMu.Unlock()
@@ -41,7 +41,7 @@ func (b *botClient) configuration(ctx context.Context) (err error) {
 	})
 }
 
-func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
+func (b *Client) readConfiguration(ctx context.Context, conn *mcnet.Conn) (err error) {
 	b.registryMu.Lock()
 	b.registryEntries = nil
 	b.registryMu.Unlock()
@@ -198,7 +198,7 @@ func supportedKnownPacks(offered []configclient.KnownPack) []configclient.KnownP
 	return result
 }
 
-func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) error) error {
+func (b *Client) withReadContext(ctx context.Context, fn func(*mcnet.Conn) error) error {
 	b.connMu.RLock()
 	conn := b.conn
 	b.connMu.RUnlock()
@@ -224,7 +224,7 @@ func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) er
 	return err
 }
 
-func (b *botClient) setReadDeadline(ctx context.Context, conn *mcnet.Conn) error {
+func (b *Client) setReadDeadline(ctx context.Context, conn *mcnet.Conn) error {
 	var deadline time.Time
 	if b.readIdleTimeout > 0 {
 		deadline = time.Now().Add(b.readIdleTimeout)

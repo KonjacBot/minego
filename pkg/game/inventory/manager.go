@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/KonjacBot/go-mc/chat"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 // Manager 管理inventory和container
@@ -31,7 +31,7 @@ func NewManager(c bot.Client) *Manager {
 		currentMenuType:    -1,
 	}
 
-	bot.AddHandler(c, func(ctx context.Context, p *client.SetContainerContent) {
+	c.Bus().On(func(ctx context.Context, p *client.SetContainerContent) {
 		m.mu.Lock()
 		if p.WindowID == 0 && m.currentContainerID < 0 {
 			m.inventory.SetSlots(p.Slots)
@@ -48,7 +48,7 @@ func NewManager(c bot.Client) *Manager {
 		m.mu.Unlock()
 		m.c.Player().UpdateStateID(p.StateID)
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.ContainerSetSlot) {
+	c.Bus().On(func(ctx context.Context, p *client.ContainerSetSlot) {
 		m.mu.Lock()
 		if p.ContainerID == -1 && p.Slot == -1 {
 			cursor := p.ItemStack
@@ -70,13 +70,13 @@ func NewManager(c bot.Client) *Manager {
 		m.mu.Unlock()
 		m.c.Player().UpdateStateID(p.StateID)
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.SetCursorItem) {
+	c.Bus().On(func(ctx context.Context, p *client.SetCursorItem) {
 		m.mu.Lock()
 		cursor := p.CarriedItem
 		m.cursor = &cursor
 		m.mu.Unlock()
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.SetPlayerInventory) {
+	c.Bus().On(func(ctx context.Context, p *client.SetPlayerInventory) {
 		m.mu.Lock()
 		if index, ok := playerInventoryMenuSlot(p.Slot); ok {
 			m.inventory.SetSlot(index, p.Data)
@@ -84,27 +84,27 @@ func NewManager(c bot.Client) *Manager {
 		}
 		m.mu.Unlock()
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.CloseContainer) {
+	c.Bus().On(func(ctx context.Context, p *client.CloseContainer) {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		if p.WindowID == m.currentContainerID {
 			m.resetCurrentContainerLocked()
 		}
 	})
-	bot.AddHandler(c, func(context.Context, *client.Login) {
+	c.Bus().On(func(context.Context, *client.Login) {
 		m.resetCurrentContainerFromLifecycle()
 	})
-	bot.AddHandler(c, func(context.Context, *client.Respawn) {
+	c.Bus().On(func(context.Context, *client.Respawn) {
 		m.resetCurrentContainerFromLifecycle()
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.OpenScreen) {
+	c.Bus().On(func(ctx context.Context, p *client.OpenScreen) {
 		m.mu.Lock()
 		m.currentContainerID = p.WindowID
 		m.currentMenuType = p.WindowType
 		m.currentMenuTitle = p.WindowTitle
 		m.container = NewContainer(c, p.WindowID)
 		m.mu.Unlock()
-		_ = bot.PublishEvent(m.c, ContainerOpenEvent{
+		m.c.Bus().Emit(ctx, ContainerOpenEvent{
 			WindowID: p.WindowID,
 			Type:     p.WindowType,
 			Title:    p.WindowTitle,

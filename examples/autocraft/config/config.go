@@ -3,8 +3,8 @@ package config
 import (
 	"os"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
 	"github.com/pelletier/go-toml/v2"
 )
 

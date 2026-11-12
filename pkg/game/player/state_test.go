@@ -12,15 +12,14 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/entity"
-	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/level/block"
-	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	gameclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 func TestPlayerPositionAcknowledgesAbsoluteState(t *testing.T) {
@@ -30,7 +29,7 @@ func TestPlayerPositionAcknowledgesAbsoluteState(t *testing.T) {
 	p.entity.SetPosition(mgl64.Vec3{10, 20, 30})
 	p.entity.SetRotation(mgl64.Vec2{40, 50})
 
-	c.handler.HandlePacket(context.Background(), &gameclient.PlayerPosition{
+	c.handler.DispatchPacket(context.Background(), &gameclient.PlayerPosition{
 		ID: 7, X: 2, Y: 5, Z: 6, XRot: 3, YRot: 4, Flags: 0x01 | 0x08,
 	})
 
@@ -86,7 +85,7 @@ func TestBreakBlockCompletionWaitsForServerAcknowledgement(t *testing.T) {
 	go func() {
 		acknowledged <- p.WaitForSequence(ctx, finish.Sequence)
 	}()
-	c.handler.HandlePacket(context.Background(), &gameclient.BlockChangedAck{Sequence: finish.Sequence})
+	c.handler.DispatchPacket(context.Background(), &gameclient.BlockChangedAck{Sequence: finish.Sequence})
 
 	if err := <-acknowledged; err != nil {
 		t.Fatalf("wait for finish acknowledgement: %v", err)
@@ -261,7 +260,7 @@ func TestIsWalkableRequiresSupport(t *testing.T) {
 }
 
 type stateTestClient struct {
-	handler   *statePacketHandler
+	handler   *bus.Bus
 	player    bot.Player
 	inventory bot.InventoryHandler
 	writes    []server.ServerboundPacket
@@ -269,7 +268,7 @@ type stateTestClient struct {
 }
 
 func newStateTestClient() *stateTestClient {
-	return &stateTestClient{handler: &statePacketHandler{handlers: make(map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket))}}
+	return &stateTestClient{handler: bus.New()}
 }
 
 func (c *stateTestClient) Connect(context.Context, string, *bot.ConnectOptions) error { return nil }
@@ -283,38 +282,10 @@ func (c *stateTestClient) WritePacket(_ context.Context, packet server.Serverbou
 	}
 	return nil
 }
-func (c *stateTestClient) PacketHandler() bot.PacketHandler { return c.handler }
-func (c *stateTestClient) EventHandler() bot.EventHandler   { return stateEventHandler{} }
-func (c *stateTestClient) World() bot.World                 { return nil }
-func (c *stateTestClient) Inventory() bot.InventoryHandler  { return c.inventory }
-func (c *stateTestClient) Player() bot.Player               { return c.player }
-
-type statePacketHandler struct {
-	handlers map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket)
-	generic  []func(context.Context, gameclient.ClientboundPacket)
-}
-
-func (h *statePacketHandler) AddPacketHandler(id packetid.ClientboundPacketID, handler func(context.Context, gameclient.ClientboundPacket)) {
-	h.handlers[id] = append(h.handlers[id], handler)
-}
-func (h *statePacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, pk.Packet)) {
-}
-func (h *statePacketHandler) AddGenericPacketHandler(handler func(context.Context, gameclient.ClientboundPacket)) {
-	h.generic = append(h.generic, handler)
-}
-func (h *statePacketHandler) HandlePacket(ctx context.Context, packet gameclient.ClientboundPacket) {
-	for _, handler := range h.generic {
-		handler(ctx, packet)
-	}
-	for _, handler := range h.handlers[packet.PacketID()] {
-		handler(ctx, packet)
-	}
-}
-
-type stateEventHandler struct{}
-
-func (stateEventHandler) PublishEvent(string, any) error         { return nil }
-func (stateEventHandler) SubscribeEvent(string, func(any) error) {}
+func (c *stateTestClient) Bus() *bus.Bus                   { return c.handler }
+func (c *stateTestClient) World() bot.World                { return nil }
+func (c *stateTestClient) Inventory() bot.InventoryHandler { return c.inventory }
+func (c *stateTestClient) Player() bot.Player              { return c.player }
 
 type waitInventory struct {
 	mu        sync.RWMutex

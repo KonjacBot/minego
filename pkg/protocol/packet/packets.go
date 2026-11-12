@@ -4,12 +4,12 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 )
-import loginclient "github.com/KonjacBot/minego/pkg/protocol/packet/login/client"
-import gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-import configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
-import loginserver "github.com/KonjacBot/minego/pkg/protocol/packet/login/server"
-import gameserver "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-import configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
+import loginclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/login/client"
+import gameclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+import configclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/client"
+import loginserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/login/server"
+import gameserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+import configserver "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/server"
 
 type ServerboundPacket interface {
 	pk.Field

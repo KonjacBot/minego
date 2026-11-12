@@ -11,14 +11,15 @@ import (
 
 	"github.com/go-gl/mathgl/mgl64"
 
+	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/level/block"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/game/world"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/game/world"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 type Player struct {
@@ -31,7 +32,8 @@ type Player struct {
 	sequenceChanged                         chan struct{}
 	noTeleport                              bool
 
-	lastReceivedPacketTime time.Time
+	// packetsReceived counts incoming packets; CheckServer watches it move.
+	packetsReceived atomic.Uint64
 }
 
 // New 創建新的 Player 實例
@@ -66,35 +68,33 @@ func New(c bot.Client, opts ...Option) *Player {
 	var loadedPending atomic.Bool
 	loadedPending.Store(true)
 
-	c.PacketHandler().AddGenericPacketHandler(func(ctx context.Context, pk client.ClientboundPacket) {
-		pl.mu.Lock()
-		pl.lastReceivedPacketTime = time.Now()
-		pl.mu.Unlock()
+	c.Bus().OnFrame(func(packetid.ClientboundPacketID, int) {
+		pl.packetsReceived.Add(1)
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *client.KeepAlive) {
+	c.Bus().On(func(ctx context.Context, p *client.KeepAlive) {
 		_ = c.WritePacket(ctx, &server.KeepAlive{
 			ID: p.ID,
 		})
 	})
-	bot.AddHandler(c, func(ctx context.Context, _ *client.ChunkBatchFinished) {
+	c.Bus().On(func(ctx context.Context, _ *client.ChunkBatchFinished) {
 		_ = c.WritePacket(ctx, &server.ChunkBatchReceived{
 			ChunksPerTick: 64,
 		})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerAbilities) {
+	c.Bus().On(func(ctx context.Context, p *client.PlayerAbilities) {
 		pl.mu.Lock()
 		pl.abilities = p.Flags
 		pl.mu.Unlock()
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.BlockChangedAck) {
+	c.Bus().On(func(ctx context.Context, p *client.BlockChangedAck) {
 		pl.UpdateSequence(p.Sequence)
 	})
 
-	bot.AddHandler(c, func(_ context.Context, _ *client.Respawn) {
+	c.Bus().On(func(_ context.Context, _ *client.Respawn) {
 		loadedPending.Store(true)
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.Login) {
+	c.Bus().On(func(ctx context.Context, p *client.Login) {
 		loadedPending.Store(true)
 		startup()
 		c.WritePacket(ctx, &server.ClientInformation{
@@ -112,15 +112,15 @@ func New(c bot.Client, opts ...Option) *Player {
 		_ = c.WritePacket(ctx, &server.PlayerLoaded{})
 		_ = c.WritePacket(ctx, &server.ClientTickEnd{})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.Ping) {
+	c.Bus().On(func(ctx context.Context, p *client.Ping) {
 		_ = c.WritePacket(ctx, &server.Pong{ID: p.ID})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.SystemChatMessage) {
+	c.Bus().On(func(ctx context.Context, p *client.SystemChatMessage) {
 		if !p.Overlay {
-			bot.PublishEvent(c, MessageEvent{Message: p.Content})
+			c.Bus().Emit(ctx, MessageEvent{Message: p.Content})
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerPosition) {
+	c.Bus().On(func(ctx context.Context, p *client.PlayerPosition) {
 		if pl.noTeleport {
 			return
 		}
@@ -169,23 +169,25 @@ func New(c bot.Client, opts ...Option) *Player {
 			Flags: 0x00,
 		})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *client.PlayerRotation) {
+	c.Bus().On(func(ctx context.Context, p *client.PlayerRotation) {
 		pl.entity.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
 	})
 
 	return pl
 }
 
+// CheckServer waits, for up to 5 seconds, until the server sends a packet,
+// as a sign that it is responsive.
 func (p *Player) CheckServer() {
 	deadline := time.Now().Add(5 * time.Second)
+	seen := p.packetsReceived.Load()
+	wait := 5 * time.Millisecond // a busy server answers within a few ms
 	for p.c.IsConnected() && time.Now().Before(deadline) {
-		p.mu.RLock()
-		lastReceived := p.lastReceivedPacketTime
-		p.mu.RUnlock()
-		if time.Since(lastReceived) <= 50*time.Millisecond {
+		time.Sleep(wait)
+		if p.packetsReceived.Load() != seen {
 			return
 		}
-		time.Sleep(50 * time.Millisecond)
+		wait = 50 * time.Millisecond
 	}
 }
 

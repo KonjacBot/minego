@@ -8,10 +8,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/client"
-	"github.com/KonjacBot/minego/pkg/game/player"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/client"
+	"github.com/KonjacBot/minego/v2/pkg/game/player"
 )
 
 func main() {
@@ -36,9 +36,8 @@ func main() {
 	}
 	defer c.Close(context.Background())
 
-	bot.SubscribeEvent(c, func(e player.MessageEvent) error {
+	c.On(func(_ context.Context, e player.MessageEvent) {
 		fmt.Println(e.Message.String())
-		return nil
 	})
 
 	if err := c.HandleGame(ctx); err != nil && !errors.Is(err, context.Canceled) {

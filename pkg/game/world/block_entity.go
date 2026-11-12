@@ -7,9 +7,9 @@ import (
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/nbt"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	cp "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
 )
 
 // 方塊實體(告示牌、箱子、旗幟…)存在區塊自己的 BlockEntity 清單裡:區塊封包本來就帶著,
@@ -17,7 +17,7 @@ import (
 
 // handleBlockEntities 註冊 BlockEntityData 的處理。
 func (w *World) handleBlockEntities(c bot.Client) {
-	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockEntityData) {
+	c.Bus().On(func(ctx context.Context, p *cp.BlockEntityData) {
 		if w.noChunks {
 			return
 		}

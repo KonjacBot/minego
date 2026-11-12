@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/KonjacBot/go-mc/level/item"
-	"github.com/KonjacBot/minego/pkg/protocol/component"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/component"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 func TestEquipmentRoundTripMultipleEntries(t *testing.T) {

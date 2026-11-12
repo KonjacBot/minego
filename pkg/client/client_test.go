@@ -13,11 +13,12 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	mcnet "github.com/KonjacBot/go-mc/net"
 	pk "github.com/KonjacBot/go-mc/net/packet"
-	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol/packet"
-	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/auth"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet"
+	configclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/configuration/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
 
 func TestNewClientAllowsNilOptions(t *testing.T) {
@@ -29,7 +30,7 @@ func TestNewClientAllowsNilOptions(t *testing.T) {
 
 func TestNewClientUsesConfiguredReadIdleTimeout(t *testing.T) {
 	const timeout = 17 * time.Second
-	c := NewClient(&bot.ClientOptions{ReadIdleTimeout: timeout}).(*botClient)
+	c := NewClient(&bot.ClientOptions{ReadIdleTimeout: timeout})
 	if c.readIdleTimeout != timeout {
 		t.Fatalf("read idle timeout = %s, want %s", c.readIdleTimeout, timeout)
 	}
@@ -42,14 +43,14 @@ func TestResourcePackResults(t *testing.T) {
 	if got := resourcePackResults(bot.ResourcePackAccept); len(got) != 2 || got[0] != 3 || got[1] != 0 {
 		t.Fatalf("accept results = %v, want [3 0]", got)
 	}
-	client := NewClient(&bot.ClientOptions{ResourcePackPolicy: bot.ResourcePackDecline}).(*botClient)
+	client := NewClient(&bot.ClientOptions{ResourcePackPolicy: bot.ResourcePackDecline})
 	if client.resourcePackPolicy != bot.ResourcePackDecline {
 		t.Fatalf("resource pack policy = %q, want decline", client.resourcePackPolicy)
 	}
 }
 
 func TestCookieStoreClonesPayloadAndReturnsMissing(t *testing.T) {
-	client := NewClient(nil).(*botClient)
+	client := NewClient(nil)
 	payload := []int8{1, 2, 3}
 	client.storeCookie("minecraft:test", payload)
 	payload[0] = 9
@@ -75,7 +76,7 @@ func TestCloseBeforeConnect(t *testing.T) {
 
 func TestConfigurationReturnsReadError(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
-	b := &botClient{conn: mcnet.WrapConn(clientConn)}
+	b := &Client{conn: mcnet.WrapConn(clientConn)}
 	_ = serverConn.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -100,10 +101,9 @@ func TestSupportedKnownPacksSelectsOnlyMatchingCorePack(t *testing.T) {
 func TestHandleGameStopsPromptlyWhenContextIsCanceled(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer serverConn.Close()
-	b := &botClient{
-		conn:          mcnet.WrapConn(clientConn),
-		packetHandler: newPacketHandler(),
-		eventHandler:  NewEventHandler(),
+	b := &Client{
+		conn: mcnet.WrapConn(clientConn),
+		bus:  bus.New(),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -124,10 +124,9 @@ func TestHandleGameStopsPromptlyWhenContextIsCanceled(t *testing.T) {
 func TestHandleGameReturnsAfterReadIdleTimeout(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer serverConn.Close()
-	b := &botClient{
+	b := &Client{
 		conn:            mcnet.WrapConn(clientConn),
-		packetHandler:   newPacketHandler(),
-		eventHandler:    NewEventHandler(),
+		bus:             bus.New(),
 		readIdleTimeout: 25 * time.Millisecond,
 	}
 
@@ -147,7 +146,7 @@ func TestConfigurationReturnsAfterReadIdleTimeout(t *testing.T) {
 	go func() {
 		_, _ = io.Copy(io.Discard, serverConn)
 	}()
-	b := &botClient{
+	b := &Client{
 		conn:            mcnet.WrapConn(clientConn),
 		readIdleTimeout: 25 * time.Millisecond,
 	}
@@ -164,7 +163,7 @@ func TestLoginReturnsAfterReadIdleTimeout(t *testing.T) {
 	go func() {
 		_, _ = io.Copy(io.Discard, serverConn)
 	}()
-	b := &botClient{
+	b := &Client{
 		conn:            mcnet.WrapConn(clientConn),
 		authProvider:    &auth.OfflineAuth{Username: "idle-test"},
 		readIdleTimeout: 25 * time.Millisecond,
@@ -183,7 +182,7 @@ func isNetworkTimeout(err error) bool {
 
 func TestWritePacketRechecksContextAfterWaitingForLock(t *testing.T) {
 	conn := &countingConn{}
-	b := NewClient(nil).(*botClient)
+	b := NewClient(nil)
 	b.conn = mcnet.WrapConn(conn)
 	b.writeMu.Lock()
 
@@ -232,19 +231,17 @@ func testWritePacketWaitsWhileConnectionIsConfiguring(t *testing.T, outbound ser
 	serverSide := mcnet.WrapConn(serverConn)
 	defer serverSide.Close()
 
-	b := NewClient(nil).(*botClient)
+	b := NewClient(nil)
 	b.conn = mcnet.WrapConn(clientConn)
 	b.connected.Store(true)
 
 	enteredConfig := make(chan struct{})
 	releaseConfig := make(chan struct{})
-	b.eventHandler.SubscribeEvent(EventConnectionStateChange, func(event any) error {
-		change := event.(ConnectionStateChangeEvent)
+	b.On(func(_ context.Context, change ConnectionStateChangeEvent) {
 		if change.From == packet.StatePlay && change.To == packet.StateConfig {
 			close(enteredConfig)
 			<-releaseConfig
 		}
-		return nil
 	})
 
 	gameCtx, cancelGame := context.WithCancel(context.Background())

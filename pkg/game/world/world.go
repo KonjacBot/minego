@@ -13,10 +13,10 @@ import (
 	"github.com/KonjacBot/go-mc/level"
 	"github.com/KonjacBot/go-mc/level/block"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	cp "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	cp "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 type World struct {
@@ -50,7 +50,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		opt(w)
 	}
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.LevelChunkWithLight) {
+	c.Bus().On(func(ctx context.Context, p *cp.LevelChunkWithLight) {
 		if w.noChunks {
 			return
 		}
@@ -60,7 +60,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.columns[p.Pos] = p.Data
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.Login) {
+	c.Bus().On(func(ctx context.Context, p *cp.Login) {
 		w.chunkLock.Lock()
 		switch p.CommonPlayerSpawnInfo.DimensionType {
 		case 0:
@@ -79,14 +79,14 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.entityLock.Unlock()
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.ForgetLevelChunk) {
+	c.Bus().On(func(ctx context.Context, p *cp.ForgetLevelChunk) {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
 		delete(w.columns, level.ChunkPos(p.Pos))
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.Respawn) {
+	c.Bus().On(func(ctx context.Context, p *cp.Respawn) {
 		// 原版客戶端只在換維度時換掉整個世界;同一個維度的重生(伺服器的傳送外掛、跨區傳送也會送)
 		// 留著原本的區塊與實體,伺服器也不會重送還在追蹤的實體。這裡照樣清掉的話,展示框這種不會動的實體
 		// 要等人離開追蹤距離再回來才會有。
@@ -116,7 +116,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.entityLock.Unlock()
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.AddEntity) {
+	c.Bus().On(func(ctx context.Context, p *cp.AddEntity) {
 		entity := &Entity{
 			id:         p.ID,
 			entityUUID: p.UUID,
@@ -130,9 +130,9 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.entityLock.Lock()
 		w.entities[p.ID] = entity
 		w.entityLock.Unlock()
-		_ = bot.PublishEvent(c, EntityAddEvent{EntityID: p.ID})
+		c.Bus().Emit(ctx, EntityAddEvent{EntityID: p.ID})
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.RemoveEntities) {
+	c.Bus().On(func(ctx context.Context, p *cp.RemoveEntities) {
 		var removed []*Entity
 		w.entityLock.Lock()
 		for _, d := range p.EntityIDs {
@@ -144,10 +144,10 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		}
 		w.entityLock.Unlock()
 		for _, e := range removed {
-			_ = bot.PublishEvent(c, EntityRemoveEvent{Entity: e})
+			c.Bus().Emit(ctx, EntityRemoveEvent{Entity: e})
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.SetEntityMetadata) {
+	c.Bus().On(func(ctx context.Context, p *cp.SetEntityMetadata) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -155,7 +155,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			e.updateMetadata(p.Metadata.Data)
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.SetEquipment) {
+	c.Bus().On(func(ctx context.Context, p *cp.SetEquipment) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -170,7 +170,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			e.mu.Unlock()
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityPosition) {
+	c.Bus().On(func(ctx context.Context, p *cp.UpdateEntityPosition) {
 		w.entityLock.RLock()
 		defer w.entityLock.RUnlock()
 		if e, ok := w.entities[p.EntityID]; ok {
@@ -178,7 +178,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		}
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityRotation) {
+	c.Bus().On(func(ctx context.Context, p *cp.UpdateEntityRotation) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -187,7 +187,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		}
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateEntityPositionAndRotation) {
+	c.Bus().On(func(ctx context.Context, p *cp.UpdateEntityPositionAndRotation) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -196,7 +196,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			e.SetRotation(mgl64.Vec2{p.Yaw.ToDeg(), p.Pitch.ToDeg()})
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.TeleportEntity) {
+	c.Bus().On(func(ctx context.Context, p *cp.TeleportEntity) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -205,7 +205,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			e.SetRotation(mgl64.Vec2{float64(p.Yaw), float64(p.Pitch)})
 		}
 	})
-	bot.AddHandler(c, func(ctx context.Context, p *cp.SynchronizeVehiclePosition) {
+	c.Bus().On(func(ctx context.Context, p *cp.SynchronizeVehiclePosition) {
 		w.entityLock.RLock()
 		e, ok := w.entities[p.EntityID]
 		w.entityLock.RUnlock()
@@ -215,7 +215,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		}
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.BlockUpdate) {
+	c.Bus().On(func(ctx context.Context, p *cp.BlockUpdate) {
 		if w.noChunks {
 			return
 		}
@@ -250,7 +250,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		section.SetBlock(int(blockIdx), level.BlocksState(p.BlockState))
 	})
 
-	bot.AddHandler(c, func(ctx context.Context, p *cp.UpdateSectionsBlocks) {
+	c.Bus().On(func(ctx context.Context, p *cp.UpdateSectionsBlocks) {
 		if w.noChunks {
 			return
 		}

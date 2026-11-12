@@ -1,6 +1,6 @@
 package client
 
-import "github.com/KonjacBot/minego/pkg/protocol/particle"
+import "github.com/KonjacBot/minego/v2/pkg/protocol/particle"
 
 //codec:gen
 type Particle struct {

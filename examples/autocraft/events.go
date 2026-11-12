@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/KonjacBot/go-mc/level/item"
-	"github.com/KonjacBot/minego/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

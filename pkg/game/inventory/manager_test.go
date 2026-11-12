@@ -7,14 +7,13 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 
 	"github.com/KonjacBot/go-mc/chat"
-	"github.com/KonjacBot/go-mc/data/packetid"
-	packet "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	gameclient "github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 func TestManagerIgnoresStaleWindowSlotsButTracksCursorAndState(t *testing.T) {
@@ -23,17 +22,17 @@ func TestManagerIgnoresStaleWindowSlotsButTracksCursorAndState(t *testing.T) {
 	c.inventory = m
 	initial := make([]slot.Slot, 46)
 	initial[9] = slot.Slot{ItemID: 12, Count: 1}
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 0, Slots: initial,
 	})
 
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
 	stalePlayer := make([]slot.Slot, 46)
 	stalePlayer[9] = slot.Slot{ItemID: 13, Count: 2}
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 0, Slots: stalePlayer,
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 4, StateID: 3, Slots: []slot.Slot{{Count: 1}}, CarriedItem: slot.Slot{Count: 9},
 	})
 	if got := m.Container().SlotCount(); got != 0 {
@@ -49,7 +48,7 @@ func TestManagerIgnoresStaleWindowSlotsButTracksCursorAndState(t *testing.T) {
 		t.Fatalf("latest content state ID = %d, want 3", state)
 	}
 
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 5, StateID: 4, Slots: []slot.Slot{{Count: 1}, {Count: 2}}, CarriedItem: slot.Slot{Count: 3},
 	})
 	if got := m.Container().SlotCount(); got != 2 {
@@ -68,14 +67,14 @@ func TestManagerTracksCursorSlotAndClearsClosedContainer(t *testing.T) {
 	m := NewManager(c)
 	c.inventory = m
 	title := chat.Text("Test ").SetColor(chat.Gold).Append(chat.Text("Menu"))
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{
+	c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{
 		WindowID: 5, WindowType: 12, WindowTitle: title,
 	})
 	if got := m.CurrentMenuTitle(); m.CurrentMenuType() != 12 ||
 		got.Color != chat.Gold || got.ClearString() != "Test Menu" {
 		t.Fatalf("menu metadata = (%d, %#v), want type 12 and complete title component", m.CurrentMenuType(), got)
 	}
-	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+	c.handler.DispatchPacket(context.Background(), &gameclient.ContainerSetSlot{
 		ContainerID: -1, Slot: -1, StateID: 7, ItemStack: slot.Slot{Count: 6},
 	})
 	if cursor := m.Cursor(); cursor == nil || cursor.Count != 6 {
@@ -85,7 +84,7 @@ func TestManagerTracksCursorSlotAndClearsClosedContainer(t *testing.T) {
 		t.Fatalf("cursor sentinel became a regular slot; slot count = %d", got)
 	}
 
-	c.handler.HandlePacket(context.Background(), &gameclient.CloseContainer{WindowID: 5})
+	c.handler.DispatchPacket(context.Background(), &gameclient.CloseContainer{WindowID: 5})
 	if m.CurrentContainerID() != -1 || m.CurrentMenuType() != -1 || m.CurrentMenuTitle().ClearString() != "" ||
 		m.Container() != nil || m.Cursor() != nil {
 		t.Fatalf("closed manager retained state: id=%d type=%d title=%#v container=%#v cursor=%#v",
@@ -98,10 +97,10 @@ func TestManagerTracksDedicatedCursorAndPlayerInventoryPackets(t *testing.T) {
 	m := NewManager(c)
 	c.inventory = m
 
-	c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetCursorItem{
 		CarriedItem: slot.Slot{ItemID: 7, Count: 3},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetPlayerInventory{
 		Slot: 0, Data: slot.Slot{ItemID: 8, Count: 2},
 	})
 	if cursor := m.Cursor(); cursor == nil || cursor.ItemID != 7 || cursor.Count != 3 {
@@ -118,11 +117,11 @@ func TestManagerPreservesExternalMenuPlayerUpdatesAfterCursorLifecycleCloses(t *
 	c.inventory = m
 
 	const playerStart = 27
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
 	slots := make([]slot.Slot, playerStart+36)
 	slots[playerStart] = slot.Slot{ItemID: 7, Count: 1}
 	slots[playerStart+35] = slot.Slot{ItemID: 8, Count: 2}
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 5,
 		StateID:  4,
 		Slots:    slots,
@@ -130,7 +129,7 @@ func TestManagerPreservesExternalMenuPlayerUpdatesAfterCursorLifecycleCloses(t *
 		// corresponding cursor-clear update until the menu lifecycle ends.
 		CarriedItem: slot.Slot{ItemID: 7, Count: 1},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+	c.handler.DispatchPacket(context.Background(), &gameclient.ContainerSetSlot{
 		ContainerID: 5,
 		StateID:     5,
 		Slot:        playerStart + 1,
@@ -159,25 +158,25 @@ func TestManagerMirrorsStandalonePlayerUpdatesIntoOpenMenu(t *testing.T) {
 	c.inventory = m
 
 	const playerStart = 27
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 5,
 		Slots:    make([]slot.Slot, playerStart+36),
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetPlayerInventory{
 		Slot: 0,
 		Data: slot.Slot{ItemID: 8, Count: 2},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetPlayerInventory{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetPlayerInventory{
 		Slot: 9,
 		Data: slot.Slot{ItemID: 9, Count: 3},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+	c.handler.DispatchPacket(context.Background(), &gameclient.ContainerSetSlot{
 		ContainerID: 0,
 		Slot:        36,
 		ItemStack:   slot.Slot{ItemID: 10, Count: 4},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.ContainerSetSlot{
+	c.handler.DispatchPacket(context.Background(), &gameclient.ContainerSetSlot{
 		ContainerID: 0,
 		Slot:        9,
 		ItemStack:   slot.Slot{ItemID: 11, Count: 5},
@@ -202,11 +201,11 @@ func TestContainerClickUsesItsOwnStateIDAndForcesServerCorrection(t *testing.T) 
 	c := newInventoryTestClient()
 	m := NewManager(c)
 	c.inventory = m
-	c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 5, StateID: 4, Slots: []slot.Slot{{Count: 1}},
 	})
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 0, StateID: 9, Slots: []slot.Slot{{Count: 1}},
 	})
 
@@ -235,7 +234,7 @@ func TestManagerClickForcesServerCorrectionWithoutPredicting(t *testing.T) {
 	c.inventory = m
 	slots := make([]slot.Slot, 46)
 	slots[9] = slot.Slot{ItemID: 7, Count: 2}
-	c.handler.HandlePacket(context.Background(), &gameclient.SetContainerContent{
+	c.handler.DispatchPacket(context.Background(), &gameclient.SetContainerContent{
 		WindowID: 0, StateID: 12, Slots: slots,
 	})
 
@@ -260,11 +259,11 @@ func TestManagerLoginAndRespawnClearOpenContainerWithoutClientClose(t *testing.T
 		c := newInventoryTestClient()
 		m := NewManager(c)
 		c.inventory = m
-		c.handler.HandlePacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
-		c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+		c.handler.DispatchPacket(context.Background(), &gameclient.OpenScreen{WindowID: 5})
+		c.handler.DispatchPacket(context.Background(), &gameclient.SetCursorItem{
 			CarriedItem: slot.Slot{ItemID: 7, Count: 1},
 		})
-		c.handler.HandlePacket(context.Background(), lifecyclePacket)
+		c.handler.DispatchPacket(context.Background(), lifecyclePacket)
 
 		title := m.CurrentMenuTitle()
 		if m.CurrentContainerID() != -1 || m.CurrentMenuType() != -1 ||
@@ -286,11 +285,11 @@ func TestManagerLoginAndRespawnClearCursorWithoutOpenContainer(t *testing.T) {
 		c := newInventoryTestClient()
 		m := NewManager(c)
 		c.inventory = m
-		c.handler.HandlePacket(context.Background(), &gameclient.SetCursorItem{
+		c.handler.DispatchPacket(context.Background(), &gameclient.SetCursorItem{
 			CarriedItem: slot.Slot{ItemID: 7, Count: 1},
 		})
 
-		c.handler.HandlePacket(context.Background(), lifecyclePacket)
+		c.handler.DispatchPacket(context.Background(), lifecyclePacket)
 
 		if cursor := m.Cursor(); cursor != nil {
 			t.Fatalf("%T left cursor without an open container: %#v", lifecyclePacket, cursor)
@@ -313,7 +312,7 @@ func TestContainerSlotsReturnsCopy(t *testing.T) {
 }
 
 type inventoryTestClient struct {
-	handler   *inventoryPacketHandler
+	handler   *bus.Bus
 	player    *inventoryTestPlayer
 	inventory bot.InventoryHandler
 	writes    []server.ServerboundPacket
@@ -321,7 +320,7 @@ type inventoryTestClient struct {
 
 func newInventoryTestClient() *inventoryTestClient {
 	return &inventoryTestClient{
-		handler: &inventoryPacketHandler{handlers: make(map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket))},
+		handler: bus.New(),
 		player:  &inventoryTestPlayer{},
 	}
 }
@@ -334,33 +333,10 @@ func (c *inventoryTestClient) WritePacket(_ context.Context, packet server.Serve
 	c.writes = append(c.writes, packet)
 	return nil
 }
-func (c *inventoryTestClient) PacketHandler() bot.PacketHandler { return c.handler }
-func (c *inventoryTestClient) EventHandler() bot.EventHandler   { return inventoryEventHandler{} }
-func (c *inventoryTestClient) World() bot.World                 { return nil }
-func (c *inventoryTestClient) Inventory() bot.InventoryHandler  { return c.inventory }
-func (c *inventoryTestClient) Player() bot.Player               { return c.player }
-
-type inventoryPacketHandler struct {
-	handlers map[packetid.ClientboundPacketID][]func(context.Context, gameclient.ClientboundPacket)
-}
-
-func (h *inventoryPacketHandler) AddPacketHandler(id packetid.ClientboundPacketID, handler func(context.Context, gameclient.ClientboundPacket)) {
-	h.handlers[id] = append(h.handlers[id], handler)
-}
-func (*inventoryPacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, packet.Packet)) {
-}
-func (*inventoryPacketHandler) AddGenericPacketHandler(func(context.Context, gameclient.ClientboundPacket)) {
-}
-func (h *inventoryPacketHandler) HandlePacket(ctx context.Context, packet gameclient.ClientboundPacket) {
-	for _, handler := range h.handlers[packet.PacketID()] {
-		handler(ctx, packet)
-	}
-}
-
-type inventoryEventHandler struct{}
-
-func (inventoryEventHandler) PublishEvent(string, any) error         { return nil }
-func (inventoryEventHandler) SubscribeEvent(string, func(any) error) {}
+func (c *inventoryTestClient) Bus() *bus.Bus                   { return c.handler }
+func (c *inventoryTestClient) World() bot.World                { return nil }
+func (c *inventoryTestClient) Inventory() bot.InventoryHandler { return c.inventory }
+func (c *inventoryTestClient) Player() bot.Player              { return c.player }
 
 type inventoryTestPlayer struct {
 	stateID  int32

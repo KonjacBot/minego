@@ -8,8 +8,8 @@ import (
 
 	"github.com/KonjacBot/go-mc/data/entity"
 
-	"github.com/KonjacBot/minego/pkg/protocol/metadata"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/metadata"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 type Entity struct {

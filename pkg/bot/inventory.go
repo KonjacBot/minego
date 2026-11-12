@@ -4,7 +4,7 @@ import (
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/level/item"
 
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 type Container interface {

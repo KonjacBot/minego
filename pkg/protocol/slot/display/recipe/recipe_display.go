@@ -6,7 +6,7 @@ import (
 
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/protocol/slot/display/slot"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot/display/slot"
 )
 
 type DisplayType int32

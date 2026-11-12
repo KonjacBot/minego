@@ -1,6 +1,6 @@
 package client
 
-import "github.com/KonjacBot/minego/pkg/protocol/slot"
+import "github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 
 //codec:gen
 type TradeOption struct {

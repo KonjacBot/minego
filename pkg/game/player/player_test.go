@@ -9,16 +9,14 @@ import (
 
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/entity"
-	"github.com/KonjacBot/go-mc/data/packetid"
 	"github.com/KonjacBot/go-mc/level/block"
 	"github.com/KonjacBot/go-mc/level/item"
-	"github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/bot"
-	"github.com/KonjacBot/minego/pkg/protocol"
-	gameclient "github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
-	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
-	"github.com/KonjacBot/minego/pkg/protocol/slot"
+	"github.com/KonjacBot/minego/v2/pkg/bot"
+	"github.com/KonjacBot/minego/v2/pkg/bus"
+	"github.com/KonjacBot/minego/v2/pkg/protocol"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
+	"github.com/KonjacBot/minego/v2/pkg/protocol/slot"
 )
 
 func TestOpenContainerRefusesAirBlock(t *testing.T) {
@@ -91,6 +89,7 @@ func TestFlyToWithinUsesUnsupportedAirPath(t *testing.T) {
 }
 
 type openContainerTestClient struct {
+	bus       *bus.Bus
 	world     bot.World
 	inventory bot.InventoryHandler
 	writes    int
@@ -108,11 +107,11 @@ func (c *openContainerTestClient) WritePacket(_ context.Context, packet server.S
 	c.packet = packet
 	return nil
 }
-func (c *openContainerTestClient) PacketHandler() bot.PacketHandler {
-	return openContainerTestPacketHandler{}
-}
-func (c *openContainerTestClient) EventHandler() bot.EventHandler {
-	return openContainerTestEventHandler{}
+func (c *openContainerTestClient) Bus() *bus.Bus {
+	if c.bus == nil {
+		c.bus = bus.New()
+	}
+	return c.bus
 }
 func (c *openContainerTestClient) World() bot.World                { return c.world }
 func (c *openContainerTestClient) Inventory() bot.InventoryHandler { return c.inventory }
@@ -168,20 +167,4 @@ func (c openContainerTestContainer) FindEmpty() int16            { return -1 }
 func (c openContainerTestContainer) FindItem(item.ID) int16      { return -1 }
 func (c openContainerTestContainer) Click(int16, int32, int32) error {
 	return nil
-}
-
-type openContainerTestPacketHandler struct{}
-
-func (openContainerTestPacketHandler) AddPacketHandler(packetid.ClientboundPacketID, func(context.Context, gameclient.ClientboundPacket)) {
-}
-func (openContainerTestPacketHandler) AddRawPacketHandler(packetid.ClientboundPacketID, func(context.Context, packet.Packet)) {
-}
-func (openContainerTestPacketHandler) AddGenericPacketHandler(func(context.Context, gameclient.ClientboundPacket)) {
-}
-func (openContainerTestPacketHandler) HandlePacket(context.Context, gameclient.ClientboundPacket) {}
-
-type openContainerTestEventHandler struct{}
-
-func (openContainerTestEventHandler) PublishEvent(string, any) error { return nil }
-func (openContainerTestEventHandler) SubscribeEvent(string, func(any) error) {
 }
