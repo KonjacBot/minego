@@ -1,13 +1,56 @@
 # Changelog
 
-## v2.0.0 (unreleased)
+## Unreleased
+
+### Added
+
+- `bot.ClientOptions.ChunkLight` / `ChunkHeightmaps`, and the matching
+  `world.WithLight()` / `world.WithHeightmaps()`, keep chunk light and
+  heightmaps. Both are dropped by default (see below).
+
+### Changed
+
+- **World keeps less of each chunk by default.** This cuts a loaded
+  overworld column from about 78 KiB to about 26 KiB (-67%). At view distance
+  16 (1,089 columns), one bot needs about 28 MB instead of 85 MB.
+  - Sky and block light are dropped. They were about half of each chunk,
+    nothing in minego read them, and light updates were never applied, so
+    they went stale.
+  - Heightmaps are dropped too.
+  - The spare sections the decoder allocates for the tallest possible column
+    are released.
+  - Sections that hold a single value (all air, all stone, one biome) share
+    one read-only container across all columns and bots. World copies such a
+    section before writing to it.
+  - World stores its own shallow copy of the column. Other subscribers to
+    `*client.LevelChunkWithLight` still see the full packet, light included.
+  - `World.SetBlock` and block updates now write through the section instead
+    of a copy, so the section's block count is no longer lost.
+
+### Performance
+
+Memory kept per loaded overworld column (`TestLoadedColumnMemory` in
+pkg/game/world, generated terrain with vanilla-style light):
+
+| | v2.0.0 | default now | with `ChunkLight` + `ChunkHeightmaps` |
+| --- | --- | --- | --- |
+| bytes per column | 78.2 KiB | 25.9 KiB | 68.6 KiB |
+| one bot at view distance 16 (1,089 columns) | about 85 MB | about 28 MB | about 75 MB |
+
+### Upgrading from v2.0.0
+
+Code that read `Light` or `HeightMaps` from World's stored columns should set
+`bot.ClientOptions{ChunkLight: true, ChunkHeightmaps: true}`, or read them in
+its own `*client.LevelChunkWithLight` handler, which still gets the full packet.
+
+## v2.0.0
 
 v2 replaces the packet-handler and string-event APIs with one typed bus, and
 moves the module to `github.com/KonjacBot/minego/v2`. It needs Go 1.27, which
 added generic methods.
 
 The v0 API stays available under the old import path
-`github.com/KonjacBot/minego`. The last v0 commit is `4c5627e`.
+`github.com/KonjacBot/minego`, tagged `v0.1.0`.
 
 ### Added
 
@@ -24,9 +67,6 @@ The v0 API stays available under the old import path
   cannot have generic methods, so such code writes `c.Bus().On(...)`.
 - `client.ConnectionStateChangeEvent` can be subscribed to like any other
   event.
-- `bot.ClientOptions.ChunkLight` / `ChunkHeightmaps`, and the matching
-  `world.WithLight()` / `world.WithHeightmaps()`, keep chunk light and
-  heightmaps. Both are dropped by default (see below).
 
 ### Changed
 
@@ -56,23 +96,6 @@ The v0 API stays available under the old import path
   - Decoders that reject length prefixes the packet cannot hold. These used to
     allow allocating 2 GB from 5 bytes, or panicking on negative lengths.
 
-- **World keeps less of each chunk by default.** This cuts a loaded
-  overworld column from about 78 KiB to about 26 KiB (-67%). At view distance
-  16 (1,089 columns), one bot needs about 28 MB instead of 85 MB.
-  - Sky and block light are dropped. They were about half of each chunk,
-    nothing in minego read them, and light updates were never applied, so
-    they went stale.
-  - Heightmaps are dropped too.
-  - The spare sections the decoder allocates for the tallest possible column
-    are released.
-  - Sections that hold a single value (all air, all stone, one biome) share
-    one read-only container across all columns and bots. World copies such a
-    section before writing to it.
-  - World stores its own shallow copy of the column. Other subscribers to
-    `*client.LevelChunkWithLight` still see the full packet, light included.
-  - `World.SetBlock` and block updates now write through the section instead
-    of a copy, so the section's block count is no longer lost.
-
 ### Removed
 
 - `bot.AddHandler`, `bot.HandlerFunc` and the `bot.PacketHandler` interface
@@ -97,14 +120,6 @@ uses the optimized go-mc:
 | allocations per run | 6133 | 1772 |
 
 Dispatching a packet to two handlers takes 88 ns and makes 0 allocations.
-
-Memory kept per loaded overworld column (`TestLoadedColumnMemory` in
-pkg/game/world, generated terrain with vanilla-style light):
-
-| | v0 | v2 default | v2 with light and heightmaps |
-| --- | --- | --- | --- |
-| bytes per column | 78.2 KiB | 25.9 KiB | 68.6 KiB |
-| one bot at view distance 16 (1,089 columns) | about 85 MB | about 28 MB | about 75 MB |
 
 ### Migrating from v0
 
@@ -131,7 +146,6 @@ pkg/game/world, generated terrain with vanilla-style light):
 | `c.EventHandler().SubscribeEvent(name, f)` | `c.On(func(ctx context.Context, e E) {...})` |
 | `func (E) EventID() string` | delete it; the Go type is the key |
 | `client.EventConnectionStateChange` | `c.On(func(ctx context.Context, e client.ConnectionStateChangeEvent) {...})` |
-| Reading `chunk.Light` / heightmaps from World's columns | set `bot.ClientOptions{ChunkLight: true, ChunkHeightmaps: true}`, or read them from your own `*client.LevelChunkWithLight` handler |
 | Polling a flag set by a handler | `v, err := c.WaitFor(ctx, func(v T) bool {...})` |
 | A handler registered for one task | `c.OnCtx(taskCtx, ...)`, or call the returned `off()` |
 | Test fakes implementing `PacketHandler()` and `EventHandler()` | implement `Bus() *bus.Bus { return b }`, with `b := bus.New()`, and feed packets with `b.Emit(ctx, p)` |
