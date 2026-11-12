@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"slices"
 	"sync"
 
 	"github.com/go-gl/mathgl/mgl64"
@@ -22,8 +23,10 @@ import (
 type World struct {
 	c bot.Client
 
-	noChunks    bool
-	chunkHeight uint32
+	noChunks       bool
+	keepLight      bool
+	keepHeightmaps bool
+	chunkHeight    uint32
 	columns     map[level.ChunkPos]*level.Chunk
 	entities    map[int32]*Entity
 	// dimension 是目前所在的維度(Login、Respawn 帶的 Dimension),由 entityLock 保護。
@@ -39,6 +42,41 @@ type Option func(*World)
 // WithoutChunks 讓 World 不保存區塊(方塊讀寫都回傳 chunk not loaded),只管實體;
 // 區塊由使用者自己的實作保存時用,避免同一份地形存兩次。
 func WithoutChunks() Option { return func(w *World) { w.noChunks = true } }
+
+// WithLight keeps the sky and block light that chunk packets carry. By default
+// World drops it: it is about half of a column's memory, nothing in minego
+// reads it, and World does not apply light updates, so it would go stale.
+func WithLight() Option { return func(w *World) { w.keepLight = true } }
+
+// WithHeightmaps keeps the heightmaps that chunk packets carry. By default
+// World drops them, as nothing in minego reads them.
+func WithHeightmaps() Option { return func(w *World) { w.keepHeightmaps = true } }
+
+// storedColumn returns the part of a decoded column that World keeps. It is a
+// new Chunk, so other subscribers to the same packet still see everything.
+//
+// The decoder allocates room for the tallest possible column and trims the
+// slice afterwards; cloning the sections lets the unused tail be collected.
+func (w *World) storedColumn(c *level.Chunk) *level.Chunk {
+	stored := &level.Chunk{
+		Sections:    slices.Clone(c.Sections),
+		BlockEntity: c.BlockEntity,
+		Status:      c.Status,
+	}
+	if w.keepLight {
+		stored.Light = c.Light
+	} else {
+		for i := range stored.Sections {
+			stored.Sections[i].SkyLight = nil
+			stored.Sections[i].BlockLight = nil
+		}
+	}
+	if w.keepHeightmaps {
+		stored.HeightMaps = c.HeightMaps
+	}
+	shareSingleValueSections(stored.Sections)
+	return stored
+}
 
 func NewWorld(c bot.Client, opts ...Option) *World {
 	w := &World{
@@ -57,7 +95,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 		w.chunkLock.Lock()
 		defer w.chunkLock.Unlock()
 
-		w.columns[p.Pos] = p.Data
+		w.columns[p.Pos] = w.storedColumn(p.Data)
 	})
 
 	c.Bus().On(func(ctx context.Context, p *cp.Login) {
@@ -245,7 +283,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			return // invalid section Y coordinate
 		}
 
-		section := chunk.Sections[sectionY]
+		section := writableSection(chunk, sectionY)
 		blockIdx := (blockY << 8) | (blockZ << 4) | blockX
 		section.SetBlock(int(blockIdx), level.BlocksState(p.BlockState))
 	})
@@ -275,7 +313,7 @@ func NewWorld(c bot.Client, opts ...Option) *World {
 			return // invalid section Y coordinate
 		}
 
-		section := chunk.Sections[sectionY]
+		section := writableSection(chunk, sectionY)
 		blocks := p.ParseBlocks()
 
 		for localPos, stateID := range blocks {
@@ -346,7 +384,7 @@ func (w *World) SetBlock(pos protocol.Position, blk block.Block) error {
 		return errors.New("invalid section Y coordinate")
 	}
 
-	section := chunk.Sections[sectionY]
+	section := writableSection(chunk, sectionY)
 
 	blockIdx := (blockY << 8) | (blockZ << 4) | blockX
 	stateID, ok := block.ToStateID[blk]

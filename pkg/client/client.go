@@ -498,6 +498,12 @@ func NewClient(options *bot.ClientOptions) *Client {
 	if options != nil && options.NoChunks {
 		worldOpts = append(worldOpts, world.WithoutChunks())
 	}
+	if options != nil && options.ChunkLight {
+		worldOpts = append(worldOpts, world.WithLight())
+	}
+	if options != nil && options.ChunkHeightmaps {
+		worldOpts = append(worldOpts, world.WithHeightmaps())
+	}
 	c.world = world.NewWorld(c, worldOpts...)
 	c.inventory = inventory.NewManager(c)
 	var playerOpts []player.Option

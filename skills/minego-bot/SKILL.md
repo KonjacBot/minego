@@ -56,6 +56,9 @@ import (
 ```go
 c := client.NewClient(&bot.ClientOptions{
     AuthProvider: &auth.KonjacAuth{UserCode: os.Getenv("MINEGO_USER_CODE")},
+    // World is memory-lean by default: chunk light and heightmaps are not kept.
+    // ChunkLight: true, ChunkHeightmaps: true, // only if you need them
+    // NoChunks: true,                           // if you keep terrain yourself
 })
 
 ctx, cancel := context.WithCancel(context.Background())
