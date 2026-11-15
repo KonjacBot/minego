@@ -63,8 +63,8 @@ func (s *session) serveCore(ctx context.Context, conn *mcnet.Conn) error {
 		if errors.Is(err, errResync) {
 			// The server reconfigured while the core was configuring: take it
 			// through the new configuration before it sees any play packet.
-			if err := s.restartConfig(conn); err != nil {
-				return err
+			if cfgErr := s.restartConfig(conn); cfgErr != nil {
+				return cfgErr
 			}
 			continue
 		}
