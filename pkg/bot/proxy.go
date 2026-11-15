@@ -1,4 +1,4 @@
-package client
+package bot
 
 import (
 	"context"
@@ -7,24 +7,23 @@ import (
 	"golang.org/x/net/proxy"
 
 	mcnet "github.com/KonjacBot/go-mc/net"
-
-	"github.com/KonjacBot/minego/pkg/bot"
 )
 
-// createSOCKS5Dialer 建立 SOCKS5 dialer
-func socks5(proxyConfig *bot.ProxyConfig) (mcnet.MCDialer, error) {
-	if proxyConfig.Type != "" && proxyConfig.Type != "socks5" {
-		return nil, fmt.Errorf("unsupported proxy type %q", proxyConfig.Type)
+// Dialer returns a Minecraft dialer that connects through this SOCKS5 proxy.
+// It lives next to ProxyConfig so the client and the keeper dial the same way.
+func (p *ProxyConfig) Dialer() (mcnet.MCDialer, error) {
+	if p.Type != "" && p.Type != "socks5" {
+		return nil, fmt.Errorf("unsupported proxy type %q", p.Type)
 	}
 	var auth *proxy.Auth
-	if proxyConfig.Username != "" || proxyConfig.Password != "" {
+	if p.Username != "" || p.Password != "" {
 		auth = &proxy.Auth{
-			User:     proxyConfig.Username,
-			Password: proxyConfig.Password,
+			User:     p.Username,
+			Password: p.Password,
 		}
 	}
 
-	dialer, err := proxy.SOCKS5("tcp", proxyConfig.Host, auth, proxy.Direct)
+	dialer, err := proxy.SOCKS5("tcp", p.Host, auth, proxy.Direct)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SOCKS5 proxy dialer: %w", err)
 	}

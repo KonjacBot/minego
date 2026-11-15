@@ -189,6 +189,17 @@ func (m *Auth) Authenticate(ctx context.Context, conn *mcnet.Conn, content clien
 	}).Authenticate(ctx, conn, content)
 }
 
+// SessionToken returns a usable Minecraft access token, refreshing it like
+// Authenticate would, so the keeper can join the session on this account.
+func (m *Auth) SessionToken(ctx context.Context) (string, error) {
+	if !m.hasUsableMinecraftToken() {
+		if err := m.prepareSessionAuthentication(ctx); err != nil {
+			return "", err
+		}
+	}
+	return m.MCToken.AccessToken, nil
+}
+
 func (m *Auth) CachedProfile(ctx context.Context) *auth.Profile {
 	m.normalize()
 	if err := m.load(ctx); err != nil {

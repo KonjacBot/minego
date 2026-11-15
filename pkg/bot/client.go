@@ -58,4 +58,26 @@ type ProxyConfig struct {
 type ConnectOptions struct {
 	FakeHost string       `json:"fake_host,omitempty" toml:"fake_host,omitempty"`
 	Proxy    *ProxyConfig `json:"proxy,omitempty" toml:"proxy,omitempty"`
+	// Keeper, when set, connects through a local connection keeper (see
+	// package keeper) instead of dialing the server: the keeper owns the
+	// server connection and this client attaches to it, so the client process
+	// can restart without the player leaving the server.
+	Keeper *KeeperOptions `json:"keeper,omitempty" toml:"keeper,omitempty"`
+}
+
+// KeeperOptions locates the local connection keeper and names the session.
+type KeeperOptions struct {
+	// Socket is the keeper's local socket path.
+	Socket string `json:"socket" toml:"socket"`
+	// Token is the shared secret the keeper wrote next to its socket.
+	Token string `json:"-" toml:"-"`
+	// Session names the kept connection, usually the player name. Attaching
+	// with the same name resumes the connection if it is still alive.
+	Session string `json:"session" toml:"session"`
+}
+
+// Detacher is implemented by clients that can leave a kept connection running
+// while closing their side (see ConnectOptions.Keeper).
+type Detacher interface {
+	Detach(ctx context.Context) error
 }

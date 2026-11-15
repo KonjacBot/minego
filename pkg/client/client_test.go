@@ -91,7 +91,7 @@ func TestSupportedKnownPacksSelectsOnlyMatchingCorePack(t *testing.T) {
 		{Namespace: "minecraft", ID: "core", Version: "26.1"},
 		{Namespace: "minecraft", ID: "core", Version: "26.2"},
 	}
-	selected := supportedKnownPacks(offered)
+	selected := configclient.SupportedKnownPacks(offered)
 	if len(selected) != 1 || selected[0] != offered[2] {
 		t.Fatalf("selected packs = %+v", selected)
 	}

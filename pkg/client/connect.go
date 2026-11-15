@@ -12,7 +12,6 @@ import (
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
 	"github.com/KonjacBot/minego/pkg/auth"
-	"github.com/KonjacBot/minego/pkg/protocol"
 	configclient "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/client"
 	configserver "github.com/KonjacBot/minego/pkg/protocol/packet/configuration/server"
 	gameserver "github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
@@ -132,7 +131,7 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 				return err
 			}
 			response := configserver.ConfigSelectKnownPacks{
-				Packs: supportedKnownPacks(offered.KnownPacks),
+				Packs: configclient.SupportedKnownPacks(offered.KnownPacks),
 			}
 			err = b.writeRawPacket(ctx, pk.Marshal(packetid.ServerboundConfigSelectKnownPacks, &response))
 			if err != nil {
@@ -184,18 +183,6 @@ func (b *botClient) readConfiguration(ctx context.Context, conn *mcnet.Conn) (er
 			continue
 		}
 	}
-}
-
-func supportedKnownPacks(offered []configclient.KnownPack) []configclient.KnownPack {
-	result := make([]configclient.KnownPack, 0, 1)
-	for _, pack := range offered {
-		if pack.Namespace == protocol.CorePackNamespace &&
-			pack.ID == protocol.CorePackID &&
-			pack.Version == protocol.VersionName {
-			result = append(result, pack)
-		}
-	}
-	return result
 }
 
 func (b *botClient) withReadContext(ctx context.Context, fn func(*mcnet.Conn) error) error {
