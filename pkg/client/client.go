@@ -323,9 +323,9 @@ func (b *Client) Connect(ctx context.Context, addr string, options *bot.ConnectO
 
 	var conn *mcnet.Conn
 	if options != nil && options.Keeper != nil {
-		raw, reply, err := keeper.Dial(ctx, *options.Keeper, addr, options, b.authProvider)
-		if err != nil {
-			return err
+		raw, reply, dialErr := keeper.Dial(ctx, *options.Keeper, addr, options, b.authProvider)
+		if dialErr != nil {
+			return dialErr
 		}
 		conn = mcnet.WrapConn(raw)
 		b.kept.Store(&keptConnection{options: *options.Keeper, reply: reply})

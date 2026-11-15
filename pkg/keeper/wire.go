@@ -154,7 +154,7 @@ func LoadOrCreateToken(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("create keeper token: %w", err)
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if err := tmp.Chmod(0o600); err != nil && !errors.Is(err, errors.ErrUnsupported) {
 		_ = tmp.Close()
 		return "", fmt.Errorf("protect keeper token: %w", err)
@@ -169,8 +169,8 @@ func LoadOrCreateToken(path string) (string, error) {
 	// Link instead of rename: when two processes race, the first token wins and
 	// the second reads it back instead of overwriting it.
 	if err := os.Link(tmp.Name(), path); err != nil {
-		if token, readErr := ReadToken(path); readErr == nil {
-			return token, nil
+		if existing, readErr := ReadToken(path); readErr == nil {
+			return existing, nil
 		}
 		if err := os.Rename(tmp.Name(), path); err != nil {
 			return "", fmt.Errorf("install keeper token: %w", err)
