@@ -44,6 +44,6 @@ func (p *CustomPayload) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil && (err != io.ErrUnexpectedEOF && err != io.EOF) {
 		return n + int64(nn), err
 	}
-	p.Data = data
+	p.Data = data[:nn]
 	return n + int64(nn), nil
 }

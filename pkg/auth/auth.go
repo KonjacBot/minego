@@ -51,6 +51,17 @@ type Auth struct {
 	*net.Conn
 	Provider
 	ReadIdleTimeout time.Duration
+	// Finished is the body of the server's LoginFinished packet (the game
+	// profile with its properties), set when HandleLogin succeeds. The keeper
+	// hands the same profile to the core that attaches later.
+	Finished []byte
+}
+
+// TokenSource is implemented by online providers that can hand out the
+// Minecraft access token used for the session join, so another process (the
+// keeper) can log in on the caller's behalf.
+type TokenSource interface {
+	SessionToken(ctx context.Context) (string, error)
 }
 
 func (a *Auth) HandleLogin(ctx context.Context) error {
@@ -104,6 +115,7 @@ func (a *Auth) HandleLogin(ctx context.Context) error {
 				return errors.Join(ErrLogin, fmt.Errorf("authenticate fail: %w", err))
 			}
 		case packetid.ClientboundLoginLoginFinished:
+			a.Finished = append([]byte(nil), p.Data...)
 			err = a.WritePacket(pk.Marshal(packetid.ServerboundLoginLoginAcknowledged))
 			if err != nil {
 				return errors.Join(ErrLogin, fmt.Errorf("write login ack fail: %w", err))
@@ -297,6 +309,14 @@ func newSymmetricEncryption() (key []byte, encoStream, decoStream cipher.Stream,
 
 func (o *OnlineAuth) FetchProfile(ctx context.Context) *Profile {
 	return &o.Profile
+}
+
+// SessionToken returns the token this provider joins the session with.
+func (o *OnlineAuth) SessionToken(context.Context) (string, error) {
+	if o.AccessToken == "" {
+		return "", errors.New("online auth has no access token")
+	}
+	return o.AccessToken, nil
 }
 
 func authDigest(serverID string, sharedSecret, publicKey []byte) string {

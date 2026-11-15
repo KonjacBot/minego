@@ -26,6 +26,7 @@ import (
 	"github.com/KonjacBot/minego/v2/pkg/game/inventory"
 	"github.com/KonjacBot/minego/v2/pkg/game/player"
 	"github.com/KonjacBot/minego/v2/pkg/game/world"
+	"github.com/KonjacBot/minego/v2/pkg/keeper"
 	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/v2/pkg/protocol/packet/game/server"
 )
@@ -50,13 +51,53 @@ type Client struct {
 	inventory *inventory.Manager
 	world     *world.World
 	player    *player.Player
+
+	// kept is set while the connection goes through a keeper.
+	kept atomic.Pointer[keptConnection]
+}
+
+type keptConnection struct {
+	options bot.KeeperOptions
+	reply   keeper.Reply
 }
 
 func (b *Client) Player() bot.Player {
 	return b.player
 }
 
+// Kept reports whether the connection goes through a keeper and whether the
+// keeper resumed a connection that already existed (see keeper.Reply). previous
+// is why the keeper's last connection of this session ended, if it ended while
+// no client was attached.
+func (b *Client) Kept() (kept, resumed bool, previous string) {
+	k := b.kept.Load()
+	if k == nil {
+		return false, false, ""
+	}
+	return true, k.reply.Resumed, k.reply.Previous
+}
+
+// Close closes the connection. Through a keeper it also ends the kept session,
+// so the player leaves the server; use Detach to leave it running.
 func (b *Client) Close(ctx context.Context) error {
+	if b.kept.Load() != nil && b.connectionState() == packet.StatePlay {
+		// Best effort: if the keeper does not hear it, the session ends by itself
+		// after the keeper's detach timeout.
+		closeCtx, cancel := context.WithTimeout(ctx, time.Second)
+		_ = b.WritePacket(closeCtx, &server.CustomPayload{Channel: keeper.ControlChannel, Data: []byte("close")})
+		cancel()
+	}
+	return b.closeConn(ctx)
+}
+
+// Detach closes this side of a kept connection and leaves the player on the
+// server, held by the keeper until a client attaches again. Without a keeper
+// it is the same as Close.
+func (b *Client) Detach(ctx context.Context) error {
+	return b.closeConn(ctx)
+}
+
+func (b *Client) closeConn(ctx context.Context) error {
 	b.writeMu.Lock()
 	defer b.writeMu.Unlock()
 
@@ -280,16 +321,27 @@ func (b *Client) Connect(ctx context.Context, addr string, options *bot.ConnectO
 		}
 	}
 
-	var dialer mcnet.MCDialer = &mcnet.DefaultDialer
-	if options != nil && options.Proxy != nil {
-		dialer, err = socks5(options.Proxy)
+	var conn *mcnet.Conn
+	if options != nil && options.Keeper != nil {
+		raw, reply, err := keeper.Dial(ctx, *options.Keeper, addr, options, b.authProvider)
 		if err != nil {
 			return err
 		}
-	}
-	conn, err := dialer.DialMCContext(ctx, addr)
-	if err != nil {
-		return err
+		conn = mcnet.WrapConn(raw)
+		b.kept.Store(&keptConnection{options: *options.Keeper, reply: reply})
+	} else {
+		var dialer mcnet.MCDialer = &mcnet.DefaultDialer
+		if options != nil && options.Proxy != nil {
+			dialer, err = options.Proxy.Dialer()
+			if err != nil {
+				return err
+			}
+		}
+		conn, err = dialer.DialMCContext(ctx, addr)
+		if err != nil {
+			return err
+		}
+		b.kept.Store(nil)
 	}
 	b.connMu.Lock()
 	b.conn = conn
