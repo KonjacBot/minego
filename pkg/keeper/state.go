@@ -3,7 +3,7 @@ package keeper
 import (
 	"bytes"
 	"fmt"
-	"reflect"
+	"maps"
 	"slices"
 	"strings"
 
@@ -12,7 +12,6 @@ import (
 	"github.com/KonjacBot/go-mc/data/packetid"
 	pk "github.com/KonjacBot/go-mc/net/packet"
 
-	"github.com/KonjacBot/minego/pkg/protocol/metadata"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/client"
 	"github.com/KonjacBot/minego/pkg/protocol/packet/game/server"
 )
@@ -29,9 +28,10 @@ type state struct {
 	// tags, known packs, features), replayed to the core's configuration phase.
 	config []pk.Packet
 
-	// login is the last Login with the spawn info of the latest Respawn, so the
-	// snapshot enters the current dimension directly.
-	login    *client.Login
+	// login is the server's last Login and respawn its latest Respawn after it;
+	// replayed in that order they put the core in the current dimension.
+	login    []byte
+	respawn  []byte
 	playerID int32
 	// loaded is set once PlayerLoaded went to the server for the current world;
 	// the core's duplicate is swallowed.
@@ -47,7 +47,9 @@ type state struct {
 	recipes []pk.Packet
 	// effects are the player's own mob effects by effect id.
 	effects map[int32]pk.Packet
-	players map[uuid.UUID]map[reflect.Type]client.PlayerInfo
+	// players is the tab list: each player's raw field per PlayerInfoUpdate
+	// action bit.
+	players map[uuid.UUID]map[int][]byte
 
 	world    world
 	inv      inventory
@@ -87,13 +89,13 @@ func newState() *state {
 
 // resetPlay forgets everything tied to one play session (a new Login).
 func (s *state) resetPlay() {
-	s.login = nil
+	s.login, s.respawn = nil, nil
 	s.loaded = false
 	s.singles = make(map[packetid.ClientboundPacketID]pk.Packet)
 	s.events = nil
 	s.recipes = nil
 	s.effects = make(map[int32]pk.Packet)
-	s.players = make(map[uuid.UUID]map[reflect.Type]client.PlayerInfo)
+	s.players = make(map[uuid.UUID]map[int][]byte)
 	s.world = newWorld()
 	s.inv = newInventory()
 	s.self = selfState{held: -1}
@@ -155,7 +157,7 @@ func (s *state) fromServer(p pk.Packet) error {
 			return err
 		}
 		s.resetPlay()
-		s.login = &login
+		s.login = p.Data
 		s.playerID = login.PlayerID
 		s.world.dimension = login.CommonPlayerSpawnInfo.Dimension
 	case packetid.ClientboundRespawn:
@@ -163,9 +165,7 @@ func (s *state) fromServer(p pk.Packet) error {
 		if err := decode(p, &respawn); err != nil {
 			return err
 		}
-		if s.login != nil {
-			s.login.CommonPlayerSpawnInfo = respawn.CommonPlayerSpawnInfo
-		}
+		s.respawn = p.Data
 		if respawn.CommonPlayerSpawnInfo.Dimension != s.world.dimension {
 			// Like the vanilla client (and minego): only a new dimension replaces the
 			// level; respawning in the same one keeps chunks and entities.
@@ -218,20 +218,7 @@ func (s *state) fromServer(p pk.Packet) error {
 			delete(s.effects, effect.EffectID)
 		}
 	case packetid.ClientboundPlayerInfoUpdate:
-		var update client.PlayerInfoUpdate
-		if err := decode(p, &update); err != nil {
-			return err
-		}
-		for id, infos := range update.Players {
-			known := s.players[id]
-			if known == nil {
-				known = make(map[reflect.Type]client.PlayerInfo)
-				s.players[id] = known
-			}
-			for _, info := range infos {
-				known[reflect.TypeOf(info)] = info
-			}
-		}
+		return s.playerInfo(p.Data)
 	case packetid.ClientboundPlayerInfoRemove:
 		var remove client.PlayerInfoRemove
 		if err := decode(p, &remove); err != nil {
@@ -393,37 +380,94 @@ func marshal(p client.ClientboundPacket) pk.Packet {
 	return pk.Marshal(p.PacketID(), p)
 }
 
+// playerFields decodes one PlayerInfoUpdate action's field, to find where it ends.
+func playerField(mask int) pk.FieldDecoder {
+	switch mask {
+	case 0x01:
+		return &client.PlayerInfoAddPlayer{}
+	case 0x02:
+		return &client.PlayerInfoInitializeChat{}
+	case 0x04:
+		return &client.PlayerInfoUpdateGameMode{}
+	case 0x08:
+		return &client.PlayerInfoUpdateListed{}
+	case 0x10:
+		return &client.PlayerInfoUpdateLatency{}
+	case 0x20:
+		return &client.PlayerInfoUpdateDisplayName{}
+	case 0x40:
+		return &client.PlayerInfoUpdateListPriority{}
+	case 0x80:
+		return &client.PlayerInfoUpdateHat{}
+	}
+	return nil
+}
+
+// playerInfo merges a PlayerInfoUpdate into the tab list, keeping each
+// player's raw field per action (the newest wins).
+func (s *state) playerInfo(data []byte) error {
+	r := bytes.NewReader(data)
+	var actions pk.UnsignedByte
+	if _, err := actions.ReadFrom(r); err != nil {
+		return err
+	}
+	var count pk.VarInt
+	if _, err := count.ReadFrom(r); err != nil {
+		return err
+	}
+	for range int(count) {
+		var id pk.UUID
+		if _, err := id.ReadFrom(r); err != nil {
+			return err
+		}
+		fields := map[int][]byte{}
+		for mask := 1; mask <= 0x80; mask <<= 1 {
+			if int(actions)&mask == 0 {
+				continue
+			}
+			field := playerField(mask)
+			if field == nil {
+				return fmt.Errorf("player info action %#x", mask)
+			}
+			raw, err := span(data, r, field)
+			if err != nil {
+				return err
+			}
+			fields[mask] = raw
+		}
+		known := s.players[uuid.UUID(id)]
+		if known == nil {
+			known = map[int][]byte{}
+			s.players[uuid.UUID(id)] = known
+		}
+		maps.Copy(known, fields)
+	}
+	return nil
+}
+
 // playerGroups splits the tab list into PlayerInfoUpdate packets whose players
 // all carry the same actions, which is what the packet format requires.
 func (s *state) playerGroups() []pk.Packet {
-	groups := map[string]map[uuid.UUID][]client.PlayerInfo{}
-	var keys []string
-	for id, infos := range s.players {
-		names := make([]string, 0, len(infos))
-		list := make([]client.PlayerInfo, 0, len(infos))
-		for t, info := range infos {
-			names = append(names, t.String())
-			list = append(list, info)
+	groups := map[int][]uuid.UUID{}
+	for id, fields := range s.players {
+		set := 0
+		for mask := range fields {
+			set |= mask
 		}
-		slices.Sort(names)
-		key := strings.Join(names, ",")
-		if groups[key] == nil {
-			groups[key] = map[uuid.UUID][]client.PlayerInfo{}
-			keys = append(keys, key)
-		}
-		groups[key][id] = list
+		groups[set] = append(groups[set], id)
 	}
-	slices.Sort(keys)
-	out := make([]pk.Packet, 0, len(keys))
-	for _, key := range keys {
-		out = append(out, marshal(&client.PlayerInfoUpdate{Players: groups[key]}))
+	out := make([]pk.Packet, 0, len(groups))
+	for _, set := range slices.Sorted(maps.Keys(groups)) {
+		ids := groups[set]
+		slices.SortFunc(ids, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+		data := append([]byte{byte(set)}, varint(int32(len(ids)))...)
+		for _, id := range ids {
+			data = append(data, id[:]...)
+			for mask := 1; mask <= 0x80; mask <<= 1 {
+				data = append(data, s.players[id][mask]...)
+			}
+		}
+		out = append(out, pk.Packet{ID: int32(packetid.ClientboundPlayerInfoUpdate), Data: data})
 	}
 	return out
-}
-
-// metadataCopy keeps entity metadata merged by index.
-func metadataCopy(dst map[uint8]metadata.Metadata, src metadata.EntityMetadata) {
-	for index, value := range src.Data {
-		dst[index] = value
-	}
 }

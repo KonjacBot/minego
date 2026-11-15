@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"slices"
 
@@ -41,20 +42,31 @@ type chunk struct {
 	blockEntities map[blockPos][]byte
 }
 
+// entity keeps the server's bytes: the spawn packet as sent, metadata entries
+// and equipment slots by index, and the latest of the other packets. Only the
+// position is tracked as numbers, replayed as a position sync after the spawn.
 type entity struct {
 	// spawn is nil for the player itself, which has no spawn packet.
-	spawn      *client.AddEntity
-	meta       map[uint8]metadata.Metadata
-	equipment  map[int8]slot.Slot
+	spawn      []byte
+	x, y, z    float64
+	yaw, pitch float32
+	moved      bool
+	head       []byte
+	meta       map[uint8][]byte
+	equipment  map[int8][]byte
 	attributes []byte
 	passengers []byte
 	link       []byte
 }
 
+func newEntity(spawn []byte) *entity {
+	return &entity{spawn: spawn, meta: map[uint8][]byte{}, equipment: map[int8][]byte{}}
+}
+
 type mapState struct {
 	scale     int8
 	locked    bool
-	icons     []client.MapIcon
+	icons     []byte // the icon array as the server sent it
 	hasIcons  bool
 	colors    [128 * 128]byte
 	hasColors bool
@@ -128,7 +140,9 @@ func (w *world) fromServer(id packetid.ClientboundPacketID, p pk.Packet, self in
 		if err := decode(p, &spawn); err != nil {
 			return true, err
 		}
-		w.entities[spawn.ID] = &entity{spawn: &spawn, meta: map[uint8]metadata.Metadata{}, equipment: map[int8]slot.Slot{}}
+		e := newEntity(p.Data)
+		e.x, e.y, e.z, e.yaw, e.pitch = spawn.X, spawn.Y, spawn.Z, float32(spawn.Yaw.ToDeg()), float32(spawn.Pitch.ToDeg())
+		w.entities[spawn.ID] = e
 	case packetid.ClientboundRemoveEntities:
 		var remove client.RemoveEntities
 		if err := decode(p, &remove); err != nil {
@@ -161,8 +175,7 @@ func (w *world) fromServer(id packetid.ClientboundPacketID, p pk.Packet, self in
 			return true, err
 		}
 		if e := w.entities[m.EntityID]; e != nil && e.spawn != nil {
-			e.spawn.X, e.spawn.Y, e.spawn.Z = m.X, m.Y, m.Z
-			e.spawn.Yaw, e.spawn.Pitch = angle(m.Yaw), angle(m.Pitch)
+			e.x, e.y, e.z, e.yaw, e.pitch, e.moved = m.X, m.Y, m.Z, m.Yaw, m.Pitch, true
 		}
 	case packetid.ClientboundTeleportEntity:
 		var m client.SynchronizeVehiclePosition
@@ -176,37 +189,53 @@ func (w *world) fromServer(id packetid.ClientboundPacketID, p pk.Packet, self in
 				}
 				return v
 			}
-			e.spawn.X = rel(0x01, e.spawn.X, m.X)
-			e.spawn.Y = rel(0x02, e.spawn.Y, m.Y)
-			e.spawn.Z = rel(0x04, e.spawn.Z, m.Z)
-			e.spawn.Yaw = angle(float32(rel(0x08, float64(e.spawn.Yaw.ToDeg()), float64(m.Yaw))))
-			e.spawn.Pitch = angle(float32(rel(0x10, float64(e.spawn.Pitch.ToDeg()), float64(m.Pitch))))
+			e.x = rel(0x01, e.x, m.X)
+			e.y = rel(0x02, e.y, m.Y)
+			e.z = rel(0x04, e.z, m.Z)
+			e.yaw = float32(rel(0x08, float64(e.yaw), float64(m.Yaw)))
+			e.pitch = float32(rel(0x10, float64(e.pitch), float64(m.Pitch)))
+			e.moved = true
 		}
 	case packetid.ClientboundRotateHead:
-		var m client.SetHeadRotation
-		if err := decode(p, &m); err != nil {
-			return true, err
-		}
-		if e := w.entities[m.EntityID]; e != nil && e.spawn != nil {
-			e.spawn.HeadYaw = m.HeadYaw
+		if e := w.entities[leadingVarInt(p.Data)]; e != nil && e.spawn != nil {
+			e.head = p.Data
 		}
 	case packetid.ClientboundSetEntityData:
-		var m client.SetEntityMetadata
-		if err := decode(p, &m); err != nil {
+		r := bytes.NewReader(p.Data)
+		var id pk.VarInt
+		if _, err := id.ReadFrom(r); err != nil {
 			return true, err
 		}
-		if e := w.entityOrSelf(m.EntityID, self); e != nil {
-			metadataCopy(e.meta, m.Metadata)
+		entries, _, err := metadata.ReadRaw(p.Data[len(p.Data)-r.Len():])
+		if err != nil {
+			return true, err
+		}
+		if e := w.entityOrSelf(int32(id), self); e != nil {
+			maps.Copy(e.meta, entries)
 		}
 	case packetid.ClientboundSetEquipment:
-		var m client.SetEquipment
-		if err := decode(p, &m); err != nil {
+		r := bytes.NewReader(p.Data)
+		var id pk.VarInt
+		if _, err := id.ReadFrom(r); err != nil {
 			return true, err
 		}
-		if e := w.entityOrSelf(m.EntityID, self); e != nil {
-			for _, item := range m.Equipment {
-				e.equipment[item.Slot] = item.Item
+		items := map[int8][]byte{}
+		for {
+			var b pk.Byte
+			if _, err := b.ReadFrom(r); err != nil {
+				return true, err
 			}
+			raw, err := span(p.Data, r, &slot.Slot{})
+			if err != nil {
+				return true, err
+			}
+			items[int8(b)&0x7f] = raw
+			if int8(b) >= 0 {
+				break
+			}
+		}
+		if e := w.entityOrSelf(int32(id), self); e != nil {
+			maps.Copy(e.equipment, items)
 		}
 	case packetid.ClientboundUpdateAttributes:
 		if e := w.entityOrSelf(leadingVarInt(p.Data), self); e != nil {
@@ -248,12 +277,13 @@ func (w *world) move(id int32, dx, dy, dz int16, rot *[2]pk.Angle) {
 	if e == nil || e.spawn == nil {
 		return
 	}
-	e.spawn.X += float64(dx) / 4096
-	e.spawn.Y += float64(dy) / 4096
-	e.spawn.Z += float64(dz) / 4096
+	e.x += float64(dx) / 4096
+	e.y += float64(dy) / 4096
+	e.z += float64(dz) / 4096
 	if rot != nil {
-		e.spawn.Yaw, e.spawn.Pitch = rot[0], rot[1]
+		e.yaw, e.pitch = float32(rot[0].ToDeg()), float32(rot[1].ToDeg())
 	}
+	e.moved = true
 }
 
 // entityOrSelf finds a tracked entity; data for the player itself is kept in
@@ -265,13 +295,9 @@ func (w *world) entityOrSelf(id, self int32) *entity {
 	if id != self {
 		return nil
 	}
-	e := &entity{meta: map[uint8]metadata.Metadata{}, equipment: map[int8]slot.Slot{}}
+	e := newEntity(nil)
 	w.entities[id] = e
 	return e
-}
-
-func angle(deg float32) pk.Angle {
-	return pk.Angle(int8(int32(math.Floor(float64(deg)*256/360)) & 0xff))
 }
 
 func leadingVarInt(data []byte) int32 {
@@ -302,10 +328,11 @@ func (w *world) mapData(p pk.Packet) error {
 	}
 	if hasIcons {
 		var icons []client.MapIcon
-		if _, err := pk.Array(&icons).ReadFrom(r); err != nil {
+		raw, err := span(p.Data, r, pk.Array(&icons))
+		if err != nil {
 			return fmt.Errorf("decode map icons: %w", err)
 		}
-		m.icons, m.hasIcons = icons, true
+		m.icons, m.hasIcons = raw, true
 	}
 	var patch client.MapColorPatch
 	if _, err := patch.ReadFrom(r); err != nil && err != io.EOF {
@@ -362,24 +389,35 @@ func (w *world) packets(self int32) []pk.Packet {
 	for _, id := range ids {
 		e := w.entities[id]
 		if e.spawn != nil {
-			out = append(out, marshal(e.spawn))
+			out = append(out, pk.Packet{ID: int32(packetid.ClientboundAddEntity), Data: e.spawn})
+			if e.moved {
+				out = append(out, marshal(&client.TeleportEntity{EntityID: id, X: e.x, Y: e.y, Z: e.z, Yaw: e.yaw, Pitch: e.pitch}))
+			}
+			if e.head != nil {
+				out = append(out, pk.Packet{ID: int32(packetid.ClientboundRotateHead), Data: e.head})
+			}
 		} else if id != self {
 			continue
 		}
 		if len(e.meta) > 0 {
-			out = append(out, marshal(&client.SetEntityMetadata{EntityID: id, Metadata: metadata.EntityMetadata{Data: e.meta}}))
+			data := varint(id)
+			for _, index := range slices.Sorted(maps.Keys(e.meta)) {
+				data = append(data, e.meta[index]...)
+			}
+			out = append(out, pk.Packet{ID: int32(packetid.ClientboundSetEntityData), Data: append(data, 0xff)})
 		}
 		if len(e.equipment) > 0 {
-			slots := make([]int8, 0, len(e.equipment))
-			for s := range e.equipment {
-				slots = append(slots, s)
+			data := varint(id)
+			slots := slices.Sorted(maps.Keys(e.equipment))
+			for i, s := range slots {
+				b := byte(s)
+				if i < len(slots)-1 {
+					b |= 0x80
+				}
+				data = append(data, b)
+				data = append(data, e.equipment[s]...)
 			}
-			slices.Sort(slots)
-			eq := make(client.Equipment, 0, len(slots))
-			for _, s := range slots {
-				eq = append(eq, client.EquipmentData{Slot: s, Item: e.equipment[s]})
-			}
-			out = append(out, marshal(&client.SetEquipment{EntityID: id, Equipment: eq}))
+			out = append(out, pk.Packet{ID: int32(packetid.ClientboundSetEquipment), Data: data})
 		}
 		if e.attributes != nil {
 			out = append(out, pk.Packet{ID: int32(packetid.ClientboundUpdateAttributes), Data: e.attributes})
@@ -445,7 +483,7 @@ func (m *mapState) packet(id int32) pk.Packet {
 	_, _ = client.MapData{MapID: id, Scale: m.scale, Locked: m.locked}.WriteTo(&buf)
 	_, _ = pk.Boolean(m.hasIcons).WriteTo(&buf)
 	if m.hasIcons {
-		_, _ = pk.Array(&m.icons).WriteTo(&buf)
+		buf.Write(m.icons)
 	}
 	patch := client.MapColorPatch{}
 	if m.hasColors {

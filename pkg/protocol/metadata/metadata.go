@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -177,4 +178,35 @@ func init() {
 	metadataType[MetadataQuaternion] = func() Metadata { return &Quaternion{} }
 	metadataType[MetadataResolvableProfile] = func() Metadata { return &ResolvableProfile{} }
 	metadataType[MetadataHumanoidArm] = func() Metadata { return &HumanoidArm{} }
+}
+
+// ReadRaw reads an entity metadata list from data and returns each entry's raw
+// bytes (index, type and value) by index, and the bytes consumed including the
+// 0xff terminator. Callers that merge metadata from several packets (the
+// keeper) keep the server's bytes instead of re-encoding decoded values.
+func ReadRaw(data []byte) (map[uint8][]byte, int, error) {
+	r := bytes.NewReader(data)
+	out := make(map[uint8][]byte)
+	for {
+		start := len(data) - r.Len()
+		var index pk.UnsignedByte
+		if _, err := index.ReadFrom(r); err != nil {
+			return nil, 0, err
+		}
+		if index == 0xff {
+			return out, len(data) - r.Len(), nil
+		}
+		var typeID MetadataType
+		if _, err := (*pk.VarInt)(&typeID).ReadFrom(r); err != nil {
+			return nil, 0, err
+		}
+		creator := metadataType[typeID]
+		if creator == nil {
+			return nil, 0, fmt.Errorf("metadata: unknown entity metadata type id %d", typeID)
+		}
+		if _, err := creator().ReadFrom(r); err != nil {
+			return nil, 0, err
+		}
+		out[uint8(index)] = data[start : len(data)-r.Len()]
+	}
 }
