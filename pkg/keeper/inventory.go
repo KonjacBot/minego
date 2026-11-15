@@ -17,16 +17,20 @@ import (
 // crafting result and grid, armor, main inventory, hotbar, offhand.
 const playerSlots = 46
 
-// inventory follows the player's inventory and the open container.
+// emptySlot is an empty item stack on the wire (count 0).
+var emptySlot = []byte{0}
+
+// inventory follows the player's inventory and the open container. Every slot
+// is the server's encoding of that stack (see raw.go).
 //
 // The server confirms clicks without echoing the result (the client predicts
 // it), so the keeper also applies the core's clicks: they carry the changed
 // slots as hashes, which are resolved against the stacks the keeper already
 // knows (an item can only move between slots it can see).
 type inventory struct {
-	player  [playerSlots]slot.Slot
+	player  [playerSlots][]byte
 	stateID int32
-	cursor  slot.Slot
+	cursor  []byte
 	open    *screen
 	// unresolved counts click slots that matched no known stack and were kept
 	// as bare item id and count.
@@ -38,7 +42,7 @@ type inventory struct {
 type screen struct {
 	id       int32
 	open     []byte
-	own      []slot.Slot
+	own      [][]byte
 	stateID  int32
 	data     map[int16]int16
 	dataSeq  []int16
@@ -46,10 +50,16 @@ type screen struct {
 	content  bool
 }
 
-func newInventory() inventory { return inventory{} }
+func newInventory() inventory {
+	inv := inventory{cursor: emptySlot}
+	for i := range inv.player {
+		inv.player[i] = emptySlot
+	}
+	return inv
+}
 
 // view returns the slot behind index in window id, or nil if unknown.
-func (inv *inventory) view(id int32, index int) *slot.Slot {
+func (inv *inventory) view(id int32, index int) *[]byte {
 	switch {
 	case id == 0:
 		if index >= 0 && index < playerSlots {
@@ -67,53 +77,79 @@ func (inv *inventory) view(id int32, index int) *slot.Slot {
 }
 
 func (inv *inventory) fromServer(id packetid.ClientboundPacketID, p pk.Packet) (handled bool, err error) {
+	r := bytes.NewReader(p.Data)
 	switch id {
 	case packetid.ClientboundContainerSetContent:
-		var c client.SetContainerContent
-		if err := decode(p, &c); err != nil {
+		var window, state, count pk.VarInt
+		for _, f := range []pk.FieldDecoder{&window, &state, &count} {
+			if _, err := f.ReadFrom(r); err != nil {
+				return true, err
+			}
+		}
+		slots := make([][]byte, 0, int(count))
+		for range int(count) {
+			raw, err := span(p.Data, r, &slot.Slot{})
+			if err != nil {
+				return true, err
+			}
+			slots = append(slots, raw)
+		}
+		carried, err := span(p.Data, r, &slot.Slot{})
+		if err != nil {
 			return true, err
 		}
-		inv.cursor = c.CarriedItem
+		inv.cursor = carried
 		switch {
-		case c.WindowID == 0:
-			copy(inv.player[:], c.Slots)
-			inv.stateID = c.StateID
-		case inv.open != nil && c.WindowID == inv.open.id:
-			n := max(len(c.Slots)-36, 0)
-			inv.open.own = slices.Clone(c.Slots[:n])
-			copy(inv.player[9:45], c.Slots[n:])
-			inv.open.stateID, inv.open.content = c.StateID, true
+		case window == 0:
+			copy(inv.player[:], slots)
+			inv.stateID = int32(state)
+		case inv.open != nil && int32(window) == inv.open.id:
+			n := max(len(slots)-36, 0)
+			inv.open.own = slices.Clone(slots[:n])
+			copy(inv.player[9:45], slots[n:])
+			inv.open.stateID, inv.open.content = int32(state), true
 		}
 	case packetid.ClientboundContainerSetSlot:
-		var c client.ContainerSetSlot
-		if err := decode(p, &c); err != nil {
+		var window, state pk.VarInt
+		var index pk.Short
+		for _, f := range []pk.FieldDecoder{&window, &state, &index} {
+			if _, err := f.ReadFrom(r); err != nil {
+				return true, err
+			}
+		}
+		raw, err := span(p.Data, r, &slot.Slot{})
+		if err != nil {
 			return true, err
 		}
-		if c.ContainerID == -1 && c.Slot == -1 {
-			inv.cursor = c.ItemStack
+		if window == -1 && index == -1 {
+			inv.cursor = raw
 			return true, nil
 		}
-		if s := inv.view(c.ContainerID, int(c.Slot)); s != nil {
-			*s = c.ItemStack
+		if s := inv.view(int32(window), int(index)); s != nil {
+			*s = raw
 		}
-		if c.ContainerID == 0 {
-			inv.stateID = c.StateID
-		} else if inv.open != nil && c.ContainerID == inv.open.id {
-			inv.open.stateID = c.StateID
+		if window == 0 {
+			inv.stateID = int32(state)
+		} else if inv.open != nil && int32(window) == inv.open.id {
+			inv.open.stateID = int32(state)
 		}
 	case packetid.ClientboundSetCursorItem:
-		var c client.SetCursorItem
-		if err := decode(p, &c); err != nil {
+		raw, err := span(p.Data, r, &slot.Slot{})
+		if err != nil {
 			return true, err
 		}
-		inv.cursor = c.CarriedItem
+		inv.cursor = raw
 	case packetid.ClientboundSetPlayerInventory:
-		var c client.SetPlayerInventory
-		if err := decode(p, &c); err != nil {
+		var index pk.VarInt
+		if _, err := index.ReadFrom(r); err != nil {
 			return true, err
 		}
-		if index, ok := menuSlot(c.Slot); ok {
-			inv.player[index] = c.Data
+		raw, err := span(p.Data, r, &slot.Slot{})
+		if err != nil {
+			return true, err
+		}
+		if i, ok := menuSlot(int32(index)); ok {
+			inv.player[i] = raw
 		}
 	case packetid.ClientboundOpenScreen:
 		inv.open = &screen{id: leadingVarInt(p.Data), open: p.Data, data: map[int16]int16{}}
@@ -197,21 +233,22 @@ func (inv *inventory) click(c server.ContainerClick) {
 }
 
 type candidate struct {
-	stack slot.Slot
-	hash  slot.HashedSlot
+	raw  []byte
+	hash slot.HashedSlot
 }
 
 func (inv *inventory) candidates() []candidate {
 	var out []candidate
-	add := func(s slot.Slot) {
-		if s.Count <= 0 {
+	add := func(raw []byte) {
+		var s slot.Slot
+		if _, err := s.ReadFrom(bytes.NewReader(raw)); err != nil || s.Count <= 0 {
 			return
 		}
 		h, err := slot.HashSlot(s)
 		if err != nil {
 			return
 		}
-		out = append(out, candidate{stack: s, hash: h})
+		out = append(out, candidate{raw: raw, hash: h})
 	}
 	add(inv.cursor)
 	for _, s := range inv.player {
@@ -225,21 +262,29 @@ func (inv *inventory) candidates() []candidate {
 	return out
 }
 
-func (inv *inventory) resolve(known []candidate, want slot.HashedSlot) slot.Slot {
+func (inv *inventory) resolve(known []candidate, want slot.HashedSlot) []byte {
 	if !want.HasItem || want.ItemCount <= 0 {
-		return slot.Slot{}
+		return emptySlot
 	}
 	for _, c := range known {
 		if sameItem(c.hash, want) {
-			s := c.stack
-			s.Count = want.ItemCount
-			return s
+			return withCount(c.raw, want.ItemCount)
 		}
 	}
 	inv.unresolved++
-	var s slot.Slot
-	s.ItemID, s.Count = item.ID(want.ItemID), want.ItemCount
-	return s
+	var buf bytes.Buffer
+	_, _ = slot.Slot{ItemID: item.ID(want.ItemID), Count: want.ItemCount}.WriteTo(&buf)
+	return buf.Bytes()
+}
+
+// withCount replaces the leading count of an encoded stack.
+func withCount(raw []byte, count int32) []byte {
+	r := bytes.NewReader(raw)
+	var old pk.VarInt
+	if _, err := old.ReadFrom(r); err != nil {
+		return raw
+	}
+	return append(varint(count), raw[len(raw)-r.Len():]...)
 }
 
 func sameItem(a, b slot.HashedSlot) bool {
@@ -248,19 +293,25 @@ func sameItem(a, b slot.HashedSlot) bool {
 		slices.Equal(a.RemovedComponents, b.RemovedComponents)
 }
 
+// content encodes a SetContainerContent from raw slots.
+func content(window, state int32, slots [][]byte, cursor []byte) pk.Packet {
+	data := append(varint(window), varint(state)...)
+	data = append(data, varint(int32(len(slots)))...)
+	for _, s := range slots {
+		data = append(data, s...)
+	}
+	data = append(data, cursor...)
+	return pk.Packet{ID: int32(packetid.ClientboundContainerSetContent), Data: data}
+}
+
 // packets returns window 0 and, if one is open, the container with its data
 // and trades.
 func (inv *inventory) packets() []pk.Packet {
-	out := []pk.Packet{marshal(&client.SetContainerContent{
-		WindowID: 0, StateID: inv.stateID, Slots: slices.Clone(inv.player[:]), CarriedItem: inv.cursor,
-	})}
+	out := []pk.Packet{content(0, inv.stateID, inv.player[:], inv.cursor)}
 	if o := inv.open; o != nil {
 		out = append(out, pk.Packet{ID: int32(packetid.ClientboundOpenScreen), Data: o.open})
 		if o.content {
-			slots := append(slices.Clone(o.own), inv.player[9:45]...)
-			out = append(out, marshal(&client.SetContainerContent{
-				WindowID: o.id, StateID: o.stateID, Slots: slots, CarriedItem: inv.cursor,
-			}))
+			out = append(out, content(o.id, o.stateID, append(slices.Clone(o.own), inv.player[9:45]...), inv.cursor))
 		}
 		for _, id := range o.dataSeq {
 			var buf bytes.Buffer

@@ -1,8 +1,11 @@
 package keeper
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/KonjacBot/go-mc/chat"
 	"github.com/KonjacBot/go-mc/data/packetid"
@@ -173,7 +176,11 @@ func TestInventoryResolvesHashedClicks(t *testing.T) {
 	}
 }
 
-func sameStack(a, b slot.Slot) bool {
+func sameStack(raw []byte, b slot.Slot) bool {
+	var a slot.Slot
+	if _, err := a.ReadFrom(bytes.NewReader(raw)); err != nil {
+		return false
+	}
 	if a.Count <= 0 && b.Count <= 0 {
 		return true
 	}
@@ -198,8 +205,8 @@ func TestEntitiesAndDimensions(t *testing.T) {
 		}
 	}
 	e := s.world.entities[3]
-	if e == nil || e.spawn.X != 10 || e.spawn.Y != 65.5 || e.spawn.Z != 10 || e.spawn.Yaw != angle(90) {
-		t.Fatalf("entity = %+v", e.spawn)
+	if e == nil || e.x != 10 || e.y != 65.5 || e.z != 10 || e.yaw != 90 {
+		t.Fatalf("entity = %+v", e)
 	}
 
 	respawn := func(dim string) pk.Packet {
@@ -221,12 +228,16 @@ func TestEntitiesAndDimensions(t *testing.T) {
 	if !ok {
 		t.Fatal("no snapshot after login")
 	}
-	var login client.Login
-	if err := decode(packets[0], &login); err != nil {
+	// The server's own Login then its latest Respawn: the core ends up in the nether.
+	var last client.Respawn
+	if len(packets) < 2 || packetid.ClientboundPacketID(packets[1].ID) != packetid.ClientboundRespawn {
+		t.Fatal("snapshot does not replay the respawn after the login")
+	}
+	if err := decode(packets[1], &last); err != nil {
 		t.Fatal(err)
 	}
-	if login.CommonPlayerSpawnInfo.Dimension != "minecraft:the_nether" {
-		t.Fatalf("snapshot enters %q, want the nether", login.CommonPlayerSpawnInfo.Dimension)
+	if last.CommonPlayerSpawnInfo.Dimension != "minecraft:the_nether" {
+		t.Fatalf("snapshot enters %q, want the nether", last.CommonPlayerSpawnInfo.Dimension)
 	}
 }
 
@@ -270,5 +281,49 @@ func TestSnapshotRestoresPredictedState(t *testing.T) {
 	}
 	if !sawPos || !sawFlying || !sawHeld {
 		t.Fatalf("position %v flying %v held %v", sawPos, sawFlying, sawHeld)
+	}
+}
+
+// Every packet of a snapshot must decode with minego's own decoder: the core
+// drops the connection on the first packet it cannot read.
+func TestSnapshotDecodes(t *testing.T) {
+	s := loggedIn(t)
+	nameID, _ := slot.ComponentID("minecraft:custom_name")
+	named := slot.Slot{ItemID: 900, Count: 5, AddComponent: map[int32]slot.Component{int32(nameID): &component.CustomName{Name: chat.Text("編號1")}}}
+	content := client.SetContainerContent{Slots: make([]slot.Slot, playerSlots)}
+	content.Slots[36] = named
+	for _, p := range []pk.Packet{
+		chunkPacket(0, 0),
+		marshal(&client.BlockUpdate{Position: pk.Position{X: 1, Y: 64, Z: 2}, BlockState: 10}),
+		marshal(&client.AddEntity{ID: 3, Type: 5, X: 1, Y: 64, Z: 1}),
+		marshal(&client.UpdateEntityPosition{EntityID: 3, DeltaX: 4096}),
+		marshal(&client.SetEquipment{EntityID: 3, Equipment: client.Equipment{{Slot: 0, Item: named}, {Slot: 5, Item: named}}}),
+		marshal(&content),
+		marshal(&client.PlayerAbilities{Flags: 0x04}),
+		marshal(&client.PlayerInfoUpdate{Players: map[uuid.UUID][]client.PlayerInfo{
+			uuid.New(): {&client.PlayerInfoAddPlayer{Name: "a"}, &client.PlayerInfoUpdateLatency{Ping: 5}},
+		}}),
+		marshal(&client.PlayerInfoUpdate{Players: map[uuid.UUID][]client.PlayerInfo{
+			uuid.New(): {&client.PlayerInfoUpdateLatency{Ping: 9}},
+		}}),
+		marshal(&client.Respawn{CommonPlayerSpawnInfo: client.CommonPlayerSpawnInfo{Dimension: "minecraft:overworld"}}),
+	} {
+		if err := s.fromServer(p); err != nil {
+			t.Fatalf("record %#x: %v", p.ID, err)
+		}
+	}
+	if err := s.fromCore(marshalServer(&server.MovePlayerPos{X: 1, FeetY: 64, Z: 1})); err != nil {
+		t.Fatal(err)
+	}
+	packets, _, _ := s.snapshot()
+	for _, p := range packets {
+		creator := client.ClientboundPackets[packetid.ClientboundPacketID(p.ID)]
+		if creator == nil {
+			continue
+		}
+		r := bytes.NewReader(p.Data)
+		if _, err := creator().ReadFrom(r); err != nil {
+			t.Errorf("snapshot packet %v does not decode: %v", packetid.ClientboundPacketID(p.ID), err)
+		}
 	}
 }

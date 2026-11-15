@@ -27,7 +27,10 @@ func (s *state) snapshot() (packets []pk.Packet, teleport int32, ok bool) {
 		}
 	}
 
-	out = append(out, marshal(s.login))
+	out = append(out, pk.Packet{ID: int32(packetid.ClientboundLogin), Data: s.login})
+	if s.respawn != nil {
+		out = append(out, pk.Packet{ID: int32(packetid.ClientboundRespawn), Data: s.respawn})
+	}
 	single(packetid.ClientboundChangeDifficulty)
 	if p, ok := s.abilities(); ok {
 		out = append(out, p)
