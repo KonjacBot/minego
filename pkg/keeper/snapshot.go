@@ -64,6 +64,11 @@ func (s *state) snapshot() (packets []pk.Packet, teleport int32, ok bool) {
 	for _, p := range s.effects {
 		out = append(out, p)
 	}
+	if s.inBundle {
+		// The snapshot falls inside a bundle: open one so the closing delimiter
+		// that arrives live pairs up instead of starting a bundle of its own.
+		out = append(out, pk.Packet{ID: int32(packetid.BundleDelimiter)})
+	}
 	return out, teleport, true
 }
 

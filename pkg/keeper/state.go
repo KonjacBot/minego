@@ -53,6 +53,8 @@ type state struct {
 	inv      inventory
 	self     selfState
 	nextPort int32
+	// inBundle is set between a server's two BundleDelimiter packets.
+	inBundle bool
 }
 
 // selfState is the player state the server never echoes back: the client
@@ -95,6 +97,7 @@ func (s *state) resetPlay() {
 	s.world = newWorld()
 	s.inv = newInventory()
 	s.self = selfState{held: -1}
+	s.inBundle = false
 }
 
 // singleKinds are the packets whose last copy is all the state they carry.
@@ -173,6 +176,8 @@ func (s *state) fromServer(p pk.Packet) error {
 		s.effects = make(map[int32]pk.Packet)
 		s.inv.open = nil
 		s.self.sprinting, s.self.usingItem = false, false
+	case packetid.BundleDelimiter:
+		s.inBundle = !s.inBundle
 	case packetid.ClientboundGameEvent:
 		var event client.GameEvent
 		if err := decode(p, &event); err != nil {
