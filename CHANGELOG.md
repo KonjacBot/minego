@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `pkg/keeper`: a connection keeper. It is a small long-running process that
+  owns the server connections, so the program driving the bot can restart
+  without the player leaving the server. The driving client attaches over a
+  local socket and gets a snapshot of the world, made from the server's own
+  bytes, then the live stream.
+- `bot.ConnectOptions.Keeper` (`bot.KeeperOptions`) connects through a keeper.
+  `client.Client.Kept` reports whether the keeper resumed an existing
+  connection. `Detach` (`bot.Detacher`) leaves the player on the server;
+  `Close` now also ends the kept session.
+- `bot.ProxyConfig.Dialer()`, the SOCKS5 dialer shared by the client and the
+  keeper.
+- `configclient.SupportedKnownPacks`, `auth.Auth.Finished`,
+  `auth.TokenSource` (implemented by `auth.OnlineAuth` and `msa.Auth`), and
+  `metadata.ReadRaw`.
+
+### Fixed
+
+- `server.CustomPayload.ReadFrom` kept the whole 32767-byte read buffer as
+  `Data` instead of only the bytes it read.
+
 ## v2.1.0
 
 ### Added
